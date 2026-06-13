@@ -38,11 +38,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     return Scaffold(
       body: Container(
         width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFFFF0F3), Color(0xFFFFD1D8)],
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAFAFA),
+          image: DecorationImage(
+            image: const AssetImage('assets/images/bg_floral.png'),
+            fit: BoxFit.fill,
           ),
         ),
         child: Column(

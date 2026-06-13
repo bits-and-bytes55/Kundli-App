@@ -9,10 +9,18 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final phoneController = TextEditingController();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      body: SafeArea(
-        child: SingleChildScrollView(
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA),
+        image: DecorationImage(
+          image: const AssetImage('assets/images/bg_floral.png'),
+          fit: BoxFit.fill,
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -62,6 +70,7 @@ class LoginScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

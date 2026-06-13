@@ -67,4 +67,27 @@ class ApiService extends GetxService {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> matchMilan({
+    required String boyName, required String boyDate, required String boyTime,
+    required double boyLat, required double boyLon,
+    required String girlName, required String girlDate, required String girlTime,
+    required double girlLat, required double girlLon,
+  }) async {
+    try {
+      final response = await dio.post('/kundli/milan', data: {
+        'boy_name': boyName, 'boy_date': boyDate, 'boy_time': boyTime,
+        'boy_lat': boyLat, 'boy_lon': boyLon,
+        'girl_name': girlName, 'girl_date': girlDate, 'girl_time': girlTime,
+        'girl_lat': girlLat, 'girl_lon': girlLon,
+      });
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      }
+      return null;
+    } catch (e) {
+      print('Milan API Error: $e');
+      return null;
+    }
+  }
 }

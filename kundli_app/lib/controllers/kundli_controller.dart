@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import '../services/api_service.dart';
 
 class KundliController extends GetxController {
-  final ApiService _apiService = Get.find<ApiService>();
+  final ApiService apiService = Get.find<ApiService>();
 
   var isLoading = false.obs;
   var kundliData = Rx<Map<String, dynamic>?>(null);
@@ -10,7 +10,7 @@ class KundliController extends GetxController {
   Future<void> fetchKundli(String name, String date, String time, double lat, double lon) async {
     isLoading.value = true;
     try {
-      var data = await _apiService.generateKundli(
+      var data = await apiService.generateKundli(
         name: name,
         date: date,
         time: time,

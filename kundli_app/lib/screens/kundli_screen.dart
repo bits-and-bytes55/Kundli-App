@@ -2,290 +2,134 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/kundli_controller.dart';
 import '../theme/custom_shadows.dart';
+import 'kundli/dasha_tab.dart';
+import 'kundli/yoga_tab.dart';
+import 'kundli/lal_kitab_tab.dart';
+import 'kundli/chart_tab.dart';
+import 'kundli/planets_tab.dart';
+import 'kundli/reports_tab.dart';
+import 'kundli/shodashvarga_tab.dart';
 
-class KundliScreen extends StatelessWidget {
+class KundliScreen extends StatefulWidget {
   const KundliScreen({super.key});
+  @override
+  State<KundliScreen> createState() => _KundliScreenState();
+}
+
+class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  final List<Tab> _tabs = const [
+    Tab(text: 'Chart'), Tab(text: 'Planets'), Tab(text: 'Dasha'),
+    Tab(text: 'Yogas'), Tab(text: 'Shodashvarga'), Tab(text: 'Lal Kitab'),
+    Tab(text: 'Reports'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this);
+  }
+
+  @override
+  void dispose() { _tabController.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
-    final kundliController = Get.find<KundliController>();
-    final data = kundliController.kundliData.value;
-
+    final c = Get.find<KundliController>();
+    final data = c.kundliData.value;
     if (data == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Result')),
-        body: const Center(child: Text('No Data found from API')),
-      );
+      return Scaffold(appBar: AppBar(title: const Text('Kundli')),
+        body: const Center(child: Text('No data available')));
     }
-
-    final ascendant = data['ascendant'];
     final planets = data['planets'] as Map<String, dynamic>;
+    final ascendant = data['ascendant'];
+    final kpPlanets = data['kp_planets'] as Map<String, dynamic>? ?? planets;
+    final kpAscendant = data['kp_ascendant'] ?? ascendant;
+    final dasha = data['dasha'] as List<dynamic>? ?? [];
+    final yogas = data['yogas'] as List<dynamic>? ?? [];
+    final doshas = data['doshas'] as Map<String, dynamic>? ?? {};
+    final numerology = data['numerology'] as Map<String, dynamic>? ?? {};
+    final lalKitab = data['lal_kitab'] as Map<String, dynamic>? ?? {};
+    final shodashvarga = data['shodashvarga'] as Map<String, dynamic>? ?? {};
 
-    return DefaultTabController(
-      length: 3,
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/bg_floral.png'), fit: BoxFit.fill)),
       child: Scaffold(
-        backgroundColor: const Color(0xFFFAFAFA),
+        backgroundColor: Colors.transparent,
+        key: _scaffoldKey,
+        drawer: _buildDrawer(data['name'] ?? ''),
         appBar: AppBar(
+          backgroundColor: Colors.white.withOpacity(0.95),
+          elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: () => Get.back(),
-          ),
-          title: Text('${data['name']}\'s Kundli'),
-          actions: [
-            IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-          ],
-          bottom: const TabBar(
-            labelColor: Color(0xFFFF7E93),
-            unselectedLabelColor: Color(0xFF7F8C8D),
-            indicatorColor: Color(0xFFFF7E93),
-            indicatorWeight: 3,
-            tabs: [
-              Tab(text: 'Basic Chart'),
-              Tab(text: 'Navamsha'),
-              Tab(text: 'Planets'),
-            ],
+            icon: const Icon(Icons.menu_rounded, color: Color(0xFFFF7E93)),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer()),
+          title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(data['name'] ?? '', style: const TextStyle(color: Color(0xFFFF7E93), fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('${data['date']} • ${ascendant['rashi']} Lagna', style: const TextStyle(fontSize: 11, color: Color(0xFF7F8C8D))),
+          ]),
+          actions: [IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFFFF7E93)), onPressed: () => Get.back())],
+          bottom: TabBar(
+            controller: _tabController, isScrollable: true,
+            labelColor: const Color(0xFFFF7E93), unselectedLabelColor: const Color(0xFF7F8C8D),
+            indicatorColor: const Color(0xFFFF7E93), indicatorWeight: 3,
+            tabs: _tabs,
           ),
         ),
-        body: TabBarView(
-          children: [
-            _BasicChartTab(ascendant: ascendant, planets: planets),
-            const Center(child: Text('Navamsha D9 Chart (Coming Soon)')),
-            _PlanetsTab(planets: planets),
-          ],
-        ),
+        body: TabBarView(controller: _tabController, children: [
+          ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets),
+          PlanetsTab(planets: planets, ascendant: ascendant),
+          DashaTab(dasha: dasha),
+          YogaTab(yogas: yogas),
+          ShodashvargaTab(shodashvarga: shodashvarga),
+          LalKitabTab(lalKitab: lalKitab),
+          ReportsTab(doshas: doshas, numerology: numerology),
+        ]),
       ),
     );
   }
-}
 
-class _BasicChartTab extends StatelessWidget {
-  final Map<String, dynamic> ascendant;
-  final Map<String, dynamic> planets;
-  
-  const _BasicChartTab({required this.ascendant, required this.planets});
-
-  @override
-  Widget build(BuildContext context) {
-    const rashiList = ['Mesh','Vrishabh','Mithun','Kark','Singh','Kanya','Tula','Vrischik','Dhanu','Makar','Kumbh','Meen'];
-    
-    int lagnaIdx = rashiList.indexOf(ascendant['rashi']);
-    if (lagnaIdx == -1) lagnaIdx = 0; // fallback
-
-    List<List<String>> houses = List.generate(12, (_) => []);
-    
-    // Abbreviations map
-    final abbrev = {
-      'Sun': 'Su', 'Moon': 'Mo', 'Mars': 'Ma', 'Mercury': 'Me', 
-      'Jupiter': 'Ju', 'Venus': 'Ve', 'Saturn': 'Sa', 'Rahu': 'Ra', 'Ketu': 'Ke'
-    };
-
-    planets.forEach((key, value) {
-      if (abbrev.containsKey(key)) {
-        int pRashiIdx = rashiList.indexOf(value['rashi']);
-        if (pRashiIdx != -1) {
-          int houseIndex = (pRashiIdx - lagnaIdx) % 12;
-          if (houseIndex < 0) houseIndex += 12;
-          houses[houseIndex].add(abbrev[key]!);
-        }
-      }
-    });
-
-    final alignments = [
-      const Alignment(0, -0.45),      // House 1
-      const Alignment(-0.45, -0.75),  // House 2
-      const Alignment(-0.75, -0.45),  // House 3
-      const Alignment(-0.45, 0),      // House 4
-      const Alignment(-0.75, 0.45),   // House 5
-      const Alignment(-0.45, 0.75),   // House 6
-      const Alignment(0, 0.45),       // House 7
-      const Alignment(0.45, 0.75),    // House 8
-      const Alignment(0.75, 0.45),    // House 9
-      const Alignment(0.45, 0),       // House 10
-      const Alignment(0.75, -0.45),   // House 11
-      const Alignment(0.45, -0.75),   // House 12
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF7E93),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                ),
-                child: const Text('North Indian', style: TextStyle(fontSize: 14)),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF7F8C8D),
-                  side: BorderSide(color: Colors.grey.shade300),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                ),
-                child: const Text('South Indian', style: TextStyle(fontSize: 14)),
-              )
-            ],
-          ),
-          const SizedBox(height: 32),
-          
-          // North Indian Chart implementation
-          Container(
-            width: double.infinity,
-            height: MediaQuery.of(context).size.width - 40, // Square aspect ratio
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFFF7E93), width: 2),
-            ),
-            child: Stack(
-              children: [
-                CustomPaint(
-                  size: Size.infinite,
-                  painter: _ChartPainter(),
-                ),
-                // Place the text inside each house
-                for (int i = 0; i < 12; i++)
-                  Align(
-                    alignment: alignments[i],
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          ((lagnaIdx + i) % 12 + 1).toString(), // Rashi Number
-                          style: TextStyle(fontSize: 10, color: Colors.grey.shade400, fontWeight: FontWeight.bold),
-                        ),
-                        if (houses[i].isNotEmpty)
-                          Text(
-                            houses[i].join(', '),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50)),
-                          ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          // Details
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: CustomShadows.cardShadow,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Ascendant (Lagna)', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2C3E50))),
-                    Text('${ascendant['rashi']} (${ascendant['degree'].toStringAsFixed(2)}°)', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFF7E93))),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Rashi Lord', style: TextStyle(color: Color(0xFF7F8C8D))),
-                    Text('${ascendant['rashi_lord'] ?? ''}', style: const TextStyle(color: Color(0xFF7F8C8D))),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Nakshatra', style: TextStyle(color: Color(0xFF7F8C8D))),
-                    Text('${ascendant['nakshatra']} (Pada ${ascendant['pada']})', style: const TextStyle(color: Color(0xFF7F8C8D))),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Nakshatra Lord', style: TextStyle(color: Color(0xFF7F8C8D))),
-                    Text('${ascendant['nakshatra_lord'] ?? ''}', style: const TextStyle(color: Color(0xFF7F8C8D))),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Namakshar (Syllable)', style: TextStyle(color: Color(0xFF7F8C8D))),
-                    Text('${ascendant['namakshar'] ?? ''}', style: const TextStyle(color: Color(0xFF7F8C8D), fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ],
-            ),
-          )
-        ],
-      ),
+  Widget _buildDrawer(String name) {
+    return Drawer(
+      child: Column(children: [
+        UserAccountsDrawerHeader(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [Color(0xFFFF7E93), Color(0xFFD5F3D8)],
+              begin: Alignment.topLeft, end: Alignment.bottomRight)),
+          currentAccountPicture: const CircleAvatar(
+            backgroundColor: Colors.white,
+            child: Icon(Icons.person, color: Color(0xFFFF7E93), size: 40)),
+          accountName: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          accountEmail: const Text('Janma Kundli', style: TextStyle(color: Colors.white70)),
+        ),
+        Expanded(child: ListView(padding: EdgeInsets.zero, children: [
+          _dItem('होम', Icons.home_rounded, 0),
+          _dItem('चार्ट (Chart)', Icons.grid_view_rounded, 0),
+          _dItem('ग्रह (Planets)', Icons.stars_rounded, 1),
+          _dItem('दशा (Dasha)', Icons.timelapse_rounded, 2),
+          _dItem('योग (Yogas)', Icons.auto_awesome_rounded, 3),
+          _dItem('षोडशवर्ग', Icons.layers_rounded, 4),
+          _dItem('लाल किताब', Icons.book_rounded, 5),
+          _dItem('रिपोर्ट (Reports)', Icons.analytics_rounded, 6),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.arrow_back_rounded, color: Color(0xFFFF7E93)),
+            title: const Text('Back to Home', style: TextStyle(fontWeight: FontWeight.w600)),
+            onTap: () { Navigator.pop(context); Get.back(); }),
+        ])),
+      ]),
     );
   }
-}
 
-class _PlanetsTab extends StatelessWidget {
-  final Map<String, dynamic> planets;
-  const _PlanetsTab({required this.planets});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(20.0),
-      itemCount: planets.keys.length,
-      itemBuilder: (context, index) {
-        String key = planets.keys.elementAt(index);
-        var p = planets[key];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: CustomShadows.cardShadow,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: const Color(0xFFFFF0F3),
-              child: Text(key.substring(0, 1), style: const TextStyle(color: Color(0xFFFF7E93), fontWeight: FontWeight.bold)),
-            ),
-            title: Text(key, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-            subtitle: Text(
-              '${p['rashi']} (${p['degree'].toStringAsFixed(2)}°) • Lord: ${p['rashi_lord'] ?? ''}\n'
-              'Nak: ${p['nakshatra']} (Pada ${p['pada']}) • Lord: ${p['nakshatra_lord'] ?? ''}\n'
-              'Syllable (Namakshar): ${p['namakshar'] ?? ''}',
-              style: const TextStyle(height: 1.4),
-            ),
-            isThreeLine: true,
-          ),
-        );
-      },
+  Widget _dItem(String title, IconData icon, int tabIdx) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFFF7E93)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
+      onTap: () { Navigator.pop(context); _tabController.animateTo(tabIdx); },
     );
   }
-}
-
-class _ChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFFF7E93)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawLine(const Offset(0, 0), Offset(size.width, size.height), paint);
-    canvas.drawLine(Offset(size.width, 0), Offset(0, size.height), paint);
-    canvas.drawLine(Offset(size.width / 2, 0), Offset(0, size.height / 2), paint);
-    canvas.drawLine(Offset(size.width / 2, 0), Offset(size.width, size.height / 2), paint);
-    canvas.drawLine(Offset(0, size.height / 2), Offset(size.width / 2, size.height), paint);
-    canvas.drawLine(Offset(size.width, size.height / 2), Offset(size.width / 2, size.height), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
