@@ -3,9 +3,7 @@ import 'package:dio/dio.dart';
 
 class ApiService extends GetxService {
   late Dio dio;
-  
-  final String baseUrl = 'http://10.0.2.2:8000/api';
-
+  final String baseUrl = 'https://kundli.bitsandbytesitsolution.com/api';
   @override
   void onInit() {
     super.onInit();
@@ -16,6 +14,32 @@ class ApiService extends GetxService {
       headers: {
         'Content-Type': 'application/json',
       }
+    ));
+
+    dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        print('================ API REQUEST ================');
+        print('URL: ${options.uri}');
+        print('METHOD: ${options.method}');
+        print('BODY: ${options.data}');
+        return handler.next(options);
+      },
+      onResponse: (response, handler) {
+        print('================ API RESPONSE ================');
+        print('URL: ${response.requestOptions.uri}');
+        print('STATUS CODE: ${response.statusCode}');
+        print('RESPONSE DATA: ${response.data}');
+        print('==============================================');
+        return handler.next(response);
+      },
+      onError: (DioException e, handler) {
+        print('================ API ERROR ================');
+        print('URL: ${e.requestOptions.uri}');
+        print('STATUS CODE: ${e.response?.statusCode}');
+        print('ERROR MESSAGE: ${e.message}');
+        print('===========================================');
+        return handler.next(e);
+      },
     ));
   }
 

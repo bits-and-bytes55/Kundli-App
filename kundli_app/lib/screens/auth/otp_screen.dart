@@ -36,7 +36,7 @@ class OtpScreen extends StatelessWidget {
               const SizedBox(height: 48),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(4, (index) => _otpBox()),
+                children: List.generate(4, (index) => _otpBox(context)),
               ),
               const SizedBox(height: 40),
               ElevatedButton(
@@ -52,7 +52,7 @@ class OtpScreen extends StatelessWidget {
     );
   }
 
-  Widget _otpBox() {
+  Widget _otpBox(BuildContext context) {
     return Container(
       width: 65,
       height: 65,
@@ -64,12 +64,19 @@ class OtpScreen extends StatelessWidget {
           BoxShadow(color: const Color(0xFFFF7E93).withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
         ]
       ),
-      child: const TextField(
+      child: TextField(
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
-        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        decoration: InputDecoration(
+        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
+        onChanged: (value) {
+          if (value.isNotEmpty) {
+            FocusScope.of(context).nextFocus();
+          } else {
+            FocusScope.of(context).previousFocus();
+          }
+        },
+        decoration: const InputDecoration(
           counterText: "",
           border: InputBorder.none,
           enabledBorder: InputBorder.none,

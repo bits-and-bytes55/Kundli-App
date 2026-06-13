@@ -40,12 +40,11 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: white,
-        elevation: 2,
+        elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
-        shadowColor: primaryPink.withOpacity(0.1),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -53,7 +52,7 @@ class AppTheme {
           foregroundColor: white,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(8),
           ),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, fontFamily: 'Montserrat'),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -64,15 +63,15 @@ class AppTheme {
         fillColor: white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.grey.shade200),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.grey.shade200),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: primaryPink, width: 2),
         ),
         labelStyle: const TextStyle(color: textLight, fontSize: 14),
