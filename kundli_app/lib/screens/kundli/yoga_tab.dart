@@ -8,25 +8,31 @@ class YogaTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (yogas.isEmpty) {
-      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.info_outline_rounded, size: 60, color: Colors.grey.shade300),
-        const SizedBox(height: 12),
-        Text('No significant Yogas found', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
-      ]));
-    }
-    return ListView(padding: const EdgeInsets.all(12), children: [
-      Container(padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFD5F3D8), Color(0xFFFFF0F3)]),
-          borderRadius: BorderRadius.circular(12)),
-        child: Row(children: [
-          const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFF7E93)),
-          const SizedBox(width: 8),
-          Text('${yogas.length} Yoga(s) Found', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2C3E50))),
+      return Container(
+        color: const Color(0xFFFFF5F7),
+        child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.info_outline_rounded, size: 60, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text('No significant Yogas found', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
         ])),
-      const SizedBox(height: 12),
-      ...yogas.map((y) => _yogaCard(y as Map<String, dynamic>)).toList(),
-    ]);
+      );
+    }
+    return Container(
+      color: const Color(0xFFFFF5F7),
+      child: ListView(padding: const EdgeInsets.all(12), children: [
+        Container(padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFFD5F3D8), Color(0xFFFFF0F3)]),
+            borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            const Icon(Icons.auto_awesome_rounded, color: Color(0xFFFF7E93)),
+            const SizedBox(width: 8),
+            Text('${yogas.length} Yoga(s) Found', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2C3E50))),
+          ])),
+        const SizedBox(height: 12),
+        ...yogas.map((y) => _yogaCard(y as Map<String, dynamic>)).toList(),
+      ]),
+    );
   }
 
   Widget _yogaCard(Map<String, dynamic> yoga) {

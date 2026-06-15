@@ -51,19 +51,26 @@ class _ChartTabState extends State<ChartTab> {
     ];
     final aligns = _chartStyle == 'North' ? northAlign : southAlign;
 
-    return SingleChildScrollView(
+    return Container(
+      color: const Color(0xFFFFF5F7),
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(children: [
-        // Toggle row
+        // Toggle row - split into 2 rows to avoid overflow
         Card(
-          color: Colors.white.withOpacity(0.92),
-          elevation: 2,
+          color: Colors.white,
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFFFE0E8))),
           child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              _toggle('North Indian', 'North'), const SizedBox(width: 8),
-              _toggle('South Indian', 'South'), const SizedBox(width: 16),
-              const VerticalDivider(width: 1), const SizedBox(width: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Column(children: [
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                _toggle('North Indian', 'North'),
+                const SizedBox(width: 10),
+                _toggle('South Indian', 'South'),
+              ]),
+              const SizedBox(height: 8),
               _kpToggle(),
             ]),
           ),
@@ -106,7 +113,10 @@ class _ChartTabState extends State<ChartTab> {
         const SizedBox(height: 10),
         // Legend
         Card(
-          color: Colors.white.withOpacity(0.92),
+          color: Colors.white,
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: Color(0xFFFFE0E8))),
           child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
               Text('ᴿ Retrograde  ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFFF7E93))),
@@ -116,12 +126,11 @@ class _ChartTabState extends State<ChartTab> {
           ),
         ),
         const SizedBox(height: 12),
-        // Ascendant info card
         _infoCard(ascendant),
         const SizedBox(height: 16),
-        // Quick buttons
         _quickButtons(),
       ]),
+    ),
     );
   }
 
@@ -146,29 +155,35 @@ class _ChartTabState extends State<ChartTab> {
     return GestureDetector(
       onTap: () => setState(() => _showKP = !_showKP),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 7),
         decoration: BoxDecoration(
-          color: _showKP ? const Color(0xFFFF7E93) : Colors.transparent,
+          color: _showKP ? const Color(0xFFFF7E93) : const Color(0xFFFFF0F3),
           border: Border.all(color: const Color(0xFFFF7E93)),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text('KP System', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+        alignment: Alignment.center,
+        child: Text(_showKP ? 'KP System (ON)' : 'KP System (OFF)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
           color: _showKP ? Colors.white : const Color(0xFFFF7E93))),
       ),
     );
   }
 
   Widget _infoCard(Map<String, dynamic> asc) {
-    return Card(
-      color: Colors.white.withOpacity(0.95),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFD5F3D8), width: 1.5)),
-      child: Padding(padding: const EdgeInsets.all(14), child: Row(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFE0E8), width: 1.5),
+      ),
+      child: Padding(padding: const EdgeInsets.all(12), child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
           _infoItem('Lagna', asc['rashi'] ?? '-'),
+          Container(width: 1, height: 36, color: const Color(0xFFFFE0E8)),
           _infoItem('Degree', '${(asc['degree'] as num? ?? 0).toStringAsFixed(1)}°'),
+          Container(width: 1, height: 36, color: const Color(0xFFFFE0E8)),
           _infoItem('Nakshatra', asc['nakshatra'] ?? '-'),
+          Container(width: 1, height: 36, color: const Color(0xFFFFE0E8)),
           _infoItem('Pada', '${asc['pada'] ?? '-'}'),
         ],
       )),

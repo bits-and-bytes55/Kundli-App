@@ -7,19 +7,22 @@ class LalKitabTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(padding: const EdgeInsets.all(12), children: [
-      Container(padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFFFF0F3), Color(0xFFD5F3D8)]),
-          borderRadius: BorderRadius.circular(10)),
-        child: const Row(children: [
-          Icon(Icons.book_rounded, color: Color(0xFFFF7E93)),
-          SizedBox(width: 8),
-          Text('Lal Kitab Analysis', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2C3E50))),
-        ])),
-      const SizedBox(height: 12),
-      ...lalKitab.entries.map((e) => _card(e.key, e.value as Map<String, dynamic>? ?? {})).toList(),
-    ]);
+    return Container(
+      color: const Color(0xFFFFF5F7),
+      child: ListView(padding: const EdgeInsets.all(12), children: [
+        Container(padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFFFFF0F3), Color(0xFFD5F3D8)]),
+            borderRadius: BorderRadius.circular(10)),
+          child: const Row(children: [
+            Icon(Icons.book_rounded, color: Color(0xFFFF7E93)),
+            SizedBox(width: 8),
+            Text('Lal Kitab Analysis', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2C3E50))),
+          ])),
+        const SizedBox(height: 12),
+        ...lalKitab.entries.map((e) => _card(e.key, e.value as Map<String, dynamic>? ?? {})).toList(),
+      ]),
+    );
   }
 
   Widget _card(String planet, Map<String, dynamic> data) {

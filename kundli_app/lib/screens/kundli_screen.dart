@@ -54,17 +54,13 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
     final lalKitab = data['lal_kitab'] as Map<String, dynamic>? ?? {};
     final shodashvarga = data['shodashvarga'] as Map<String, dynamic>? ?? {};
 
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/images/bg_floral.png'), fit: BoxFit.fill)),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
+    return Scaffold(
+        backgroundColor: const Color(0xFFFFF5F7),
         key: _scaffoldKey,
         drawer: _buildDrawer(data['name'] ?? ''),
         appBar: AppBar(
-          backgroundColor: Colors.white.withOpacity(0.95),
-          elevation: 0,
+          backgroundColor: Colors.white,
+          elevation: 0.5,
           leading: IconButton(
             icon: const Icon(Icons.menu_rounded, color: Color(0xFFFF7E93)),
             onPressed: () => _scaffoldKey.currentState?.openDrawer()),
@@ -89,8 +85,7 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
           LalKitabTab(lalKitab: lalKitab),
           ReportsTab(doshas: doshas, numerology: numerology),
         ]),
-      ),
-    );
+      );
   }
 
   Widget _buildDrawer(String name) {

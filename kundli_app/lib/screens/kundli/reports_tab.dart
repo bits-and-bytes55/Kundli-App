@@ -10,19 +10,22 @@ class ReportsTab extends StatelessWidget {
     final manglik = doshas['manglik'] as Map<String, dynamic>? ?? {};
     final sadeSati = doshas['sade_sati'] as Map<String, dynamic>? ?? {};
     final kaalSarp = doshas['kaal_sarp'] as Map<String, dynamic>? ?? {};
-    return ListView(padding: const EdgeInsets.all(12), children: [
-      _sectionTitle('Dosha Analysis'),
-      const SizedBox(height: 8),
-      _doshaCard('Manglik Dosha (कुज दोष)', manglik['is_manglik'] == true, manglik['report'] as String? ?? '', 'Mars', manglik['mars_house']),
-      _doshaCard('Sade Sati (साढ़े साती)', sadeSati['in_sade_sati'] == true, sadeSati['report'] as String? ?? '', 'Saturn', null,
-        extraBadge: sadeSati['phase'] as String?),
-      _doshaCard('Kaal Sarp Yoga (काल सर्प)', kaalSarp['present'] == true, kaalSarp['report'] as String? ?? '', 'Rahu', null,
-        extraBadge: kaalSarp['type'] as String?),
-      const SizedBox(height: 16),
-      _sectionTitle('Numerology (अंक ज्योतिष)'),
-      const SizedBox(height: 8),
-      _numerologyCard(numerology),
-    ]);
+    return Container(
+      color: const Color(0xFFFFF5F7),
+      child: ListView(padding: const EdgeInsets.all(12), children: [
+        _sectionTitle('Dosha Analysis'),
+        const SizedBox(height: 8),
+        _doshaCard('Manglik Dosha (कुज दोष)', manglik['is_manglik'] == true, manglik['report'] as String? ?? '', 'Mars', manglik['mars_house']),
+        _doshaCard('Sade Sati (साढ़े साती)', sadeSati['in_sade_sati'] == true, sadeSati['report'] as String? ?? '', 'Saturn', null,
+          extraBadge: sadeSati['phase'] as String?),
+        _doshaCard('Kaal Sarp Yoga (काल सर्प)', kaalSarp['present'] == true, kaalSarp['report'] as String? ?? '', 'Rahu', null,
+          extraBadge: kaalSarp['type'] as String?),
+        const SizedBox(height: 16),
+        _sectionTitle('Numerology (अंक ज्योतिष)'),
+        const SizedBox(height: 8),
+        _numerologyCard(numerology),
+      ]),
+    );
   }
 
   Widget _sectionTitle(String t) {

@@ -13,7 +13,9 @@ class PlanetsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final allPlanets = {'Lagna': ascendant, ...planets};
-    return ListView(
+    return Container(
+      color: const Color(0xFFFFF5F7),
+      child: ListView(
       padding: const EdgeInsets.all(12),
       children: [
         // Header table
@@ -31,6 +33,7 @@ class PlanetsTab extends StatelessWidget {
         const SizedBox(height: 16),
         ...planets.entries.map((e) => _planetCard(e.key, e.value)).toList(),
       ],
+      ),
     );
   }
 

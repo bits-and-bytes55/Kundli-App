@@ -18,7 +18,9 @@ class _DashaTabState extends State<DashaTab> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return Container(
+      color: const Color(0xFFFFF5F7),
+      child: ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: widget.dasha.length,
       itemBuilder: (ctx, i) {
@@ -90,6 +92,7 @@ class _DashaTabState extends State<DashaTab> {
           ]),
         );
       },
+      ),
     );
   }
 

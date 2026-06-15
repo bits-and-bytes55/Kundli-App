@@ -24,39 +24,42 @@ class _ShodashvargaTabState extends State<ShodashvargaTab> {
   @override
   Widget build(BuildContext context) {
     final chart = (widget.shodashvarga[_selected] as Map<String, dynamic>?) ?? {};
-    return Column(children: [
-      Container(
-        height: 48, color: Colors.white.withOpacity(0.9),
-        child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          children: chartNames.keys.map((k) {
-            bool sel = _selected == k;
-            return GestureDetector(
-              onTap: () => setState(() => _selected = k),
-              child: Container(
-                margin: const EdgeInsets.only(right: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: sel ? const Color(0xFFFF7E93) : Colors.transparent,
-                  border: Border.all(color: sel ? const Color(0xFFFF7E93) : Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(16)),
-                alignment: Alignment.center,
-                child: Text(k, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12,
-                  color: sel ? Colors.white : const Color(0xFF7F8C8D))),
-              ),
-            );
-          }).toList()),
-      ),
-      Expanded(child: ListView(padding: const EdgeInsets.all(12), children: [
-        Container(padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFFD5F3D8), Color(0xFFFFF0F3)]),
-            borderRadius: BorderRadius.circular(10)),
-          child: Text(chartNames[_selected] ?? _selected,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF2C3E50)))),
-        const SizedBox(height: 12),
-        ...chart.entries.map((e) => _row(e.key, e.value as Map<String, dynamic>? ?? {})).toList(),
-      ])),
-    ]);
+    return Container(
+      color: const Color(0xFFFFF5F7),
+      child: Column(children: [
+        Container(
+          height: 48, color: Colors.white,
+          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            children: chartNames.keys.map((k) {
+              bool sel = _selected == k;
+              return GestureDetector(
+                onTap: () => setState(() => _selected = k),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: sel ? const Color(0xFFFF7E93) : Colors.transparent,
+                    border: Border.all(color: sel ? const Color(0xFFFF7E93) : Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(16)),
+                  alignment: Alignment.center,
+                  child: Text(k, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12,
+                    color: sel ? Colors.white : const Color(0xFF7F8C8D))),
+                ),
+              );
+            }).toList()),
+        ),
+        Expanded(child: ListView(padding: const EdgeInsets.all(12), children: [
+          Container(padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFFD5F3D8), Color(0xFFFFF0F3)]),
+              borderRadius: BorderRadius.circular(10)),
+            child: Text(chartNames[_selected] ?? _selected,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF2C3E50)))),
+          const SizedBox(height: 12),
+          ...chart.entries.map((e) => _row(e.key, e.value as Map<String, dynamic>? ?? {})).toList(),
+        ])),
+      ]),
+    );
   }
 
   Widget _row(String planet, Map<String, dynamic> data) {
