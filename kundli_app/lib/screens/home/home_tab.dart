@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../birth_form_screen.dart';
 import '../milan_screen.dart';
+import '../../theme/app_theme.dart';
 
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
@@ -10,7 +11,7 @@ class HomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage('assets/images/bg_floral.png'), fit: BoxFit.fill)),
+        image: DecorationImage(image: AssetImage('assets/images/ChatGPT Image Jun 14, 2026, 10_51_39 PM.png'), fit: BoxFit.fill)),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -25,16 +26,25 @@ class HomeTab extends StatelessWidget {
         body: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Panchang Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Colors.white.withOpacity(0.95), const Color(0xFFD5F3D8).withOpacity(0.8)]),
+                gradient: LinearGradient(colors: [
+                  Colors.white.withOpacity(0.95),
+                  AppColors.accentLight.withOpacity(0.9),
+                ]),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFD5F3D8))),
+                border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.wb_sunny_rounded, color: Color(0xFFFF7E93), size: 20),
+                  const Icon(Icons.wb_sunny_rounded, color: AppColors.primary, size: 20),
                   const SizedBox(width: 6),
                   Text("Today's Panchang", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
                   const Spacer(),
@@ -44,7 +54,7 @@ class HomeTab extends StatelessWidget {
                 _pRow('Tithi', 'Shukla Paksha Dashami'), _pRow('Nakshatra', 'Hasta'), _pRow('Yoga', 'Shiva'), _pRow('Karana', 'Balava'),
                 const SizedBox(height: 12),
                 SizedBox(width: double.infinity, child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7E93), padding: const EdgeInsets.all(10)),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.all(10)),
                   onPressed: () {},
                   child: const Text('View Full Panchang'))),
               ]),
@@ -56,11 +66,11 @@ class HomeTab extends StatelessWidget {
               shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.88,
               children: [
-                _svc(Icons.auto_awesome_rounded, 'Kundli', const Color(0xFFFF7E93), () => Get.to(() => BirthFormScreen())),
+                _svc(Icons.auto_awesome_rounded, 'Kundli', AppColors.primary, () => Get.to(() => BirthFormScreen())),
                 _svc(Icons.favorite_rounded, 'Milan', const Color(0xFFE91E63), () => Get.to(() => const MilanScreen())),
                 _svc(Icons.timelapse_rounded, 'Dasha', const Color(0xFF9C27B0), () => Get.to(() => BirthFormScreen())),
                 _svc(Icons.calendar_month_rounded, 'Panchang', const Color(0xFFFF5722), () {}),
-                _svc(Icons.stars_rounded, 'Horoscope', const Color(0xFFFF7E93), () {}),
+                _svc(Icons.stars_rounded, 'Horoscope', AppColors.primary, () {}),
                 _svc(Icons.format_list_numbered_rounded, 'Numerology', const Color(0xFF4CAF50), () {}),
                 _svc(Icons.book_rounded, 'Lal Kitab', const Color(0xFF795548), () {}),
                 _svc(Icons.layers_rounded, 'Shodashvarga', const Color(0xFF607D8B), () {}),
@@ -72,11 +82,11 @@ class HomeTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [const Color(0xFFFF7E93).withOpacity(0.1), const Color(0xFFD5F3D8).withOpacity(0.5)]),
+                gradient: LinearGradient(colors: [AppColors.primary.withOpacity(0.1), AppColors.accent.withOpacity(0.5)]),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFF7E93).withOpacity(0.3))),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3))),
               child: Row(children: [
-                const Icon(Icons.info_outline_rounded, color: Color(0xFFFF7E93), size: 20),
+                const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
                 const SizedBox(width: 10),
                 const Expanded(child: Text('Powered by Swiss Ephemeris • Lahiri Ayanamsa • Vimshottari Dasha',
                   style: TextStyle(fontSize: 11, color: Color(0xFF7F8C8D)))),

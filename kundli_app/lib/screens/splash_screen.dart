@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'auth/login_screen.dart';
+import 'dashboard/dashboard_screen.dart';
+import '../controllers/auth_controller.dart';
+import '../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,8 +25,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     )..forward();
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
 
-    Future.delayed(const Duration(seconds: 3), () {
-      Get.offAll(() => const LoginScreen(), transition: Transition.fadeIn);
+    Future.delayed(const Duration(seconds: 3), () async {
+      final authController = Get.put(AuthController());
+      final isLoggedIn = await authController.checkLoginStatus();
+      if (isLoggedIn) {
+        Get.offAll(() => const DashboardScreen(), transition: Transition.fadeIn);
+      } else {
+        Get.offAll(() => const LoginScreen(), transition: Transition.fadeIn);
+      }
     });
   }
 
@@ -39,9 +48,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       body: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
+          color: AppColors.scaffoldBg,
           image: DecorationImage(
-            image: const AssetImage('assets/images/bg_floral.png'),
+            image: const AssetImage('assets/images/ChatGPT Image Jun 14, 2026, 10_51_39 PM.png'),
             fit: BoxFit.fill,
           ),
         ),
@@ -56,13 +65,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   shape: BoxShape.circle,
                   color: Colors.white.withOpacity(0.6),
                   boxShadow: [
-                    BoxShadow(color: const Color(0xFFFF7E93).withOpacity(0.2), blurRadius: 20)
+                    BoxShadow(color: AppColors.primary.withOpacity(0.2), blurRadius: 20)
                   ]
                 ),
                 child: const Icon(
                   Icons.auto_awesome_rounded,
                   size: 80,
-                  color: Color(0xFFFF7E93),
+                  color: AppColors.primary,
                 ),
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/custom_shadows.dart';
+import '../../theme/app_theme.dart';
 
 class PlanetsTab extends StatelessWidget {
   final Map<String, dynamic> planets, ascendant;
@@ -14,13 +15,13 @@ class PlanetsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final allPlanets = {'Lagna': ascendant, ...planets};
     return Container(
-      color: const Color(0xFFFFF5F7),
+      color: AppColors.scaffoldBg,
       child: ListView(
       padding: const EdgeInsets.all(12),
       children: [
         // Header table
         Card(
-          color: const Color(0xFFFF7E93),
+          color: AppColors.primary,
           child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(children: const [
               Expanded(flex: 3, child: Text('Planet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))),
@@ -45,7 +46,7 @@ class PlanetsTab extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 1),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: name == 'Lagna' ? const Color(0xFFD5F3D8).withOpacity(0.5) : Colors.white.withOpacity(0.9),
+        color: name == 'Lagna' ? AppColors.accent.withOpacity(0.5) : Colors.white.withOpacity(0.9),
         border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
       ),
       child: Row(children: [
@@ -56,7 +57,7 @@ class PlanetsTab extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12,
               color: exalt ? Colors.green : debil ? Colors.red : const Color(0xFF2C3E50)))),
         ])),
-        Expanded(flex: 3, child: Text(p['rashi'] ?? '-', style: const TextStyle(fontSize: 12, color: Color(0xFFFF7E93)))),
+        Expanded(flex: 3, child: Text(p['rashi'] ?? '-', style: const TextStyle(fontSize: 12, color: AppColors.primary))),
         Expanded(flex: 3, child: Text('${p['nakshatra'] ?? '-'} P${p['pada'] ?? ''}', style: const TextStyle(fontSize: 11, color: Color(0xFF7F8C8D)))),
         Expanded(flex: 2, child: Text('${(p['degree'] as num? ?? 0).toStringAsFixed(1)}°', style: const TextStyle(fontSize: 11))),
       ]),
@@ -72,13 +73,13 @@ class PlanetsTab extends StatelessWidget {
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(14),
         boxShadow: CustomShadows.cardShadow,
-        border: Border.all(color: const Color(0xFFD5F3D8), width: 1.5),
+        border: Border.all(color: AppColors.accent, width: 1.5),
       ),
       child: Column(children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [const Color(0xFFD5F3D8), const Color(0xFFFFF0F3)]),
+            gradient: LinearGradient(colors: [AppColors.accent, AppColors.accentLight]),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
           ),
           child: Row(children: [
@@ -92,7 +93,7 @@ class PlanetsTab extends StatelessWidget {
               decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(4)),
               child: const Text('Exalted', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold))),
             const Spacer(),
-            Text('H${p['house'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF7E93), fontSize: 14)),
+            Text('H${p['house'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14)),
           ]),
         ),
         Padding(padding: const EdgeInsets.all(14), child: Column(children: [

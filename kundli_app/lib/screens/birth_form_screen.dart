@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'kundli_screen.dart';
 import '../controllers/kundli_controller.dart';
 import '../theme/custom_shadows.dart';
+import '../theme/app_theme.dart';
 
 class BirthFormScreen extends StatelessWidget {
   BirthFormScreen({super.key});
@@ -19,9 +20,9 @@ class BirthFormScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
+        color: AppColors.scaffoldBg,
         image: DecorationImage(
-          image: const AssetImage('assets/images/bg_floral.png'),
+          image: const AssetImage('assets/images/ChatGPT Image Jun 14, 2026, 10_51_39 PM.png'),
           fit: BoxFit.fill,
         ),
       ),
@@ -90,7 +91,7 @@ class BirthFormScreen extends StatelessWidget {
                                 builder: (context, child) {
                                   return Theme(
                                     data: Theme.of(context).copyWith(
-                                      colorScheme: const ColorScheme.light(primary: Color(0xFFFF7E93)),
+                                      colorScheme: const ColorScheme.light(primary: AppColors.primary),
                                     ),
                                     child: child!,
                                   );
@@ -130,7 +131,7 @@ class BirthFormScreen extends StatelessWidget {
                                 builder: (context, child) {
                                   return Theme(
                                     data: Theme.of(context).copyWith(
-                                      colorScheme: const ColorScheme.light(primary: Color(0xFFFF7E93)),
+                                      colorScheme: const ColorScheme.light(primary: AppColors.primary),
                                     ),
                                     child: child!,
                                   );

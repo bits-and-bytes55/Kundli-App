@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/custom_shadows.dart';
+import '../../theme/app_theme.dart';
 
 class LalKitabTab extends StatelessWidget {
   final Map<String, dynamic> lalKitab;
@@ -8,14 +9,14 @@ class LalKitabTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFFFF5F7),
+      color: AppColors.scaffoldBg,
       child: ListView(padding: const EdgeInsets.all(12), children: [
         Container(padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFFFFF0F3), Color(0xFFD5F3D8)]),
+            gradient: const LinearGradient(colors: [AppColors.accentLight, AppColors.accent]),
             borderRadius: BorderRadius.circular(10)),
           child: const Row(children: [
-            Icon(Icons.book_rounded, color: Color(0xFFFF7E93)),
+            Icon(Icons.book_rounded, color: AppColors.primary),
             SizedBox(width: 8),
             Text('Lal Kitab Analysis', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2C3E50))),
           ])),
@@ -35,18 +36,18 @@ class LalKitabTab extends StatelessWidget {
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(14),
         boxShadow: CustomShadows.cardShadow,
-        border: Border.all(color: const Color(0xFFD5F3D8), width: 1.5),
+        border: Border.all(color: AppColors.accent, width: 1.5),
       ),
       child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Container(width: 36, height: 36, decoration: BoxDecoration(color: const Color(0xFFFF7E93).withOpacity(0.1), shape: BoxShape.circle),
+          Container(width: 36, height: 36, decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
             alignment: Alignment.center,
-            child: Text(planet.substring(0, 1), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF7E93)))),
+            child: Text(planet.substring(0, 1), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))),
           const SizedBox(width: 10),
           Text(planet, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
           const Spacer(),
           Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: const Color(0xFFD5F3D8), borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(6)),
             child: Text('House $house', style: const TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold, fontSize: 12))),
         ]),
         if (effects.isNotEmpty) ...[
@@ -55,11 +56,11 @@ class LalKitabTab extends StatelessWidget {
         ],
         if (remedies.isNotEmpty) ...[
           const SizedBox(height: 10),
-          const Text('Remedies:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF7E93))),
+          const Text('Remedies:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
           const SizedBox(height: 4),
           ...remedies.map((r) => Padding(padding: const EdgeInsets.only(bottom: 4),
             child: Row(children: [
-              const Icon(Icons.fiber_manual_record, size: 8, color: Color(0xFFFF7E93)),
+              const Icon(Icons.fiber_manual_record, size: 8, color: AppColors.primary),
               const SizedBox(width: 6),
               Expanded(child: Text(r, style: const TextStyle(fontSize: 12, color: Color(0xFF2C3E50)))),
             ]))).toList(),

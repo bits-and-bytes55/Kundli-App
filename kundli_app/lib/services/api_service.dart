@@ -90,4 +90,38 @@ class ApiService extends GetxService {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> getGochar() async {
+    try {
+      final response = await dio.get('/kundli/gochar');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      }
+      return null;
+    } catch (e) {
+      print('Gochar API Error: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getGrahaSthiti({
+    required String name,
+    required String date,
+    required String time,
+    required double lat,
+    required double lon,
+  }) async {
+    try {
+      final response = await dio.post('/kundli/graha-sthiti', data: {
+        'name': name, 'date': date, 'time': time, 'lat': lat, 'lon': lon,
+      });
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      }
+      return null;
+    } catch (e) {
+      print('GrahaSthiti API Error: $e');
+      return null;
+    }
+  }
 }

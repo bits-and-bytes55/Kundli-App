@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../../controllers/auth_controller.dart';
+import '../../theme/app_theme.dart';
 
 class OtpScreen extends StatelessWidget {
   const OtpScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authController = Get.find<AuthController>();
+    final controllers = List.generate(6, (index) => TextEditingController());
+    final focusNodes = List.generate(6, (index) => FocusNode());
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
+        color: AppColors.scaffoldBg,
         image: DecorationImage(
-          image: const AssetImage('assets/images/bg_floral.png'),
+          image: const AssetImage('assets/images/ChatGPT Image Jun 14, 2026, 10_51_39 PM.png'),
           fit: BoxFit.fill,
         ),
       ),
@@ -39,61 +45,110 @@ class OtpScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Enter the 4-digit code sent to your number',
+                'Enter the 6-digit code sent to your number',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Color(0xFF7F8C8D)),
               ),
               const SizedBox(height: 48),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(4, (index) => _otpBox(context)),
+                children: List.generate(6, (index) => _otpBox(context, controllers[index], focusNodes[index], index, controllers, focusNodes)),
               ),
               const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  Get.offAll(() => const DashboardScreen(), transition: Transition.fadeIn);
-                },
-                child: const Text('Verify & Login'),
-              ),
-            ],
-          ),
-        ),
-      ),
-      ),
-    );
-  }
-
-  Widget _otpBox(BuildContext context) {
-    return Container(
-      width: 65,
-      height: 65,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFFFF7E93).withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
-        ]
-      ),
+              Obx(() => ElevatedButton(
+                onPressed: authController.isLoading.value
+                     ? null
+                     : () async {
+                         final otp = controllers.map((c) => c.text.trim()).join();
+                         if (otp.length < 6) {
+                           Get.snackbar(
+                             'Error',
+                             'Please enter the 6-digit OTP',
+                             backgroundColor: Colors.white.withOpacity(0.9),
+                             colorText: Colors.red,
+                           );
+                           return;
+                         }
+                         await authController.verifyOtp(otp);
+                       },
+                 child: authController.isLoading.value
+                     ? const SizedBox(
+                         height: 20,
+                         width: 20,
+                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                       )
+                     : const Text('Verify & Login'),
+               )),
+             ],
+           ),
+         ),
+       ),
+       ),
+     );
+   }
+ 
+   Widget _otpBox(
+     BuildContext context,
+     TextEditingController controller,
+     FocusNode focusNode,
+     int index,
+     List<TextEditingController> controllers,
+     List<FocusNode> focusNodes,
+   ) {
+     return Container(
+       width: 46,
+       height: 55,
+       decoration: BoxDecoration(
+         color: Colors.white,
+         borderRadius: BorderRadius.circular(12),
+         border: Border.all(color: Colors.grey.shade200),
+         boxShadow: [
+           BoxShadow(color: AppColors.primary.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+         ]
+       ),
       child: TextField(
+        controller: controller,
+        focusNode: focusNode,
         textAlign: TextAlign.center,
+        textAlignVertical: TextAlignVertical.center,
         keyboardType: TextInputType.number,
-        maxLength: 1,
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
-        onChanged: (value) {
-          if (value.isNotEmpty) {
-            FocusScope.of(context).nextFocus();
-          } else {
-            FocusScope.of(context).previousFocus();
-          }
-        },
+        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50)),
         decoration: const InputDecoration(
+          contentPadding: EdgeInsets.zero,
           counterText: "",
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
           filled: false,
         ),
+        onChanged: (value) {
+          if (value.length > 1) {
+            final cleanVal = value.replaceAll(RegExp(r'\D'), '');
+            if (cleanVal.length > 1) {
+              for (int i = 0; i < 6; i++) {
+                if (i < cleanVal.length) {
+                  controllers[i].text = cleanVal[i];
+                }
+              }
+              final nextFocusIndex = cleanVal.length < 6 ? cleanVal.length : 5;
+              FocusScope.of(context).requestFocus(focusNodes[nextFocusIndex]);
+              return;
+            } else {
+              controller.text = cleanVal;
+            }
+          }
+          if (value.isNotEmpty) {
+            if (index < 5) {
+              FocusScope.of(context).requestFocus(focusNodes[index + 1]);
+            } else {
+              focusNode.unfocus();
+            }
+          } else {
+            if (index > 0) {
+              FocusScope.of(context).requestFocus(focusNodes[index - 1]);
+            }
+          }
+        },
       ),
     );
   }

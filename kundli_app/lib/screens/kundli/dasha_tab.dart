@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
 
 class DashaTab extends StatefulWidget {
   final List<dynamic> dasha;
@@ -19,7 +20,7 @@ class _DashaTabState extends State<DashaTab> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFFFF5F7),
+      color: AppColors.scaffoldBg,
       child: ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: widget.dasha.length,
@@ -29,7 +30,7 @@ class _DashaTabState extends State<DashaTab> {
         final start = (d['start_year'] as num?)?.toDouble() ?? 0;
         final end = (d['end_year'] as num?)?.toDouble() ?? 0;
         final isActive = now >= start && now <= end;
-        final color = lordColors[lord] ?? const Color(0xFFFF7E93);
+        final color = lordColors[lord] ?? AppColors.primary;
         final antars = d['antars'] as List<dynamic>? ?? [];
         final isOpen = _expanded == i;
 

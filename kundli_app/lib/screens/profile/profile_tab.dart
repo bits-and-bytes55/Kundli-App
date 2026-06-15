@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../controllers/auth_controller.dart';
+import '../../theme/app_theme.dart';
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
@@ -6,7 +9,7 @@ class ProfileTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Profile'),
@@ -24,7 +27,7 @@ class ProfileTab extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundColor: const Color(0xFFD5F3D8), // Green shade
+                  backgroundColor: AppColors.accent,
                   child: const Icon(Icons.person, size: 50, color: Colors.black26),
                 ),
                 const SizedBox(width: 20),
@@ -47,7 +50,7 @@ class ProfileTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF0F3),
+                color: AppColors.accentLight,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -63,7 +66,7 @@ class ProfileTab extends StatelessWidget {
                   LinearProgressIndicator(
                     value: 0.8,
                     backgroundColor: Colors.white,
-                    color: const Color(0xFFFF7E93),
+                    color: AppColors.primary,
                     minHeight: 8,
                     borderRadius: BorderRadius.circular(4),
                   )
@@ -100,7 +103,12 @@ class ProfileTab extends StatelessWidget {
         color: isLogout ? Colors.red.shade400 : const Color(0xFF2C3E50)
       )),
       trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey),
-      onTap: () {},
+      onTap: () {
+        if (isLogout) {
+          final authController = Get.find<AuthController>();
+          authController.logout();
+        }
+      },
     );
   }
 

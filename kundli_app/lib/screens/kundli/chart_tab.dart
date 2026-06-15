@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/custom_shadows.dart';
+import '../../theme/app_theme.dart';
 
 class ChartTab extends StatefulWidget {
   final Map<String, dynamic> ascendant, planets, kpAscendant, kpPlanets;
@@ -52,7 +53,7 @@ class _ChartTabState extends State<ChartTab> {
     final aligns = _chartStyle == 'North' ? northAlign : southAlign;
 
     return Container(
-      color: const Color(0xFFFFF5F7),
+      color: AppColors.scaffoldBg,
       child: SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(children: [
@@ -61,7 +62,7 @@ class _ChartTabState extends State<ChartTab> {
           color: Colors.white,
           elevation: 1,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFFFE0E8))),
+            side: const BorderSide(color: AppColors.accentLight)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Column(children: [
@@ -82,7 +83,7 @@ class _ChartTabState extends State<ChartTab> {
           height: MediaQuery.of(context).size.width - 32,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.95),
-            border: Border.all(color: const Color(0xFFFF7E93), width: 2),
+            border: Border.all(color: AppColors.primary, width: 2),
             boxShadow: CustomShadows.cardShadow,
           ),
           child: Stack(children: [
@@ -94,7 +95,7 @@ class _ChartTabState extends State<ChartTab> {
                   if (_chartStyle == 'North')
                     Text('${(lagnaIdx + i) % 12 + 1}', style: TextStyle(fontSize: 9, color: Colors.grey.shade400)),
                   if (_chartStyle == 'South')
-                    Text(rashiList[(lagnaIdx + i) % 12].substring(0, 2), style: const TextStyle(fontSize: 8, color: Color(0xFFFF7E93))),
+                    Text(rashiList[(lagnaIdx + i) % 12].substring(0, 2), style: const TextStyle(fontSize: 8, color: AppColors.primary)),
                   if (houses[i].isNotEmpty)
                     Text(houses[i].join(' '),
                       textAlign: TextAlign.center,
@@ -106,7 +107,7 @@ class _ChartTabState extends State<ChartTab> {
             if (_chartStyle == 'North')
               Align(alignment: aligns[0], child: Padding(
                 padding: const EdgeInsets.only(bottom: 14),
-                child: Text('Lagna', style: TextStyle(fontSize: 8, color: const Color(0xFFFF7E93).withOpacity(0.7))),
+                child: Text('Lagna', style: TextStyle(fontSize: 8, color: AppColors.primary.withOpacity(0.7))),
               )),
           ]),
         ),
@@ -116,10 +117,10 @@ class _ChartTabState extends State<ChartTab> {
           color: Colors.white,
           elevation: 1,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: Color(0xFFFFE0E8))),
+            side: const BorderSide(color: AppColors.accentLight)),
           child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: const [
-              Text('ᴿ Retrograde  ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFFF7E93))),
+              Text('ᴿ Retrograde  ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
               Text('↑ Exalted  ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
               Text('La = Lagna', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
             ]),
@@ -141,12 +142,12 @@ class _ChartTabState extends State<ChartTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: sel ? const Color(0xFFD5F3D8) : Colors.transparent,
-          border: Border.all(color: sel ? const Color(0xFFFF7E93) : Colors.grey.shade300),
+          color: sel ? AppColors.accent : Colors.transparent,
+          border: Border.all(color: sel ? AppColors.primary : Colors.grey.shade300),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-          color: sel ? const Color(0xFFFF7E93) : Colors.grey)),
+          color: sel ? AppColors.primary : Colors.grey)),
       ),
     );
   }
@@ -158,13 +159,13 @@ class _ChartTabState extends State<ChartTab> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 7),
         decoration: BoxDecoration(
-          color: _showKP ? const Color(0xFFFF7E93) : const Color(0xFFFFF0F3),
-          border: Border.all(color: const Color(0xFFFF7E93)),
+          color: _showKP ? AppColors.primary : AppColors.accentLight,
+          border: Border.all(color: AppColors.primary),
           borderRadius: BorderRadius.circular(20),
         ),
         alignment: Alignment.center,
         child: Text(_showKP ? 'KP System (ON)' : 'KP System (OFF)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-          color: _showKP ? Colors.white : const Color(0xFFFF7E93))),
+          color: _showKP ? Colors.white : AppColors.primary)),
       ),
     );
   }
@@ -174,16 +175,16 @@ class _ChartTabState extends State<ChartTab> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFE0E8), width: 1.5),
+        border: Border.all(color: AppColors.accentLight, width: 1.5),
       ),
       child: Padding(padding: const EdgeInsets.all(12), child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
           _infoItem('Lagna', asc['rashi'] ?? '-'),
-          Container(width: 1, height: 36, color: const Color(0xFFFFE0E8)),
+          Container(width: 1, height: 36, color: AppColors.accentLight),
           _infoItem('Degree', '${(asc['degree'] as num? ?? 0).toStringAsFixed(1)}°'),
-          Container(width: 1, height: 36, color: const Color(0xFFFFE0E8)),
+          Container(width: 1, height: 36, color: AppColors.accentLight),
           _infoItem('Nakshatra', asc['nakshatra'] ?? '-'),
-          Container(width: 1, height: 36, color: const Color(0xFFFFE0E8)),
+          Container(width: 1, height: 36, color: AppColors.accentLight),
           _infoItem('Pada', '${asc['pada'] ?? '-'}'),
         ],
       )),
@@ -194,7 +195,7 @@ class _ChartTabState extends State<ChartTab> {
     return Column(children: [
       Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF7F8C8D))),
       const SizedBox(height: 4),
-      Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFFF7E93))),
+      Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
     ]);
   }
 
@@ -204,9 +205,9 @@ class _ChartTabState extends State<ChartTab> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
-        border: Border.all(color: const Color(0xFFD5F3D8)),
+        border: Border.all(color: AppColors.accent),
         borderRadius: BorderRadius.circular(8),
-        boxShadow: [BoxShadow(color: const Color(0xFFFF7E93).withOpacity(0.05), blurRadius: 4)],
+        boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.05), blurRadius: 4)],
       ),
       child: Text(b, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
     )).toList());
@@ -216,7 +217,7 @@ class _ChartTabState extends State<ChartTab> {
 class _NorthPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size s) {
-    final p = Paint()..color = const Color(0xFFFF7E93)..strokeWidth = 1.5..style = PaintingStyle.stroke;
+    final p = Paint()..color = AppColors.primary..strokeWidth = 1.5..style = PaintingStyle.stroke;
     canvas.drawRect(Rect.fromLTWH(0, 0, s.width, s.height), p);
     canvas.drawLine(Offset(0,0), Offset(s.width,s.height), p);
     canvas.drawLine(Offset(s.width,0), Offset(0,s.height), p);
@@ -231,7 +232,7 @@ class _NorthPainter extends CustomPainter {
 class _SouthPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size s) {
-    final p = Paint()..color = const Color(0xFFFF7E93)..strokeWidth = 1.5..style = PaintingStyle.stroke;
+    final p = Paint()..color = AppColors.primary..strokeWidth = 1.5..style = PaintingStyle.stroke;
     double w = s.width/4;
     canvas.drawRect(Rect.fromLTWH(0,0,s.width,s.height), p);
     canvas.drawLine(Offset(w,0), Offset(w,s.height), p);

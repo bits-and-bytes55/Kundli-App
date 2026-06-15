@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/kundli_controller.dart';
-import '../theme/custom_shadows.dart';
+import '../theme/app_theme.dart';
 
 class MilanScreen extends StatefulWidget {
   const MilanScreen({super.key});
@@ -23,14 +23,14 @@ class _MilanScreenState extends State<MilanScreen> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage('assets/images/bg_floral.png'), fit: BoxFit.fill)),
+        image: DecorationImage(image: AssetImage('assets/images/ChatGPT Image Jun 14, 2026, 10_51_39 PM.png'), fit: BoxFit.fill)),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: Colors.white.withOpacity(0.95),
           elevation: 0,
-          leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFFFF7E93)), onPressed: () => Get.back()),
-          title: const Text('Kundli Milan', style: TextStyle(color: Color(0xFFFF7E93), fontWeight: FontWeight.bold)),
+          leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primary), onPressed: () => Get.back()),
+          title: const Text('Kundli Milan', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
         ),
         body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Form(
           key: _formKey,
@@ -40,11 +40,11 @@ class _MilanScreenState extends State<MilanScreen> {
             _personCard('Girl / Vadhu', girlName, girlDate, girlTime, const Color(0xFFE91E63)),
             const SizedBox(height: 20),
             Obx(() => loading.value
-              ? const CircularProgressIndicator(color: Color(0xFFFF7E93))
+              ? const CircularProgressIndicator(color: AppColors.primary)
               : SizedBox(width: double.infinity, child: ElevatedButton.icon(
                   icon: const Icon(Icons.favorite_rounded),
                   label: const Text('Match Kundli (मिलान करें)'),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7E93), padding: const EdgeInsets.all(16)),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.all(16)),
                   onPressed: _doMilan))),
             const SizedBox(height: 20),
             Obx(() => result.value == null ? const SizedBox() : _resultWidget(result.value!)),
@@ -100,14 +100,14 @@ class _MilanScreenState extends State<MilanScreen> {
               backgroundColor: Colors.grey.shade200,
               color: pct >= 75 ? Colors.green : pct >= 50 ? Colors.orange : Colors.red)),
             Column(children: [
-              Text('$total/36', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFF7E93))),
+              Text('$total/36', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
               Text('${pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 14, color: Color(0xFF7F8C8D))),
             ]),
           ]),
           const SizedBox(height: 12),
           Text(verdict, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
         ])),
-        const Divider(height: 24, color: Color(0xFFD5F3D8)),
+        const Divider(height: 24, color: AppColors.accent),
         const Text('Ashtakoot Scores', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF2C3E50))),
         const SizedBox(height: 10),
         ...scores.entries.map((e) {
@@ -120,10 +120,10 @@ class _MilanScreenState extends State<MilanScreen> {
               backgroundColor: Colors.grey.shade200, color: got >= max * 0.7 ? Colors.green : got >= max * 0.4 ? Colors.orange : Colors.red,
               minHeight: 8, borderRadius: BorderRadius.circular(4))),
             const SizedBox(width: 8),
-            Text('$got/$max', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF7E93))),
+            Text('$got/$max', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
           ]));
         }).toList(),
-        const Divider(height: 24, color: Color(0xFFD5F3D8)),
+        const Divider(height: 24, color: AppColors.accent),
         if ((doshas['report'] as String? ?? '').isNotEmpty)
           Container(padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8),
@@ -158,14 +158,14 @@ class _MilanScreenState extends State<MilanScreen> {
     DateTime? d = await showDatePicker(context: context,
       initialDate: DateTime(1995), firstDate: DateTime(1900), lastDate: DateTime.now(),
       builder: (ctx, child) => Theme(data: Theme.of(ctx).copyWith(
-        colorScheme: const ColorScheme.light(primary: Color(0xFFFF7E93))), child: child!));
+        colorScheme: const ColorScheme.light(primary: AppColors.primary)), child: child!));
     if (d != null) ctrl.text = '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
   }
 
   void _pickTime(TextEditingController ctrl) async {
     TimeOfDay? t = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 10, minute: 0),
       builder: (ctx, child) => Theme(data: Theme.of(ctx).copyWith(
-        colorScheme: const ColorScheme.light(primary: Color(0xFFFF7E93))), child: child!));
+        colorScheme: const ColorScheme.light(primary: AppColors.primary)), child: child!));
     if (t != null) ctrl.text = '${t.hour.toString().padLeft(2,'0')}:${t.minute.toString().padLeft(2,'0')}';
   }
 }

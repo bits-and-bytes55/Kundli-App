@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/custom_shadows.dart';
+import '../../theme/app_theme.dart';
 
 class ShodashvargaTab extends StatefulWidget {
   final Map<String, dynamic> shodashvarga;
@@ -25,7 +25,7 @@ class _ShodashvargaTabState extends State<ShodashvargaTab> {
   Widget build(BuildContext context) {
     final chart = (widget.shodashvarga[_selected] as Map<String, dynamic>?) ?? {};
     return Container(
-      color: const Color(0xFFFFF5F7),
+      color: AppColors.scaffoldBg,
       child: Column(children: [
         Container(
           height: 48, color: Colors.white,
@@ -38,8 +38,8 @@ class _ShodashvargaTabState extends State<ShodashvargaTab> {
                   margin: const EdgeInsets.only(right: 6),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: sel ? const Color(0xFFFF7E93) : Colors.transparent,
-                    border: Border.all(color: sel ? const Color(0xFFFF7E93) : Colors.grey.shade300),
+                    color: sel ? AppColors.primary : Colors.transparent,
+                    border: Border.all(color: sel ? AppColors.primary : Colors.grey.shade300),
                     borderRadius: BorderRadius.circular(16)),
                   alignment: Alignment.center,
                   child: Text(k, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12,
@@ -51,7 +51,7 @@ class _ShodashvargaTabState extends State<ShodashvargaTab> {
         Expanded(child: ListView(padding: const EdgeInsets.all(12), children: [
           Container(padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFFD5F3D8), Color(0xFFFFF0F3)]),
+              gradient: const LinearGradient(colors: [AppColors.accent, AppColors.accentLight]),
               borderRadius: BorderRadius.circular(10)),
             child: Text(chartNames[_selected] ?? _selected,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF2C3E50)))),
@@ -69,13 +69,13 @@ class _ShodashvargaTabState extends State<ShodashvargaTab> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFD5F3D8)),
+        border: Border.all(color: AppColors.accent),
       ),
       child: Row(children: [
         SizedBox(width: 80, child: Text(planet, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2C3E50)))),
-        const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFFFF7E93)),
+        const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
         const SizedBox(width: 8),
-        Text(data['rashi'] as String? ?? '-', style: const TextStyle(color: Color(0xFFFF7E93), fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(data['rashi'] as String? ?? '-', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(width: 4),
         Text('(${data['rashi_lord'] ?? '-'})', style: const TextStyle(color: Color(0xFF7F8C8D), fontSize: 12)),
       ]),

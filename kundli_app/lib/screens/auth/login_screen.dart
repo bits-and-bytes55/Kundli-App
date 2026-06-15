@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'otp_screen.dart';
+import '../../controllers/auth_controller.dart';
+import '../../theme/app_theme.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authController = Get.put(AuthController());
     final phoneController = TextEditingController();
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
+        color: AppColors.scaffoldBg,
         image: DecorationImage(
-          image: const AssetImage('assets/images/bg_floral.png'),
+          image: const AssetImage('assets/images/ChatGPT Image Jun 14, 2026, 10_51_39 PM.png'),
           fit: BoxFit.fill,
         ),
       ),
@@ -30,9 +33,9 @@ class LoginScreen extends StatelessWidget {
                 height: 120,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Color(0xFFFFF0F3),
+                  color: AppColors.accentLight,
                 ),
-                child: const Icon(Icons.person_outline_rounded, size: 60, color: Color(0xFFFF7E93)),
+                child: const Icon(Icons.person_outline_rounded, size: 60, color: AppColors.primary),
               ),
               const SizedBox(height: 40),
               const Text(
@@ -52,21 +55,38 @@ class LoginScreen extends StatelessWidget {
                 keyboardType: TextInputType.phone,
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 1.5),
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.phone_android_rounded, color: Color(0xFFFF7E93)),
+                  prefixIcon: Icon(Icons.phone_android_rounded, color: AppColors.primary),
                   hintText: '+91 00000 00000',
                 ),
               ),
               const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () {
-                  if (phoneController.text.length >= 10 || phoneController.text.isEmpty) {
-                    Get.to(() => const OtpScreen(), transition: Transition.rightToLeft);
-                  } else {
-                    Get.snackbar('Error', 'Enter a valid number', backgroundColor: Colors.white);
-                  }
-                },
-                child: const Text('Get OTP'),
-              ),
+              Obx(() => ElevatedButton(
+                onPressed: authController.isLoading.value
+                    ? null
+                    : () async {
+                        final phone = phoneController.text.trim();
+                        if (phone.length < 10) {
+                          Get.snackbar(
+                            'Error',
+                            'Enter a valid 10-digit number',
+                            backgroundColor: Colors.white.withOpacity(0.9),
+                            colorText: Colors.red,
+                          );
+                          return;
+                        }
+                        final success = await authController.sendOtp(phone);
+                        if (success) {
+                          Get.to(() => const OtpScreen(), transition: Transition.rightToLeft);
+                        }
+                      },
+                child: authController.isLoading.value
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text('Get OTP'),
+              )),
             ],
           ),
         ),
