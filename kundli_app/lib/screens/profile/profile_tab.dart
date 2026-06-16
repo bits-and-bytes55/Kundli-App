@@ -1,10 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import 'edit_profile_screen.dart';
+import '../bookmarks/bookmarks_tab.dart';
 
-class ProfileTab extends StatelessWidget {
+class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
+
+  @override
+  State<ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<ProfileTab> {
+  String _name = 'Guest User';
+  String _phone = '';
+  String _email = 'No email provided';
+  double _completeness = 0.25;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('profile_name') ?? '';
+    final email = prefs.getString('profile_email') ?? '';
+    final phone = prefs.getString('logged_phone') ?? '';
+    final dob = prefs.getString('profile_dob') ?? '';
+    final tob = prefs.getString('profile_tob') ?? '';
+    final place = prefs.getString('profile_place') ?? '';
+
+    double completeness = 0.25; // Base 25% for phone (login parameter)
+    if (name.isNotEmpty) completeness += 0.25;
+    if (email.isNotEmpty) completeness += 0.25;
+    if (dob.isNotEmpty && tob.isNotEmpty && place.isNotEmpty) completeness += 0.25;
+
+    setState(() {
+      _name = name.isEmpty ? 'Guest User' : name;
+      _phone = phone.isEmpty ? 'Guest Account' : phone;
+      _email = email.isEmpty ? 'No email provided' : email;
+      _completeness = completeness;
+    });
+  }
+
+  void _navigateToEditProfile() async {
+    final result = await Get.to(() => const EditProfileScreen());
+    if (result == true) {
+      _loadProfile();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +62,10 @@ class ProfileTab extends StatelessWidget {
         centerTitle: true,
         title: const Text('Profile'),
         actions: [
-          IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.edit_note_rounded, color: AppColors.primary, size: 28),
+            onPressed: _navigateToEditProfile,
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -27,18 +78,18 @@ class ProfileTab extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundColor: AppColors.accent,
-                  child: const Icon(Icons.person, size: 50, color: Colors.black26),
+                  backgroundColor: AppColors.primary.withOpacity(0.12),
+                  child: const Icon(Icons.person_rounded, size: 50, color: AppColors.primary),
                 ),
                 const SizedBox(width: 20),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Arjun Kumar', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF2C3E50))),
-                      SizedBox(height: 4),
-                      Text('+91 98765 43210', style: TextStyle(fontSize: 14, color: Color(0xFF7F8C8D))),
-                      Text('arjunkumar@gmail.com', style: TextStyle(fontSize: 14, color: Color(0xFF7F8C8D))),
+                      Text(_name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF2C3E50))),
+                      const SizedBox(height: 4),
+                      Text(_phone, style: const TextStyle(fontSize: 14, color: Color(0xFF7F8C8D), fontWeight: FontWeight.bold)),
+                      Text(_email, style: const TextStyle(fontSize: 13, color: Color(0xFF95A5A6))),
                     ],
                   ),
                 )
@@ -50,21 +101,22 @@ class ProfileTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.accentLight,
+                color: AppColors.accentLight.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withOpacity(0.1)),
               ),
               child: Column(
                 children: [
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Profile Completeness', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2C3E50))),
-                      Text('80%', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2C3E50))),
+                      const Text('Profile Completeness', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2C3E50))),
+                      Text('${(_completeness * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary)),
                     ],
                   ),
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
-                    value: 0.8,
+                    value: _completeness,
                     backgroundColor: Colors.white,
                     color: AppColors.primary,
                     minHeight: 8,
@@ -76,24 +128,24 @@ class ProfileTab extends StatelessWidget {
             const SizedBox(height: 30),
             
             // Menu Items
-            _menuItem(Icons.person_outline_rounded, 'My Profile'),
+            _menuItem(Icons.person_outline_rounded, 'Edit Profile', onTap: _navigateToEditProfile),
             _divider(),
-            _menuItem(Icons.insert_chart_outlined_rounded, 'Saved Charts'),
+            _menuItem(Icons.bookmark_border_rounded, 'Saved Charts', onTap: () {
+              // Direct navigation to Bookmarks Tab
+              Get.to(() => const BookmarksTab());
+            }),
             _divider(),
-            _menuItem(Icons.bookmark_border_rounded, 'Bookmarks'),
-            _divider(),
-            _menuItem(Icons.settings_outlined, 'Settings'),
-            _divider(),
-            _menuItem(Icons.help_outline_rounded, 'Help & Support'),
-            _divider(),
-            _menuItem(Icons.logout_rounded, 'Logout', isLogout: true),
+            _menuItem(Icons.logout_rounded, 'Logout', isLogout: true, onTap: () {
+              final authController = Get.find<AuthController>();
+              authController.logout();
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _menuItem(IconData icon, String title, {bool isLogout = false}) {
+  Widget _menuItem(IconData icon, String title, {bool isLogout = false, required VoidCallback onTap}) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: isLogout ? Colors.red.shade400 : const Color(0xFF2C3E50)),
@@ -103,12 +155,7 @@ class ProfileTab extends StatelessWidget {
         color: isLogout ? Colors.red.shade400 : const Color(0xFF2C3E50)
       )),
       trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey),
-      onTap: () {
-        if (isLogout) {
-          final authController = Get.find<AuthController>();
-          authController.logout();
-        }
-      },
+      onTap: onTap,
     );
   }
 
