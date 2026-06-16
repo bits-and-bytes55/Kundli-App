@@ -87,7 +87,7 @@ class _HoroscopeScreenState extends State<HoroscopeScreen> {
                           child: Column(children: [
                             const Text('LUCKY NUMBER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textLight)),
                             const SizedBox(height: 4),
-                            Text('${horo['lucky_number'] ?? '-'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.black, color: AppColors.primary)),
+                            Text('${horo['lucky_number'] ?? '-'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.primary)),
                           ]),
                         ),
                       ),
@@ -99,7 +99,7 @@ class _HoroscopeScreenState extends State<HoroscopeScreen> {
                           child: Column(children: [
                             const Text('LUCKY COLOR', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textLight)),
                             const SizedBox(height: 4),
-                            Text('${horo['lucky_color'] ?? '-'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.black, color: Colors.indigo)),
+                            Text('${horo['lucky_color'] ?? '-'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.indigo)),
                           ]),
                         ),
                       ),
