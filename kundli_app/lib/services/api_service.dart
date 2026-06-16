@@ -49,15 +49,27 @@ class ApiService extends GetxService {
     required String time,
     required double lat,
     required double lon,
+    String? partnerName,
+    String? partnerDate,
+    String? partnerTime,
+    double? partnerLat,
+    double? partnerLon,
   }) async {
     try {
-      final response = await dio.post('/kundli/generate', data: {
+      final Map<String, dynamic> reqData = {
         'name': name,
         'date': date,
         'time': time,
         'lat': lat,
         'lon': lon,
-      });
+      };
+      if (partnerName != null) reqData['partner_name'] = partnerName;
+      if (partnerDate != null) reqData['partner_date'] = partnerDate;
+      if (partnerTime != null) reqData['partner_time'] = partnerTime;
+      if (partnerLat != null) reqData['partner_lat'] = partnerLat;
+      if (partnerLon != null) reqData['partner_lon'] = partnerLon;
+
+      final response = await dio.post('/kundli/generate', data: reqData);
       if (response.statusCode == 200 && response.data['success'] == true) {
         return response.data['data'];
       }
@@ -121,6 +133,29 @@ class ApiService extends GetxService {
       return null;
     } catch (e) {
       print('GrahaSthiti API Error: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPanchang({
+    required String date,
+    required String time,
+    required double lat,
+    required double lon,
+  }) async {
+    try {
+      final response = await dio.post('/panchang', data: {
+        'date': date,
+        'time': time,
+        'lat': lat,
+        'lon': lon,
+      });
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      }
+      return null;
+    } catch (e) {
+      print('Panchang API Error: $e');
       return null;
     }
   }

@@ -20,6 +20,14 @@ class _MilanScreenState extends State<MilanScreen> {
   var loading = false.obs;
 
   @override
+  void initState() {
+    super.initState();
+    if (!Get.isRegistered<KundliController>()) {
+      Get.lazyPut(() => KundliController());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
@@ -142,12 +150,17 @@ class _MilanScreenState extends State<MilanScreen> {
     loading.value = true;
     try {
       final c = Get.find<KundliController>();
+      print('=== API HIT: matchMilan ===');
+      print('Boy: ${boyName.text}, ${boyDate.text}, ${boyTime.text}');
+      print('Girl: ${girlName.text}, ${girlDate.text}, ${girlTime.text}');
       final data = await c.apiService.matchMilan(
         boyName: boyName.text, boyDate: boyDate.text, boyTime: boyTime.text, boyLat: 28.6139, boyLon: 77.209,
         girlName: girlName.text, girlDate: girlDate.text, girlTime: girlTime.text, girlLat: 28.6139, girlLon: 77.209,
       );
+      print('=== RESPONSE BODY: $data ===');
       result.value = data;
     } catch (e) {
+      print('=== ERROR: $e ===');
       Get.snackbar('Error', e.toString(), backgroundColor: Colors.red.shade100);
     } finally {
       loading.value = false;

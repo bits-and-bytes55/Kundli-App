@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../birth_form_screen.dart';
 import '../milan_screen.dart';
+import '../panchang_screen.dart';
+import '../../controllers/panchang_controller.dart';
 import '../../theme/app_theme.dart';
 
 class HomeTab extends StatelessWidget {
@@ -9,6 +11,8 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final panchangController = Get.put(PanchangController());
+
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(image: AssetImage('assets/images/ChatGPT Image Jun 14, 2026, 10_51_39 PM.png'), fit: BoxFit.fill)),
@@ -26,39 +30,62 @@ class HomeTab extends StatelessWidget {
         body: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  Colors.white.withOpacity(0.95),
-                  AppColors.accentLight.withOpacity(0.9),
+            Obx(() {
+              final data = panchangController.panchangData.value;
+              final isLoading = panchangController.isLoading.value;
+              
+              String tithi = 'Shukla Paksha Dashami';
+              String nakshatra = 'Hasta';
+              String yoga = 'Shiva';
+              String karana = 'Balava';
+              
+              if (data != null) {
+                tithi = '${data['tithi']['paksha']} ${data['tithi']['name']}';
+                nakshatra = '${data['nakshatra']['name']}';
+                yoga = '${data['yoga']['name']}';
+                karana = '${data['karana']['name']}';
+              }
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                    Colors.white.withOpacity(0.95),
+                    AppColors.accentLight.withOpacity(0.9),
+                  ]),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    const Icon(Icons.wb_sunny_rounded, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 6),
+                    Text("Today's Panchang", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
+                    const Spacer(),
+                    if (isLoading)
+                      const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                    else
+                      Text(_todayStr(), style: const TextStyle(fontSize: 11, color: Color(0xFF7F8C8D))),
+                  ]),
+                  const SizedBox(height: 12),
+                  _pRow('Tithi', tithi), 
+                  _pRow('Nakshatra', nakshatra), 
+                  _pRow('Yoga', yoga), 
+                  _pRow('Karana', karana),
+                  const SizedBox(height: 12),
+                  SizedBox(width: double.infinity, child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.all(10)),
+                    onPressed: () => Get.to(() => const PanchangScreen()),
+                    child: const Text('View Full Panchang'))),
                 ]),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.primary.withOpacity(0.5)),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.06),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ]),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  const Icon(Icons.wb_sunny_rounded, color: AppColors.primary, size: 20),
-                  const SizedBox(width: 6),
-                  Text("Today's Panchang", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-                  const Spacer(),
-                  Text(_todayStr(), style: const TextStyle(fontSize: 11, color: Color(0xFF7F8C8D))),
-                ]),
-                const SizedBox(height: 12),
-                _pRow('Tithi', 'Shukla Paksha Dashami'), _pRow('Nakshatra', 'Hasta'), _pRow('Yoga', 'Shiva'), _pRow('Karana', 'Balava'),
-                const SizedBox(height: 12),
-                SizedBox(width: double.infinity, child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.all(10)),
-                  onPressed: () {},
-                  child: const Text('View Full Panchang'))),
-              ]),
-            ),
+              );
+            }),
             const SizedBox(height: 20),
             const Text('Quick Services', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
             const SizedBox(height: 12),
@@ -69,7 +96,7 @@ class HomeTab extends StatelessWidget {
                 _svc(Icons.auto_awesome_rounded, 'Kundli', AppColors.primary, () => Get.to(() => BirthFormScreen())),
                 _svc(Icons.favorite_rounded, 'Milan', const Color(0xFFE91E63), () => Get.to(() => const MilanScreen())),
                 _svc(Icons.timelapse_rounded, 'Dasha', const Color(0xFF9C27B0), () => Get.to(() => BirthFormScreen())),
-                _svc(Icons.calendar_month_rounded, 'Panchang', const Color(0xFFFF5722), () {}),
+                _svc(Icons.calendar_month_rounded, 'Panchang', const Color(0xFFFF5722), () => Get.to(() => const PanchangScreen())),
                 _svc(Icons.stars_rounded, 'Horoscope', AppColors.primary, () {}),
                 _svc(Icons.format_list_numbered_rounded, 'Numerology', const Color(0xFF4CAF50), () {}),
                 _svc(Icons.book_rounded, 'Lal Kitab', const Color(0xFF795548), () {}),
