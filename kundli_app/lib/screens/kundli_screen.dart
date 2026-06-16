@@ -14,7 +14,8 @@ import 'kundli/avakahada_tab.dart';
 import 'kundli/gochar_tab.dart';
 
 class KundliScreen extends StatefulWidget {
-  const KundliScreen({super.key});
+  final int initialTabIdx;
+  const KundliScreen({super.key, this.initialTabIdx = 0});
   @override
   State<KundliScreen> createState() => _KundliScreenState();
 }
@@ -33,7 +34,7 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = TabController(length: _tabs.length, vsync: this, initialIndex: widget.initialTabIdx);
   }
 
   @override

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../home/home_tab.dart';
 import '../profile/profile_tab.dart';
+import '../bookmarks/bookmarks_tab.dart';
+import '../services/services_tab.dart';
 import '../../theme/app_theme.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -16,8 +18,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final List<Widget> _pages = [
     const HomeTab(),
-    const Center(child: Text('Bookmarks', style: TextStyle(fontSize: 20))),
-    const Center(child: Text('Services', style: TextStyle(fontSize: 20))),
+    const BookmarksTab(),
+    const ServicesTab(),
     const ProfileTab(),
   ];
 

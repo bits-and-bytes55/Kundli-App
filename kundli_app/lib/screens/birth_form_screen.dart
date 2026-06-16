@@ -1,12 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'kundli_screen.dart';
 import '../controllers/kundli_controller.dart';
 import '../theme/custom_shadows.dart';
 import '../theme/app_theme.dart';
 
 class BirthFormScreen extends StatelessWidget {
-  BirthFormScreen({super.key});
+  final int initialTabIdx;
+  BirthFormScreen({super.key, this.initialTabIdx = 0});
 
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
@@ -177,15 +181,34 @@ class BirthFormScreen extends StatelessWidget {
                 : ElevatedButton(
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
+                        double lat = 28.6139;
+                        double lon = 77.2090;
+                        try {
+                          List<Location> locations = await locationFromAddress(placeController.text);
+                          if (locations.isNotEmpty) {
+                            lat = locations.first.latitude;
+                            lon = locations.first.longitude;
+                          }
+                        } catch (e) {
+                          print("Geocoding failed: $e");
+                        }
                         await kundliController.fetchKundli(
                           nameController.text,
                           dateController.text,
                           timeController.text,
-                          28.6139, // Default Lat (Delhi) until Google Maps API is connected
-                          77.2090, // Default Lon (Delhi) until Google Maps API is connected
+                          lat,
+                          lon,
                         );
                         if (kundliController.kundliData.value != null) {
-                          Get.to(() => const KundliScreen(), transition: Transition.fadeIn);
+                          await _saveToHistory(
+                            nameController.text,
+                            dateController.text,
+                            timeController.text,
+                            placeController.text,
+                            lat,
+                            lon,
+                          );
+                          Get.to(() => KundliScreen(initialTabIdx: initialTabIdx), transition: Transition.fadeIn);
                         } else {
                           Get.snackbar('Error', 'Failed to fetch data from API');
                         }
@@ -199,5 +222,33 @@ class BirthFormScreen extends StatelessWidget {
       ),
       ),
     );
+  }
+
+  Future<void> _saveToHistory(String name, String date, String time, String place, double lat, double lon) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('saved_charts');
+      List<dynamic> list = [];
+      if (raw != null) {
+        list = jsonDecode(raw);
+      }
+      final exists = list.any((item) =>
+          item['name'] == name &&
+          item['date'] == date &&
+          item['time'] == time);
+      if (!exists) {
+        list.add({
+          'name': name,
+          'date': date,
+          'time': time,
+          'place': place,
+          'lat': lat,
+          'lon': lon,
+        });
+        await prefs.setString('saved_charts', jsonEncode(list));
+      }
+    } catch (e) {
+      print("Error saving to history: $e");
+    }
   }
 }

@@ -159,4 +159,17 @@ class ApiService extends GetxService {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> getHoroscope({required String rashi}) async {
+    try {
+      final response = await dio.get('/horoscope', queryParameters: {'rashi': rashi});
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      }
+      return null;
+    } catch (e) {
+      print('Horoscope API Error: $e');
+      return null;
+    }
+  }
 }
