@@ -27,10 +27,14 @@ class HomeTab extends StatelessWidget {
           ]),
           actions: [IconButton(icon: const Icon(Icons.notifications_none_rounded), onPressed: () {})],
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Obx(() {
+        body: RefreshIndicator(
+          onRefresh: () => panchangController.fetchCurrentLocationAndPanchang(),
+          color: AppColors.primary,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Obx(() {
               final data = panchangController.panchangData.value;
               final isLoading = panchangController.isLoading.value;
               
@@ -122,6 +126,7 @@ class HomeTab extends StatelessWidget {
             const SizedBox(height: 16),
           ]),
         ),
+      ),
       ),
     );
   }

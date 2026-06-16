@@ -81,18 +81,30 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
             tabs: _tabs,
           ),
         ),
-        body: TabBarView(controller: _tabController, children: [
-          ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets),
-          PlanetsTab(planets: planets, ascendant: ascendant),
-          GrahaSthitiTab(planets: planets, ascendant: ascendant),
-          AvakahadaTab(avakahada: avakahada, ascendant: ascendant),
-          const GocharTab(),
-          DashaTab(dasha: dasha),
-          YogaTab(yogas: yogas),
-          ShodashvargaTab(shodashvarga: shodashvarga),
-          LalKitabTab(lalKitab: lalKitab),
-          ReportsTab(doshas: doshas, numerology: numerology),
-        ]),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            await c.fetchKundli(
+              data['name'] ?? '',
+              data['date'] ?? '',
+              data['time'] ?? '',
+              (data['lat'] as num?)?.toDouble() ?? 28.6139,
+              (data['lon'] as num?)?.toDouble() ?? 77.2090,
+            );
+          },
+          color: AppColors.primary,
+          child: TabBarView(controller: _tabController, children: [
+            ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets),
+            PlanetsTab(planets: planets, ascendant: ascendant),
+            GrahaSthitiTab(planets: planets, ascendant: ascendant),
+            AvakahadaTab(avakahada: avakahada, ascendant: ascendant),
+            const GocharTab(),
+            DashaTab(dasha: dasha),
+            YogaTab(yogas: yogas),
+            ShodashvargaTab(shodashvarga: shodashvarga),
+            LalKitabTab(lalKitab: lalKitab),
+            ReportsTab(doshas: doshas, numerology: numerology),
+          ]),
+        ),
       );
   }
 

@@ -112,34 +112,48 @@ class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProvid
           ],
         ),
         body: Obx(() {
-          if (panchangController.isLoading.value) {
+          final data = panchangController.panchangData.value;
+
+          if (data == null && panchangController.isLoading.value) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             );
           }
 
-          final data = panchangController.panchangData.value;
           if (data == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Failed to load Panchang data.', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => panchangController.fetchPanchang(),
-                    child: const Text('Retry'),
+            return RefreshIndicator(
+              onRefresh: () => panchangController.fetchCurrentLocationAndPanchang(),
+              color: AppColors.primary,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  height: MediaQuery.of(context).size.height - 150,
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Failed to load Panchang data.', style: TextStyle(fontSize: 16)),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => panchangController.fetchCurrentLocationAndPanchang(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          return RefreshIndicator(
+            onRefresh: () => panchangController.fetchCurrentLocationAndPanchang(),
+            color: AppColors.primary,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // ── Date & Time Selector Header ──────────────────────────────────
                 _buildDatePickerHeader(context),
                 const SizedBox(height: 20),
@@ -180,8 +194,9 @@ class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProvid
                 const SizedBox(height: 30),
               ],
             ),
-          );
-        }),
+          ),
+        );
+      }),
       ),
     );
   }
