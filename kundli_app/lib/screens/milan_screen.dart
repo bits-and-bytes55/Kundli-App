@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/kundli_controller.dart';
 import '../theme/app_theme.dart';
+import 'milan_result_screen.dart';
 
 class MilanScreen extends StatefulWidget {
   const MilanScreen({super.key});
@@ -55,7 +56,6 @@ class _MilanScreenState extends State<MilanScreen> {
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.all(16)),
                   onPressed: _doMilan))),
             const SizedBox(height: 20),
-            Obx(() => result.value == null ? const SizedBox() : _resultWidget(result.value!)),
           ]),
         )),
       ),
@@ -91,60 +91,6 @@ class _MilanScreenState extends State<MilanScreen> {
     );
   }
 
-  Widget _resultWidget(Map<String, dynamic> r) {
-    final total = (r['total_score'] as num?)?.toInt() ?? 0;
-    final pct = (r['percentage'] as num?)?.toDouble() ?? 0;
-    final verdict = r['verdict'] as String? ?? '';
-    final scores = r['scores'] as Map<String, dynamic>? ?? {};
-    final doshas = r['doshas'] as Map<String, dynamic>? ?? {};
-    return Card(
-      elevation: 4, color: Colors.white.withOpacity(0.97),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Center(child: Column(children: [
-          Stack(alignment: Alignment.center, children: [
-            SizedBox(width: 120, height: 120, child: CircularProgressIndicator(
-              value: pct / 100, strokeWidth: 10,
-              backgroundColor: Colors.grey.shade200,
-              color: pct >= 75 ? Colors.green : pct >= 50 ? Colors.orange : Colors.red)),
-            Column(children: [
-              Text('$total/36', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
-              Text('${pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 14, color: Color(0xFF7F8C8D))),
-            ]),
-          ]),
-          const SizedBox(height: 12),
-          Text(verdict, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-        ])),
-        const Divider(height: 24, color: AppColors.accent),
-        const Text('Ashtakoot Scores', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF2C3E50))),
-        const SizedBox(height: 10),
-        ...scores.entries.map((e) {
-          final s = e.value as Map<String, dynamic>;
-          int got = (s['score'] as num?)?.toInt() ?? 0;
-          int max = (s['max'] as num?)?.toInt() ?? 0;
-          return Padding(padding: const EdgeInsets.only(bottom: 6), child: Row(children: [
-            SizedBox(width: 110, child: Text(e.key.replaceAll('_', ' '), style: const TextStyle(fontSize: 13, color: Color(0xFF2C3E50)))),
-            Expanded(child: LinearProgressIndicator(value: max > 0 ? got / max : 0,
-              backgroundColor: Colors.grey.shade200, color: got >= max * 0.7 ? Colors.green : got >= max * 0.4 ? Colors.orange : Colors.red,
-              minHeight: 8, borderRadius: BorderRadius.circular(4))),
-            const SizedBox(width: 8),
-            Text('$got/$max', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
-          ]));
-        }).toList(),
-        const Divider(height: 24, color: AppColors.accent),
-        if ((doshas['report'] as String? ?? '').isNotEmpty)
-          Container(padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.red.shade200)),
-            child: Row(children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 18),
-              const SizedBox(width: 6),
-              Expanded(child: Text(doshas['report'] as String? ?? '', style: const TextStyle(color: Colors.red, fontSize: 12))),
-            ])),
-      ])),
-    );
-  }
-
   void _doMilan() async {
     if (!_formKey.currentState!.validate()) return;
     loading.value = true;
@@ -158,7 +104,11 @@ class _MilanScreenState extends State<MilanScreen> {
         girlName: girlName.text, girlDate: girlDate.text, girlTime: girlTime.text, girlLat: 28.6139, girlLon: 77.209,
       );
       print('=== RESPONSE BODY: $data ===');
-      result.value = data;
+      if (data != null) {
+        Get.to(() => MilanResultScreen(resultData: data));
+      } else {
+        Get.snackbar('Error', 'Failed to match Milan details. Please try again.', backgroundColor: Colors.red.shade100);
+      }
     } catch (e) {
       print('=== ERROR: $e ===');
       Get.snackbar('Error', e.toString(), backgroundColor: Colors.red.shade100);
