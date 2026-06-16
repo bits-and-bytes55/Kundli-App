@@ -173,7 +173,7 @@ class MilanResultScreen extends StatelessWidget {
                   children: [
                     Text(
                       '$total',
-                      style: TextStyle(fontSize: 38, fontWeight: FontWeight.w950, color: scoreColor),
+                      style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: scoreColor),
                     ),
                     const Text(
                       'out of 36',
