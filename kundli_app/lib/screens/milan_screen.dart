@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:geocoding/geocoding.dart';
 import '../controllers/kundli_controller.dart';
 import '../theme/app_theme.dart';
 import 'milan_result_screen.dart';
@@ -14,9 +15,13 @@ class _MilanScreenState extends State<MilanScreen> {
   final boyName = TextEditingController(text: 'Rahul');
   final boyDate = TextEditingController(text: '1995-03-15');
   final boyTime = TextEditingController(text: '10:00');
+  final boyPlace = TextEditingController(text: 'New Delhi');
+  
   final girlName = TextEditingController(text: 'Priya');
   final girlDate = TextEditingController(text: '1997-08-20');
   final girlTime = TextEditingController(text: '08:30');
+  final girlPlace = TextEditingController(text: 'New Delhi');
+
   var result = Rx<Map<String, dynamic>?>(null);
   var loading = false.obs;
 
@@ -44,9 +49,9 @@ class _MilanScreenState extends State<MilanScreen> {
         body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Form(
           key: _formKey,
           child: Column(children: [
-            _personCard('Boy / Var', boyName, boyDate, boyTime, const Color(0xFF2196F3)),
+            _personCard('Boy / Var', boyName, boyDate, boyTime, boyPlace, const Color(0xFF2196F3)),
             const SizedBox(height: 12),
-            _personCard('Girl / Vadhu', girlName, girlDate, girlTime, const Color(0xFFE91E63)),
+            _personCard('Girl / Vadhu', girlName, girlDate, girlTime, girlPlace, const Color(0xFFE91E63)),
             const SizedBox(height: 20),
             Obx(() => loading.value
               ? const CircularProgressIndicator(color: AppColors.primary)
@@ -62,7 +67,7 @@ class _MilanScreenState extends State<MilanScreen> {
     );
   }
 
-  Widget _personCard(String title, TextEditingController name, TextEditingController date, TextEditingController time, Color color) {
+  Widget _personCard(String title, TextEditingController name, TextEditingController date, TextEditingController time, TextEditingController place, Color color) {
     return Card(
       color: Colors.white.withOpacity(0.95),
       elevation: 3,
@@ -87,6 +92,9 @@ class _MilanScreenState extends State<MilanScreen> {
             decoration: const InputDecoration(hintText: 'Time', prefixIcon: Icon(Icons.access_time_rounded)),
             onTap: () => _pickTime(time), validator: (v) => v!.isEmpty ? 'Required' : null)),
         ]),
+        const SizedBox(height: 10),
+        TextFormField(controller: place, decoration: const InputDecoration(hintText: 'Birth Place', prefixIcon: Icon(Icons.location_on_rounded)),
+          validator: (v) => v!.isEmpty ? 'Required' : null),
       ])),
     );
   }
@@ -96,12 +104,37 @@ class _MilanScreenState extends State<MilanScreen> {
     loading.value = true;
     try {
       final c = Get.find<KundliController>();
+      
+      double bLat = 28.6139;
+      double bLon = 77.209;
+      try {
+        List<Location> locs = await locationFromAddress(boyPlace.text);
+        if (locs.isNotEmpty) {
+          bLat = locs.first.latitude;
+          bLon = locs.first.longitude;
+        }
+      } catch (e) {
+        print("Boy geocoding failed: $e");
+      }
+
+      double gLat = 28.6139;
+      double gLon = 77.209;
+      try {
+        List<Location> locs = await locationFromAddress(girlPlace.text);
+        if (locs.isNotEmpty) {
+          gLat = locs.first.latitude;
+          gLon = locs.first.longitude;
+        }
+      } catch (e) {
+        print("Girl geocoding failed: $e");
+      }
+
       print('=== API HIT: matchMilan ===');
-      print('Boy: ${boyName.text}, ${boyDate.text}, ${boyTime.text}');
-      print('Girl: ${girlName.text}, ${girlDate.text}, ${girlTime.text}');
+      print('Boy: ${boyName.text}, ${boyDate.text}, ${boyTime.text}, $bLat, $bLon');
+      print('Girl: ${girlName.text}, ${girlDate.text}, ${girlTime.text}, $gLat, $gLon');
       final data = await c.apiService.matchMilan(
-        boyName: boyName.text, boyDate: boyDate.text, boyTime: boyTime.text, boyLat: 28.6139, boyLon: 77.209,
-        girlName: girlName.text, girlDate: girlDate.text, girlTime: girlTime.text, girlLat: 28.6139, girlLon: 77.209,
+        boyName: boyName.text, boyDate: boyDate.text, boyTime: boyTime.text, boyLat: bLat, boyLon: bLon,
+        girlName: girlName.text, girlDate: girlDate.text, girlTime: girlTime.text, girlLat: gLat, girlLon: gLon,
       );
       print('=== RESPONSE BODY: $data ===');
       if (data != null) {

@@ -12,30 +12,68 @@ NAKSHATRAS = ['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Puna
   'Moola','P.Ashadha','U.Ashadha','Shravana','Dhanishtha','Shatabhisha','P.Bhadra','U.Bhadra','Revati']
 NAKSHATRA_LORDS = ['Ketu','Shukra','Surya','Chandra','Mangal','Rahu','Guru','Shani','Budha'] * 3
 
-# Varna
-VARNA = {'Mesh':3,'Singh':3,'Dhanu':3, 'Vrishabh':2,'Kanya':2,'Makar':2,
-         'Mithun':1,'Tula':1,'Kumbh':1, 'Kark':0,'Vrischik':0,'Meen':0}
-VARNA_NAMES = {0:'Brahmin',1:'Kshatriya',2:'Vaishya',3:'Shudra'}
+# Varna: Brahmin=4, Kshatriya=3, Vaishya=2, Shudra=1
+VARNA = {
+    'Mesh': 3, 'Singh': 3, 'Dhanu': 3,      # Kshatriya (Fire)
+    'Vrishabh': 2, 'Kanya': 2, 'Makar': 2,  # Vaishya (Earth)
+    'Mithun': 1, 'Tula': 1, 'Kumbh': 1,      # Shudra (Air)
+    'Kark': 4, 'Vrischik': 4, 'Meen': 4       # Brahmin (Water)
+}
+VARNA_NAMES = {4: 'Brahmin', 3: 'Kshatriya', 2: 'Vaishya', 1: 'Shudra'}
 
-# Vasya
+# Vasya: Chatushpad, Manav, Jalachara, Vanachara, Keeta
 VASYA = {
-    'Mesh':'Chatushpad','Vrishabh':'Chatushpad','Mithun':'Manav','Kark':'Jalachara',
-    'Singh':'Vanachara','Kanya':'Manav','Tula':'Manav','Vrischik':'Keeta',
-    'Dhanu':'Chatushpad','Makar':'Jalachara','Kumbh':'Manav','Meen':'Jalachara'
+    'Mesh': 'Chatushpad', 'Vrishabh': 'Chatushpad', 'Mithun': 'Manav', 'Kark': 'Jalachara',
+    'Singh': 'Vanachara', 'Kanya': 'Manav', 'Tula': 'Manav', 'Vrischik': 'Keeta',
+    'Dhanu': 'Manav', # First half is Manav, but since Moola is in first half we use Manav as default
+    'Makar': 'Jalachara', 'Kumbh': 'Manav', 'Meen': 'Jalachara'
 }
 
-# Tara: 9 groups of 3 nakshatras
-TARA_GROUPS = ['Janma','Sampat','Vipat','Kshema','Pratyak','Sadhana','Vadha','Mitra','Parama Mitra']
+# Vashya points matrix
+VASYA_MATRIX = {
+    'Chatushpad': {'Chatushpad': 2.0, 'Manav': 1.0, 'Jalachara': 1.0, 'Vanachara': 0.5, 'Keeta': 1.0},
+    'Manav':      {'Chatushpad': 1.0, 'Manav': 2.0, 'Jalachara': 1.5, 'Vanachara': 0.0, 'Keeta': 1.0},
+    'Jalachara':  {'Chatushpad': 1.0, 'Manav': 1.5, 'Jalachara': 2.0, 'Vanachara': 1.0, 'Keeta': 1.0},
+    'Vanachara':  {'Chatushpad': 0.5, 'Manav': 0.0, 'Jalachara': 1.0, 'Vanachara': 2.0, 'Keeta': 0.0},
+    'Keeta':      {'Chatushpad': 1.0, 'Manav': 1.0, 'Jalachara': 1.0, 'Vanachara': 0.0, 'Keeta': 2.0}
+}
 
-# Yoni
+# Tara groups
+TARA_GROUPS = ['Janma', 'Sampat', 'Vipat', 'Kshema', 'Pratyak', 'Sadhana', 'Vadha', 'Mitra', 'Parama Mitra']
+
+# Yoni: 14 categories mapped to 27 Nakshatras
 YONI = {
-    'Ashwini':'Ashwa','Shatabhisha':'Ashwa','Bharani':'Gaja','Revati':'Gaja',
-    'Pushya':'Mesha','Krittika':'Mesha','Rohini':'Sarpa','Mrigashira':'Sarpa',
-    'Moola':'Shwana','Ardra':'Shwana','Ashlesha':'Marjara','Punarvasu':'Marjara',
-    'Magha':'Mushaka','P.Phalguni':'Mushaka','U.Phalguni':'Gau','U.Bhadra':'Gau',
-    'Hasta':'Mahisha','Swati':'Mahisha','Vishakha':'Vyaghra','Chitra':'Vyaghra',
-    'Jyeshtha':'Mriga','Anuradha':'Mriga','P.Ashadha':'Vanara','Shravana':'Vanara',
-    'P.Bhadra':'Simha','Dhanishtha':'Simha','U.Ashadha':'Nakula','Hasta':'Nakula'
+    'Ashwini': 'Ashwa', 'Shatabhisha': 'Ashwa',
+    'Bharani': 'Gaja', 'Revati': 'Gaja',
+    'Krittika': 'Mesha', 'Pushya': 'Mesha',
+    'Rohini': 'Sarpa', 'Mrigashira': 'Sarpa',
+    'Ardra': 'Shwana', 'Moola': 'Shwana',
+    'Punarvasu': 'Marjara', 'Ashlesha': 'Marjara',
+    'Magha': 'Mushaka', 'P.Phalguni': 'Mushaka',
+    'U.Phalguni': 'Gau', 'U.Bhadra': 'Gau',
+    'Hasta': 'Mahisha', 'Swati': 'Mahisha',
+    'Chitra': 'Vyaghra', 'Vishakha': 'Vyaghra',
+    'Anuradha': 'Mriga', 'Jyeshtha': 'Mriga',
+    'P.Ashadha': 'Vanara', 'Shravana': 'Vanara',
+    'Dhanishtha': 'Simha', 'P.Bhadra': 'Simha',
+    'U.Ashadha': 'Nakula'
+}
+
+YONI_MATRIX = {
+    'Ashwa':   {'Ashwa':4, 'Gaja':2, 'Mesha':2, 'Sarpa':3, 'Shwana':2, 'Marjara':2, 'Mushaka':2, 'Gau':1, 'Mahisha':0, 'Vyaghra':1, 'Mriga':3, 'Vanara':3, 'Simha':2, 'Nakula':2},
+    'Gaja':    {'Ashwa':2, 'Gaja':4, 'Mesha':3, 'Sarpa':3, 'Shwana':2, 'Marjara':2, 'Mushaka':2, 'Gau':2, 'Mahisha':3, 'Vyaghra':1, 'Mriga':2, 'Vanara':3, 'Simha':0, 'Nakula':2},
+    'Mesha':   {'Ashwa':2, 'Gaja':3, 'Mesha':4, 'Sarpa':2, 'Shwana':1, 'Marjara':2, 'Mushaka':1, 'Gau':3, 'Mahisha':0, 'Vyaghra':0, 'Mriga':3, 'Vanara':2, 'Simha':1, 'Nakula':2},
+    'Sarpa':   {'Ashwa':3, 'Gaja':3, 'Mesha':2, 'Sarpa':4, 'Shwana':2, 'Marjara':1, 'Mushaka':1, 'Gau':1, 'Mahisha':1, 'Vyaghra':2, 'Mriga':2, 'Vanara':2, 'Simha':2, 'Nakula':0},
+    'Shwana':  {'Ashwa':2, 'Gaja':2, 'Mesha':1, 'Sarpa':2, 'Shwana':4, 'Marjara':0, 'Mushaka':2, 'Gau':1, 'Mahisha':2, 'Vyaghra':1, 'Mriga':2, 'Vanara':2, 'Simha':2, 'Nakula':1},
+    'Marjara': {'Ashwa':2, 'Gaja':2, 'Mesha':2, 'Sarpa':1, 'Shwana':0, 'Marjara':4, 'Mushaka':0, 'Gau':2, 'Mahisha':2, 'Vyaghra':1, 'Mriga':2, 'Vanara':2, 'Simha':1, 'Nakula':2},
+    'Mushaka': {'Ashwa':2, 'Gaja':2, 'Mesha':1, 'Sarpa':1, 'Shwana':2, 'Marjara':0, 'Mushaka':4, 'Gau':2, 'Mahisha':2, 'Vyaghra':1, 'Mriga':1, 'Vanara':2, 'Simha':1, 'Nakula':2},
+    'Gau':     {'Ashwa':1, 'Gaja':2, 'Mesha':3, 'Sarpa':1, 'Shwana':1, 'Marjara':2, 'Mushaka':2, 'Gau':4, 'Mahisha':3, 'Vyaghra':0, 'Mriga':4, 'Vanara':2, 'Simha':1, 'Nakula':2},
+    'Mahisha': {'Ashwa':0, 'Gaja':3, 'Mesha':0, 'Sarpa':1, 'Shwana':2, 'Marjara':2, 'Mushaka':2, 'Gau':3, 'Mahisha':4, 'Vyaghra':1, 'Mriga':2, 'Vanara':2, 'Simha':1, 'Nakula':2},
+    'Vyaghra': {'Ashwa':1, 'Gaja':1, 'Mesha':0, 'Sarpa':2, 'Shwana':1, 'Marjara':1, 'Mushaka':1, 'Gau':0, 'Mahisha':1, 'Vyaghra':4, 'Mriga':1, 'Vanara':1, 'Simha':2, 'Nakula':1},
+    'Mriga':   {'Ashwa':3, 'Gaja':2, 'Mesha':3, 'Sarpa':2, 'Shwana':2, 'Marjara':2, 'Mushaka':1, 'Gau':4, 'Mahisha':2, 'Vyaghra':1, 'Mriga':4, 'Vanara':2, 'Simha':1, 'Nakula':2},
+    'Vanara':  {'Ashwa':3, 'Gaja':3, 'Mesha':2, 'Sarpa':2, 'Shwana':2, 'Marjara':2, 'Mushaka':2, 'Gau':2, 'Mahisha':2, 'Vyaghra':1, 'Mriga':2, 'Vanara':4, 'Simha':2, 'Nakula':2},
+    'Simha':   {'Ashwa':2, 'Gaja':0, 'Mesha':1, 'Sarpa':2, 'Shwana':2, 'Marjara':1, 'Mushaka':1, 'Gau':1, 'Mahisha':1, 'Vyaghra':2, 'Mriga':1, 'Vanara':2, 'Simha':4, 'Nakula':2},
+    'Nakula':  {'Ashwa':2, 'Gaja':2, 'Mesha':2, 'Sarpa':0, 'Shwana':1, 'Marjara':2, 'Mushaka':2, 'Gau':2, 'Mahisha':2, 'Vyaghra':1, 'Mriga':2, 'Vanara':2, 'Simha':2, 'Nakula':4}
 }
 
 # Gana
@@ -48,20 +86,32 @@ GANA = {
     'Vishakha':'Rakshasa','Jyeshtha':'Rakshasa','Moola':'Rakshasa','Dhanishtha':'Rakshasa','Shatabhisha':'Rakshasa'
 }
 
-# Nadi
-NADI = {}
-for i,n in enumerate(NAKSHATRAS):
-    group = i % 9
-    if group in [0,1,2]: NADI[n] = 'Aadi'
-    elif group in [3,4,5]: NADI[n] = 'Madhya'
-    else: NADI[n] = 'Antya'
-
-# Rashi Maitri table (simplified)
-RASHI_MITRA = {
-    'Surya':['Chandra','Mangal','Guru'],'Chandra':['Surya','Budha'],'Mangal':['Surya','Chandra','Guru'],
-    'Budha':['Surya','Shukra'],'Guru':['Surya','Chandra','Mangal'],'Shukra':['Budha','Shani'],
-    'Shani':['Budha','Shukra']
+GANA_MATRIX = {
+    'Deva':     {'Deva': 6, 'Manushya': 6, 'Rakshasa': 1},
+    'Manushya': {'Deva': 5, 'Manushya': 6, 'Rakshasa': 0},
+    'Rakshasa': {'Deva': 0, 'Manushya': 0, 'Rakshasa': 6}
 }
+
+# Nadi: Serpentine assignment to 27 Nakshatras
+NADI = {}
+for name in ['Ashwini', 'Ardra', 'Punarvasu', 'U.Phalguni', 'Hasta', 'Jyeshtha', 'Moola', 'Shatabhisha', 'P.Bhadra']:
+    NADI[name] = 'Aadi'
+for name in ['Bharani', 'Mrigashira', 'Pushya', 'P.Phalguni', 'Chitra', 'Anuradha', 'P.Ashadha', 'Dhanishtha', 'U.Bhadra']:
+    NADI[name] = 'Madhya'
+for name in ['Krittika', 'Rohini', 'Ashlesha', 'Magha', 'Swati', 'Vishakha', 'U.Ashadha', 'Shravana', 'Revati']:
+    NADI[name] = 'Antya'
+
+# Rashi Maitri matrix (Graha Maitri)
+GRAHA_MAITRI_MATRIX = {
+    'Surya':   {'Surya':5.0, 'Chandra':5.0, 'Mangal':5.0, 'Budha':4.0, 'Guru':5.0, 'Shukra':0.0, 'Shani':0.0},
+    'Chandra': {'Surya':5.0, 'Chandra':5.0, 'Mangal':4.0, 'Budha':5.0, 'Guru':4.0, 'Shukra':0.5, 'Shani':0.5},
+    'Mangal':  {'Surya':5.0, 'Chandra':4.0, 'Mangal':5.0, 'Budha':0.5, 'Guru':5.0, 'Shukra':3.0, 'Shani':0.5},
+    'Budha':   {'Surya':4.0, 'Chandra':0.5, 'Mangal':0.5, 'Budha':5.0, 'Guru':0.5, 'Shukra':5.0, 'Shani':4.0},
+    'Guru':    {'Surya':5.0, 'Chandra':4.0, 'Mangal':5.0, 'Budha':0.5, 'Guru':5.0, 'Shukra':0.5, 'Shani':3.0},
+    'Shukra':  {'Surya':0.0, 'Chandra':0.5, 'Mangal':3.0, 'Budha':5.0, 'Guru':0.5, 'Shukra':5.0, 'Shani':5.0},
+    'Shani':   {'Surya':0.0, 'Chandra':0.5, 'Mangal':0.5, 'Budha':4.0, 'Guru':3.0, 'Shukra':5.0, 'Shani':5.0}
+}
+
 RASHI_LORDS_MAP = ['Mangal','Shukra','Budha','Chandra','Surya','Budha','Shukra','Mangal','Guru','Shani','Shani','Guru']
 
 def get_moon_info(date_str, time_str, lat, lon):
@@ -79,39 +129,53 @@ def get_moon_info(date_str, time_str, lat, lon):
     }
 
 def calc_varna(boy_rashi, girl_rashi):
-    bv = VARNA.get(boy_rashi, 0); gv = VARNA.get(girl_rashi, 0)
+    bv = VARNA.get(boy_rashi, 1)
+    gv = VARNA.get(girl_rashi, 1)
     score = 1 if bv >= gv else 0
-    return {'score': score, 'max': 1, 'boy': VARNA_NAMES[bv], 'girl': VARNA_NAMES[gv]}
+    return {'score': score, 'max': 1, 'boy': VARNA_NAMES.get(bv, 'Shudra'), 'girl': VARNA_NAMES.get(gv, 'Shudra')}
 
 def calc_vasya(boy_rashi, girl_rashi):
-    bv = VASYA.get(boy_rashi, ''); gv = VASYA.get(girl_rashi, '')
-    score = 2 if bv == gv else 1 if bv in ['Manav','Chatushpad'] and gv in ['Manav','Chatushpad'] else 0
+    bv = VASYA.get(boy_rashi, 'Manav')
+    gv = VASYA.get(girl_rashi, 'Manav')
+    score = VASYA_MATRIX.get(bv, {}).get(gv, 0.0)
     return {'score': score, 'max': 2, 'boy': bv, 'girl': gv}
 
 def calc_tara(boy_nak_idx, girl_nak_idx):
-    tara = (boy_nak_idx - girl_nak_idx) % 9
-    good_taras = [2, 4, 6, 8]  # Sampat, Kshema, Sadhana, Parama Mitra
-    score = 3 if tara in good_taras else 0
-    return {'score': score, 'max': 3, 'boy_tara': TARA_GROUPS[tara], 'detail': 'Favorable' if tara in good_taras else 'Unfavorable'}
+    c1 = (boy_nak_idx - girl_nak_idx) % 27 + 1
+    t1 = c1 % 9
+    c2 = (girl_nak_idx - boy_nak_idx) % 27 + 1
+    t2 = c2 % 9
+    
+    good_taras = [2, 4, 6, 8, 0]
+    p1 = 1.5 if t1 in good_taras else 0.0
+    p2 = 1.5 if t2 in good_taras else 0.0
+    score = p1 + p2
+    
+    boy_tara_label = TARA_GROUPS[t1 - 1] if t1 > 0 else 'Parama Mitra'
+    girl_tara_label = TARA_GROUPS[t2 - 1] if t2 > 0 else 'Parama Mitra'
+    
+    return {
+        'score': score, 
+        'max': 3, 
+        'boy_tara': boy_tara_label, 
+        'girl_tara': girl_tara_label,
+        'detail': f"Boy Tara: {boy_tara_label}, Girl Tara: {girl_tara_label}"
+    }
 
 def calc_yoni(boy_nak, girl_nak):
-    by = YONI.get(boy_nak, 'Unknown'); gy = YONI.get(girl_nak, 'Unknown')
-    score = 4 if by == gy else 2 if by != gy else 0
+    by = YONI.get(boy_nak, 'Ashwa')
+    gy = YONI.get(girl_nak, 'Ashwa')
+    score = YONI_MATRIX.get(by, {}).get(gy, 0)
     return {'score': score, 'max': 4, 'boy': by, 'girl': gy}
 
 def calc_graha_maitri(boy_rashi_lord, girl_rashi_lord):
-    bm = RASHI_MITRA.get(boy_rashi_lord, []); gm = RASHI_MITRA.get(girl_rashi_lord, [])
-    mutual = boy_rashi_lord in gm and girl_rashi_lord in bm
-    one_way = boy_rashi_lord in gm or girl_rashi_lord in bm
-    score = 5 if mutual else 4 if one_way else 0
+    score = GRAHA_MAITRI_MATRIX.get(boy_rashi_lord, {}).get(girl_rashi_lord, 0.0)
     return {'score': score, 'max': 5, 'boy_lord': boy_rashi_lord, 'girl_lord': girl_rashi_lord}
 
 def calc_gana(boy_nak, girl_nak):
-    bg = GANA.get(boy_nak, 'Manushya'); gg = GANA.get(girl_nak, 'Manushya')
-    if bg == gg: score = 6
-    elif (bg == 'Deva' and gg == 'Manushya') or (bg == 'Manushya' and gg == 'Deva'): score = 5
-    elif bg == 'Deva' and gg == 'Rakshasa': score = 1
-    else: score = 0
+    bg = GANA.get(boy_nak, 'Manushya')
+    gg = GANA.get(girl_nak, 'Manushya')
+    score = GANA_MATRIX.get(bg, {}).get(gg, 0)
     return {'score': score, 'max': 6, 'boy': bg, 'girl': gg}
 
 def calc_bhakoot(boy_rashi_idx, girl_rashi_idx):
@@ -122,7 +186,8 @@ def calc_bhakoot(boy_rashi_idx, girl_rashi_idx):
     return {'score': score, 'max': 7, 'boy_from_girl': diff1, 'detail': 'Favorable' if score == 7 else 'Bhakoot Dosha Present'}
 
 def calc_nadi(boy_nak, girl_nak):
-    bn = NADI.get(boy_nak, ''); gn = NADI.get(girl_nak, '')
+    bn = NADI.get(boy_nak, 'Aadi')
+    gn = NADI.get(girl_nak, 'Aadi')
     score = 0 if bn == gn else 8
     return {'score': score, 'max': 8, 'boy': bn, 'girl': gn, 'dosha': bn == gn}
 
