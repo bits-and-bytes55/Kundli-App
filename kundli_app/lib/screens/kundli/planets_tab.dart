@@ -38,10 +38,21 @@ class PlanetsTab extends StatelessWidget {
     );
   }
 
+  String _formatDegree(double degree) {
+    int d = degree.floor();
+    int m = ((degree - d) * 60).round();
+    if (m == 60) {
+      d += 1;
+      m = 0;
+    }
+    return "$d°${m.toString().padLeft(2, '0')}'";
+  }
+
   Widget _planetRow(String name, Map<String, dynamic> p) {
     bool retro = p['is_retrograde'] == true;
     bool exalt = p['is_exalted'] == true;
     bool debil = p['is_debilitated'] == true;
+    double degreeVal = (p['degree'] as num? ?? 0.0).toDouble();
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 1),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -54,12 +65,12 @@ class PlanetsTab extends StatelessWidget {
           Text(planetIcons[name] ?? '★', style: const TextStyle(fontSize: 14)),
           const SizedBox(width: 4),
           Flexible(child: Text(name + (retro ? 'ᴿ' : '') + (exalt ? '↑' : '') + (debil ? '↓' : ''),
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12,
-              color: exalt ? Colors.green : debil ? Colors.red : const Color(0xFF2C3E50)))),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13,
+              color: exalt ? Colors.green : debil ? Colors.red : Colors.black))),
         ])),
-        Expanded(flex: 3, child: Text(p['rashi'] ?? '-', style: const TextStyle(fontSize: 12, color: AppColors.primary))),
-        Expanded(flex: 3, child: Text('${p['nakshatra'] ?? '-'} P${p['pada'] ?? ''}', style: const TextStyle(fontSize: 11, color: Color(0xFF7F8C8D)))),
-        Expanded(flex: 2, child: Text('${(p['degree'] as num? ?? 0).toStringAsFixed(1)}°', style: const TextStyle(fontSize: 11))),
+        Expanded(flex: 3, child: Text(p['rashi'] ?? '-', style: const TextStyle(fontSize: 13, color: Colors.black, fontWeight: FontWeight.bold))),
+        Expanded(flex: 3, child: Text('${p['nakshatra'] ?? '-'} P${p['pada'] ?? ''}', style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w500))),
+        Expanded(flex: 2, child: Text(_formatDegree(degreeVal), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black))),
       ]),
     );
   }
@@ -85,7 +96,7 @@ class PlanetsTab extends StatelessWidget {
           child: Row(children: [
             Text(planetIcons[name] ?? '★', style: const TextStyle(fontSize: 20)),
             const SizedBox(width: 10),
-            Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
+            Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black)),
             if (retro) Container(margin: const EdgeInsets.only(left: 8), padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)),
               child: const Text('Retrograde', style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold))),
@@ -93,7 +104,7 @@ class PlanetsTab extends StatelessWidget {
               decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(4)),
               child: const Text('Exalted', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold))),
             const Spacer(),
-            Text('H${p['house'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14)),
+            Text('H${p['house'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 14)),
           ]),
         ),
         Padding(padding: const EdgeInsets.all(14), child: Column(children: [
@@ -111,8 +122,8 @@ class PlanetsTab extends StatelessWidget {
     return Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF7F8C8D), fontSize: 13)),
-        Text(value, style: const TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(label, style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w500)),
+        Text(value, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13)),
       ],
     ));
   }
