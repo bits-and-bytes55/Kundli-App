@@ -316,24 +316,24 @@ class _ChartTabState extends State<ChartTab> {
             // Rashi abbrev + house num on same row
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Text(rashiList[rashiI].substring(0, 2),
-                style: const TextStyle(fontSize: 8, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold)),
               Text(houseLabel,
-                style: const TextStyle(fontSize: 8, color: Color(0xFF8D6E63), fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontSize: 16, color: Color(0xFFD84315), fontWeight: FontWeight.bold)),
             ]),
             if (isLagna)
               Text('Lagna', style: TextStyle(
-                fontSize: 7, color: AppColors.primary.withOpacity(0.8),
-                fontWeight: FontWeight.w600)),
+                fontSize: 9, color: AppColors.primary.withOpacity(0.8),
+                fontWeight: FontWeight.bold)),
             // Planets wrap inside cell
             if (houses[rashiI].isNotEmpty)
               Expanded(
                 child: Wrap(
                   alignment: WrapAlignment.center,
-                  spacing: 1, runSpacing: 0,
+                  spacing: 2, runSpacing: 0,
                   children: houses[rashiI].map((p) => Text(
                     '${p.label}${p.retro ? 'ᴿ' : ''}${p.exalted ? '↑' : ''}',
                     style: TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.bold,
+                      fontSize: 11, fontWeight: FontWeight.bold,
                       color: p.isMoon ? Colors.blue.shade700 : const Color(0xFF1A237E)),
                   )).toList(),
                 ),
