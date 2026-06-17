@@ -121,8 +121,10 @@ class _ChartTabState extends State<ChartTab> {
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Icon(Icons.info_outline_rounded, size: 14, color: AppColors.primary),
                 const SizedBox(width: 6),
-                Text('KP System (Krishnamurti Paddhati) — Placidus Cusps',
-                  style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                Expanded(
+                  child: Text('KP System (Krishnamurti Paddhati) — Placidus Cusps',
+                    style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                ),
               ]),
             ),
 
