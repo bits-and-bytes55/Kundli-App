@@ -12,6 +12,7 @@ import 'kundli/shodashvarga_tab.dart';
 import 'kundli/graha_sthiti_tab.dart';
 import 'kundli/avakahada_tab.dart';
 import 'kundli/gochar_tab.dart';
+import 'kundli/kp_tab.dart';
 
 class KundliScreen extends StatefulWidget {
   final int initialTabIdx;
@@ -26,6 +27,7 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
 
   final List<Tab> _tabs = const [
     Tab(text: 'Chart'), Tab(text: 'Planets'), Tab(text: 'Graha Sthiti'),
+    Tab(text: 'KP System'),
     Tab(text: 'Avakahada'), Tab(text: 'Gochar'), Tab(text: 'Dasha'),
     Tab(text: 'Yogas'), Tab(text: 'Shodashvarga'), Tab(text: 'Lal Kitab'),
     Tab(text: 'Reports'),
@@ -97,6 +99,7 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
             ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets),
             PlanetsTab(planets: planets, ascendant: ascendant),
             GrahaSthitiTab(planets: planets, ascendant: ascendant),
+            KpTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
             AvakahadaTab(avakahada: avakahada, ascendant: ascendant),
             const GocharTab(),
             DashaTab(dasha: dasha),
@@ -126,13 +129,14 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
           _dItem('चार्ट (Chart)', Icons.grid_view_rounded, 0),
           _dItem('ग्रह (Planets)', Icons.stars_rounded, 1),
           _dItem('ग्रह स्थिति', Icons.table_rows_rounded, 2),
-          _dItem('अवकहड़ा चक्र', Icons.grid_on_rounded, 3),
-          _dItem('गोचर (Transit)', Icons.satellite_alt_rounded, 4),
-          _dItem('दशा (Dasha)', Icons.timelapse_rounded, 5),
-          _dItem('योग (Yogas)', Icons.auto_awesome_rounded, 6),
-          _dItem('षोडशवर्ग', Icons.layers_rounded, 7),
-          _dItem('लाल किताब', Icons.book_rounded, 8),
-          _dItem('रिपोर्ट (Reports)', Icons.analytics_rounded, 9),
+          _dItem('केपी सिस्टम (KP System)', Icons.auto_stories_rounded, 3),
+          _dItem('अवकहड़ा चक्र', Icons.grid_on_rounded, 4),
+          _dItem('गोचर (Transit)', Icons.satellite_alt_rounded, 5),
+          _dItem('दशा (Dasha)', Icons.timelapse_rounded, 6),
+          _dItem('योग (Yogas)', Icons.auto_awesome_rounded, 7),
+          _dItem('षोडशवर्ग', Icons.layers_rounded, 8),
+          _dItem('लाल किताब', Icons.book_rounded, 9),
+          _dItem('रिपोर्ट (Reports)', Icons.analytics_rounded, 10),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),

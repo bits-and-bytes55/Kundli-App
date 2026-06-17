@@ -102,7 +102,7 @@ def get_ascendant(jd, lat, lon, ayanamsa=swe.SIDM_LAHIRI, house_sys=b'W'):
     swe.set_sid_mode(ayanamsa)
     res = swe.houses_ex(jd, lat, lon, house_sys, swe.FLG_SIDEREAL)
     asc_lon = res[0][0]
-    cusps = list(res[0][1:])
+    cusps = list(res[0])
     ri = int(asc_lon / 30); ni = int(asc_lon / (360/27))
     np_ = int((asc_lon % (360/27)) / (360/108)) + 1
     return {
@@ -120,6 +120,55 @@ def get_house_positions(planets, ascendant):
         house = (p['rashi_num'] - 1 - lagna_idx) % 12 + 1
         houses[name] = house
     return houses
+
+def get_placidus_house_positions(planets, cusps):
+    houses = {}
+    for name, p in planets.items():
+        lon = p['longitude']
+        house = 1
+        for i in range(12):
+            start = cusps[i]
+            end = cusps[(i + 1) % 12]
+            if start < end:
+                if start <= lon < end:
+                    house = i + 1
+                    break
+            else:
+                if lon >= start or lon < end:
+                    house = i + 1
+                    break
+        houses[name] = house
+    return houses
+
+def get_kp_lords(lon):
+    rashi_idx = int(lon / 30) % 12
+    rashi_lord = RASHI_LORDS[rashi_idx]
+
+    nak_span = 360.0 / 27.0
+    nak_idx = int(lon / nak_span) % 27
+    nakshatra = NAKSHATRAS[nak_idx]
+    nakshatra_lord = NAKSHATRA_LORDS[nak_idx]
+
+    pos_in_nak = lon % nak_span
+    pos_in_nak_min = pos_in_nak * 60.0
+
+    lord_order = ['Ketu','Shukra','Surya','Chandra','Mangal','Rahu','Guru','Shani','Budha']
+    dasha_years = {'Ketu':7,'Shukra':20,'Surya':6,'Chandra':10,'Mangal':7,'Rahu':18,'Guru':16,'Shani':19,'Budha':17}
+    
+    start_lord_idx = lord_order.index(nakshatra_lord)
+
+    elapsed = 0.0
+    sub_lord = nakshatra_lord
+    for i in range(9):
+        current_lord = lord_order[(start_lord_idx + i) % 9]
+        span = 800.0 * dasha_years[current_lord] / 120.0
+        if elapsed <= pos_in_nak_min < (elapsed + span):
+            sub_lord = current_lord
+            break
+        elapsed += span
+
+    return rashi_lord, nakshatra, nakshatra_lord, sub_lord
+
 
 def get_navamsa(lon):
     """D9 Navamsa calculation"""
@@ -443,6 +492,41 @@ def calculate_kundli(date, time, lat, lon, name):
     # Add house number to each planet
     for pname in planets:
         planets[pname]['house'] = house_positions.get(pname, 0)
+        
+    # KP house positions and KP lords/cusp details
+    kp_house_positions = get_placidus_house_positions(kp_planets, kp_ascendant['cusps'])
+    for pname in kp_planets:
+        kp_planets[pname]['house'] = kp_house_positions.get(pname, 0)
+        rashi_lord, nakshatra, nakshatra_lord, sub_lord = get_kp_lords(kp_planets[pname]['longitude'])
+        kp_planets[pname]['rashi_lord'] = rashi_lord
+        kp_planets[pname]['nakshatra'] = nakshatra
+        kp_planets[pname]['nakshatra_lord'] = nakshatra_lord
+        kp_planets[pname]['sub_lord'] = sub_lord
+
+    # KP Ascendant itself specific lords
+    asc_rashi_lord, asc_nakshatra, asc_nakshatra_lord, asc_sub_lord = get_kp_lords(kp_ascendant['longitude'])
+    kp_ascendant['rashi_lord'] = asc_rashi_lord
+    kp_ascendant['nakshatra'] = asc_nakshatra
+    kp_ascendant['nakshatra_lord'] = asc_nakshatra_lord
+    kp_ascendant['sub_lord'] = asc_sub_lord
+
+    # KP Cusp details (12 houses)
+    kp_cusps_details = []
+    for i, cusp_lon in enumerate(kp_ascendant['cusps']):
+        rashi_lord, nakshatra, nakshatra_lord, sub_lord = get_kp_lords(cusp_lon)
+        ri = int(cusp_lon / 30) % 12
+        kp_cusps_details.append({
+            'house': i + 1,
+            'longitude': round(cusp_lon, 6),
+            'rashi': RASHIS[ri],
+            'degree': round(cusp_lon % 30, 4),
+            'rashi_lord': rashi_lord,
+            'nakshatra': nakshatra,
+            'nakshatra_lord': nakshatra_lord,
+            'sub_lord': sub_lord
+        })
+    kp_ascendant['cusp_details'] = kp_cusps_details
+
     
     return {
         'name': name, 'date': date, 'time': time, 'lat': lat, 'lon': lon,
