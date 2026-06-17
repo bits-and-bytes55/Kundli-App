@@ -74,7 +74,8 @@ class _ChartTabState extends State<ChartTab> {
           bool retro   = value['is_retrograde'] == true;
           bool exalted = value['is_exalted']    == true;
           bool isMoon  = key == 'Moon';
-          houses[hi].add(_PlanetLabel(lbl, retro, exalted, isMoon));
+          double deg   = (value['degree'] as num? ?? 0.0).toDouble();
+          houses[hi].add(_PlanetLabel(lbl, deg, retro, exalted, isMoon));
         }
       }
     });
@@ -238,26 +239,27 @@ class _ChartTabState extends State<ChartTab> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // House number (Sign/Rashi number) - Enlarged and styled clearly
+            // House number (Sign/Rashi number) - Enlarged and styled clearly in black
             Text('$houseRashiNum',
               style: const TextStyle(
                 fontSize: 16, fontWeight: FontWeight.bold,
-                color: Color(0xFFD84315))),
-            // Lagna label for house 1
+                color: Colors.black)),
+            // Lagna label with degree for house 1
             if (i == 0)
-              Text('Lagna', style: TextStyle(
-                fontSize: 9, color: AppColors.primary.withOpacity(0.8),
-                fontWeight: FontWeight.bold)),
-            // Planets
+              Text('La ${(widget.ascendant['degree'] as num? ?? 0).floor()}°',
+                style: const TextStyle(
+                  fontSize: 10, color: Colors.black,
+                  fontWeight: FontWeight.bold)),
+            // Planets with degrees
             if (houses[i].isNotEmpty)
               Wrap(
                 alignment: WrapAlignment.center,
                 spacing: 2, runSpacing: 0,
                 children: houses[i].map((p) => Text(
-                  '${p.label}${p.retro ? 'ᴿ' : ''}${p.exalted ? '↑' : ''}',
-                  style: TextStyle(
+                  '${p.label} ${p.degree.floor()}°${p.retro ? 'ᴿ' : ''}${p.exalted ? '↑' : ''}',
+                  style: const TextStyle(
                     fontSize: 11, fontWeight: FontWeight.bold,
-                    color: p.isMoon ? Colors.blue.shade700 : const Color(0xFF1A237E)),
+                    color: Colors.black),
                 )).toList(),
               ),
           ],
@@ -316,25 +318,26 @@ class _ChartTabState extends State<ChartTab> {
             // Rashi abbrev + house num on same row
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Text(rashiList[rashiI].substring(0, 2),
-                style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontSize: 10, color: Colors.black, fontWeight: FontWeight.bold)),
               Text(houseLabel,
-                style: const TextStyle(fontSize: 16, color: Color(0xFFD84315), fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
             ]),
             if (isLagna)
-              Text('Lagna', style: TextStyle(
-                fontSize: 9, color: AppColors.primary.withOpacity(0.8),
-                fontWeight: FontWeight.bold)),
-            // Planets wrap inside cell
+              Text('La ${(widget.ascendant['degree'] as num? ?? 0).floor()}°',
+                style: const TextStyle(
+                  fontSize: 9, color: Colors.black,
+                  fontWeight: FontWeight.bold)),
+            // Planets wrap inside cell with degrees
             if (houses[rashiI].isNotEmpty)
               Expanded(
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 2, runSpacing: 0,
                   children: houses[rashiI].map((p) => Text(
-                    '${p.label}${p.retro ? 'ᴿ' : ''}${p.exalted ? '↑' : ''}',
-                    style: TextStyle(
+                    '${p.label} ${p.degree.floor()}°${p.retro ? 'ᴿ' : ''}${p.exalted ? '↑' : ''}',
+                    style: const TextStyle(
                       fontSize: 11, fontWeight: FontWeight.bold,
-                      color: p.isMoon ? Colors.blue.shade700 : const Color(0xFF1A237E)),
+                      color: Colors.black),
                   )).toList(),
                 ),
               ),
@@ -436,8 +439,9 @@ class _ChartTabState extends State<ChartTab> {
 // ── Data class ─────────────────────────────────────────────────────
 class _PlanetLabel {
   final String label;
+  final double degree;
   final bool retro, exalted, isMoon;
-  const _PlanetLabel(this.label, this.retro, this.exalted, this.isMoon);
+  const _PlanetLabel(this.label, this.degree, this.retro, this.exalted, this.isMoon);
 }
 
 // ── Painters ───────────────────────────────────────────────────────
