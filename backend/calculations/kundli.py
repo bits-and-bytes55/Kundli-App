@@ -150,24 +150,101 @@ def get_kp_lords(lon):
     nakshatra_lord = NAKSHATRA_LORDS[nak_idx]
 
     pos_in_nak = lon % nak_span
-    pos_in_nak_min = pos_in_nak * 60.0
+    pos_in_nak_min = pos_in_nak * 60.0  # minutes within nakshatra
 
     lord_order = ['Ketu','Shukra','Surya','Chandra','Mangal','Rahu','Guru','Shani','Budha']
     dasha_years = {'Ketu':7,'Shukra':20,'Surya':6,'Chandra':10,'Mangal':7,'Rahu':18,'Guru':16,'Shani':19,'Budha':17}
-    
+    nak_total_min = 800.0  # minutes per nakshatra (13°20' = 800 arcmin)
+
     start_lord_idx = lord_order.index(nakshatra_lord)
 
     elapsed = 0.0
     sub_lord = nakshatra_lord
+    sub_lord_start = 0.0
+    sub_lord_span = 0.0
     for i in range(9):
         current_lord = lord_order[(start_lord_idx + i) % 9]
-        span = 800.0 * dasha_years[current_lord] / 120.0
+        span = nak_total_min * dasha_years[current_lord] / 120.0
         if elapsed <= pos_in_nak_min < (elapsed + span):
             sub_lord = current_lord
+            sub_lord_start = elapsed
+            sub_lord_span = span
             break
         elapsed += span
 
-    return rashi_lord, nakshatra, nakshatra_lord, sub_lord
+    # Sub-Sub Lord (SS): divide sub-lord span by 9 dasha proportions
+    sub_start_lord_idx = lord_order.index(sub_lord)
+    pos_in_sub = pos_in_nak_min - sub_lord_start
+    sub_sub_lord = sub_lord
+    sub_elapsed = 0.0
+    for i in range(9):
+        current_lord = lord_order[(sub_start_lord_idx + i) % 9]
+        span = sub_lord_span * dasha_years[current_lord] / 120.0
+        if sub_elapsed <= pos_in_sub < (sub_elapsed + span):
+            sub_sub_lord = current_lord
+            break
+        sub_elapsed += span
+
+    return rashi_lord, nakshatra, nakshatra_lord, sub_lord, sub_sub_lord
+
+
+def get_house_significators(kp_planets, kp_ascendant):
+    """
+    KP House Significators: for each house 1-12 collect planets that signify it.
+    A planet signifies a house if:
+      1. It occupies the house (direct significator)
+      2. It owns the house (rashi lord of that house cusp)
+      3. It is conjunct / aspecting the house lord (simplified: same sign as house lord)
+    Also include star lords (nakshatra lords) of occupants.
+    """
+    lord_order = ['Ketu','Shukra','Surya','Chandra','Mangal','Rahu','Guru','Shani','Budha']
+    planet_english = {
+        'Surya': 'Sun', 'Chandra': 'Moon', 'Mangal': 'Mars', 'Budha': 'Mercury',
+        'Guru': 'Jupiter', 'Shukra': 'Venus', 'Shani': 'Saturn',
+        'Rahu': 'Rahu', 'Ketu': 'Ketu'
+    }
+    planet_abbrev = {
+        'Sun': 'Su', 'Moon': 'Mo', 'Mars': 'Ma', 'Mercury': 'Me',
+        'Jupiter': 'Ju', 'Venus': 'Ve', 'Saturn': 'Sa', 'Rahu': 'Ra', 'Ketu': 'Ke'
+    }
+
+    cusp_details = kp_ascendant.get('cusp_details', [])
+    significators = {}
+
+    for house_num in range(1, 13):
+        house_idx = house_num - 1
+        cusp = cusp_details[house_idx] if house_idx < len(cusp_details) else {}
+        house_sign_lord = planet_english.get(cusp.get('rashi_lord', ''), cusp.get('rashi_lord', ''))
+
+        occupants = []      # Planets physically in this house
+        star_lord_sigs = [] # Planets whose star lord occupies this house
+
+        for pname, pdata in kp_planets.items():
+            if isinstance(pdata, dict):
+                if pdata.get('house') == house_num:
+                    occupants.append(pname)
+
+        # Planets whose nakshatra lord occupies this house
+        for pname, pdata in kp_planets.items():
+            if isinstance(pdata, dict):
+                nl = planet_english.get(pdata.get('nakshatra_lord', ''), pdata.get('nakshatra_lord', ''))
+                if nl in occupants and nl != pname:
+                    star_lord_sigs.append(pname)
+
+        significators[str(house_num)] = {
+            'house': house_num,
+            'sign': cusp.get('rashi', '-'),
+            'sign_lord': house_sign_lord,
+            'sign_lord_abbrev': planet_abbrev.get(house_sign_lord, house_sign_lord[:2]),
+            'occupants': occupants,
+            'occupant_abbrevs': [planet_abbrev.get(p, p[:2]) for p in occupants],
+            'star_lord_significators': star_lord_sigs,
+            'star_lord_sig_abbrevs': [planet_abbrev.get(p, p[:2]) for p in star_lord_sigs],
+            'nakshatra_lord': cusp.get('nakshatra_lord', '-'),
+            'sub_lord': cusp.get('sub_lord', '-'),
+        }
+
+    return significators
 
 
 def get_navamsa(lon):
@@ -497,23 +574,25 @@ def calculate_kundli(date, time, lat, lon, name):
     kp_house_positions = get_placidus_house_positions(kp_planets, kp_ascendant['cusps'])
     for pname in kp_planets:
         kp_planets[pname]['house'] = kp_house_positions.get(pname, 0)
-        rashi_lord, nakshatra, nakshatra_lord, sub_lord = get_kp_lords(kp_planets[pname]['longitude'])
+        rashi_lord, nakshatra, nakshatra_lord, sub_lord, sub_sub_lord = get_kp_lords(kp_planets[pname]['longitude'])
         kp_planets[pname]['rashi_lord'] = rashi_lord
         kp_planets[pname]['nakshatra'] = nakshatra
         kp_planets[pname]['nakshatra_lord'] = nakshatra_lord
         kp_planets[pname]['sub_lord'] = sub_lord
+        kp_planets[pname]['sub_sub_lord'] = sub_sub_lord
 
     # KP Ascendant itself specific lords
-    asc_rashi_lord, asc_nakshatra, asc_nakshatra_lord, asc_sub_lord = get_kp_lords(kp_ascendant['longitude'])
+    asc_rashi_lord, asc_nakshatra, asc_nakshatra_lord, asc_sub_lord, asc_sub_sub_lord = get_kp_lords(kp_ascendant['longitude'])
     kp_ascendant['rashi_lord'] = asc_rashi_lord
     kp_ascendant['nakshatra'] = asc_nakshatra
     kp_ascendant['nakshatra_lord'] = asc_nakshatra_lord
     kp_ascendant['sub_lord'] = asc_sub_lord
+    kp_ascendant['sub_sub_lord'] = asc_sub_sub_lord
 
     # KP Cusp details (12 houses)
     kp_cusps_details = []
     for i, cusp_lon in enumerate(kp_ascendant['cusps']):
-        rashi_lord, nakshatra, nakshatra_lord, sub_lord = get_kp_lords(cusp_lon)
+        rashi_lord, nakshatra, nakshatra_lord, sub_lord, sub_sub_lord = get_kp_lords(cusp_lon)
         ri = int(cusp_lon / 30) % 12
         kp_cusps_details.append({
             'house': i + 1,
@@ -523,9 +602,13 @@ def calculate_kundli(date, time, lat, lon, name):
             'rashi_lord': rashi_lord,
             'nakshatra': nakshatra,
             'nakshatra_lord': nakshatra_lord,
-            'sub_lord': sub_lord
+            'sub_lord': sub_lord,
+            'sub_sub_lord': sub_sub_lord
         })
     kp_ascendant['cusp_details'] = kp_cusps_details
+
+    # House Significators (KP)
+    house_significators = get_house_significators(kp_planets, kp_ascendant)
 
     
     return {
@@ -534,5 +617,6 @@ def calculate_kundli(date, time, lat, lon, name):
         'kp_planets': kp_planets, 'kp_ascendant': kp_ascendant,
         'navamsa': navamsa, 'shodashvarga': shodashvarga,
         'dasha': dasha, 'yogas': yogas, 'doshas': doshas,
-        'lal_kitab': lal_kitab, 'numerology': numerology, 'jd': jd
+        'lal_kitab': lal_kitab, 'numerology': numerology, 'jd': jd,
+        'house_significators': house_significators
     }

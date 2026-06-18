@@ -7,6 +7,9 @@ import 'kundli/yoga_tab.dart';
 import 'kundli/lal_kitab_tab.dart';
 import 'kundli/chart_tab.dart';
 import 'kundli/planets_tab.dart';
+import 'kundli/planets_sub_tab.dart';
+import 'kundli/cusps_tab.dart';
+import 'kundli/house_significators_tab.dart';
 import 'kundli/reports_tab.dart';
 import 'kundli/shodashvarga_tab.dart';
 import 'kundli/graha_sthiti_tab.dart';
@@ -26,10 +29,19 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final List<Tab> _tabs = const [
-    Tab(text: 'Chart'), Tab(text: 'Planets'), Tab(text: 'Graha Sthiti'),
+    Tab(text: 'Chart'),
+    Tab(text: 'Planets'),
+    Tab(text: 'Planets-Sub'),
+    Tab(text: 'Cusps'),
+    Tab(text: 'House Sig.'),
+    Tab(text: 'Graha Sthiti'),
     Tab(text: 'KP System'),
-    Tab(text: 'Avakahada'), Tab(text: 'Gochar'), Tab(text: 'Dasha'),
-    Tab(text: 'Yogas'), Tab(text: 'Shodashvarga'), Tab(text: 'Lal Kitab'),
+    Tab(text: 'Avakahada'),
+    Tab(text: 'Gochar'),
+    Tab(text: 'Dasha'),
+    Tab(text: 'Yogas'),
+    Tab(text: 'Shodashvarga'),
+    Tab(text: 'Lal Kitab'),
     Tab(text: 'Reports'),
   ];
 
@@ -50,17 +62,18 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
       return Scaffold(appBar: AppBar(title: const Text('Kundli')),
         body: const Center(child: Text('No data available')));
     }
-    final planets = data['planets'] as Map<String, dynamic>;
+    final planets   = data['planets']   as Map<String, dynamic>;
     final ascendant = data['ascendant'];
-    final kpPlanets = data['kp_planets'] as Map<String, dynamic>? ?? planets;
+    final kpPlanets   = data['kp_planets']   as Map<String, dynamic>? ?? planets;
     final kpAscendant = data['kp_ascendant'] ?? ascendant;
-    final dasha = data['dasha'] as List<dynamic>? ?? [];
-    final yogas = data['yogas'] as List<dynamic>? ?? [];
-    final doshas = data['doshas'] as Map<String, dynamic>? ?? {};
-    final numerology = data['numerology'] as Map<String, dynamic>? ?? {};
-    final lalKitab = data['lal_kitab'] as Map<String, dynamic>? ?? {};
+    final dasha     = data['dasha']     as List<dynamic>? ?? [];
+    final yogas     = data['yogas']     as List<dynamic>? ?? [];
+    final doshas    = data['doshas']    as Map<String, dynamic>? ?? {};
+    final numerology  = data['numerology']  as Map<String, dynamic>? ?? {};
+    final lalKitab    = data['lal_kitab']   as Map<String, dynamic>? ?? {};
     final shodashvarga = data['shodashvarga'] as Map<String, dynamic>? ?? {};
-    final avakahada = data['avakahada'] as Map<String, dynamic>? ?? {};
+    final avakahada   = data['avakahada']   as Map<String, dynamic>? ?? {};
+    final houseSignificators = data['house_significators'] as Map<String, dynamic>? ?? {};
 
     return Scaffold(
         backgroundColor: AppColors.scaffoldBg,
@@ -96,16 +109,33 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
           },
           color: AppColors.primary,
           child: TabBarView(controller: _tabController, children: [
+            // 0 - Chart
             ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets),
+            // 1 - Planets (AstroSage style)
             PlanetsTab(planets: planets, ascendant: ascendant),
+            // 2 - Planets-Sub (KP SL/NL/SB/SS)
+            PlanetsSubTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
+            // 3 - Cusps
+            CuspsTab(kpAscendant: kpAscendant),
+            // 4 - House Significators
+            HouseSignificatorsTab(houseSignificators: houseSignificators, kpPlanets: kpPlanets),
+            // 5 - Graha Sthiti
             GrahaSthitiTab(planets: planets, ascendant: ascendant),
+            // 6 - KP System
             KpTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
+            // 7 - Avakahada
             AvakahadaTab(avakahada: avakahada, ascendant: ascendant),
+            // 8 - Gochar
             const GocharTab(),
+            // 9 - Dasha
             DashaTab(dasha: dasha),
+            // 10 - Yogas
             YogaTab(yogas: yogas),
+            // 11 - Shodashvarga
             ShodashvargaTab(shodashvarga: shodashvarga),
+            // 12 - Lal Kitab
             LalKitabTab(lalKitab: lalKitab),
+            // 13 - Reports
             ReportsTab(doshas: doshas, numerology: numerology),
           ]),
         ),
@@ -128,15 +158,18 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
         Expanded(child: ListView(padding: EdgeInsets.zero, children: [
           _dItem('चार्ट (Chart)', Icons.grid_view_rounded, 0),
           _dItem('ग्रह (Planets)', Icons.stars_rounded, 1),
-          _dItem('ग्रह स्थिति', Icons.table_rows_rounded, 2),
-          _dItem('केपी सिस्टम (KP System)', Icons.auto_stories_rounded, 3),
-          _dItem('अवकहड़ा चक्र', Icons.grid_on_rounded, 4),
-          _dItem('गोचर (Transit)', Icons.satellite_alt_rounded, 5),
-          _dItem('दशा (Dasha)', Icons.timelapse_rounded, 6),
-          _dItem('योग (Yogas)', Icons.auto_awesome_rounded, 7),
-          _dItem('षोडशवर्ग', Icons.layers_rounded, 8),
-          _dItem('लाल किताब', Icons.book_rounded, 9),
-          _dItem('रिपोर्ट (Reports)', Icons.analytics_rounded, 10),
+          _dItem('Planets-Sub (KP)', Icons.table_chart_rounded, 2),
+          _dItem('Cusps (KP)', Icons.border_all_rounded, 3),
+          _dItem('House Significators', Icons.home_work_rounded, 4),
+          _dItem('ग्रह स्थिति', Icons.table_rows_rounded, 5),
+          _dItem('केपी सिस्टम (KP System)', Icons.auto_stories_rounded, 6),
+          _dItem('अवकहड़ा चक्र', Icons.grid_on_rounded, 7),
+          _dItem('गोचर (Transit)', Icons.satellite_alt_rounded, 8),
+          _dItem('दशा (Dasha)', Icons.timelapse_rounded, 9),
+          _dItem('योग (Yogas)', Icons.auto_awesome_rounded, 10),
+          _dItem('षोडशवर्ग', Icons.layers_rounded, 11),
+          _dItem('लाल किताब', Icons.book_rounded, 12),
+          _dItem('रिपोर्ट (Reports)', Icons.analytics_rounded, 13),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
