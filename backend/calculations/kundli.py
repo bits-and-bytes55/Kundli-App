@@ -519,8 +519,8 @@ def calculate_kundli(date, time, lat, lon, name):
     house_positions = get_house_positions(planets, ascendant)
     
     # KP System
-    kp_planets = get_planets(jd, swe.SIDM_KRISHNAMURTI)
-    kp_ascendant = get_ascendant(jd, lat, lon, swe.SIDM_KRISHNAMURTI, b'P')
+    kp_planets = get_planets(jd, swe.SIDM_LAHIRI)
+    kp_ascendant = get_ascendant(jd, lat, lon, swe.SIDM_LAHIRI, b'P')
     
     # Navamsa (D9)
     navamsa = {}
