@@ -323,13 +323,8 @@ class _ChartTabState extends State<ChartTab> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 2),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(rashiSymbols[rashiI],
-                style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold)),
-              const SizedBox(width: 2),
-              Text(houseLabel,
-                style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.bold)),
-            ]),
+            Text(houseLabel,
+              style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.bold)),
             if (isLagna)
               Text('La $lagnaDegStr',
                 style: TextStyle(

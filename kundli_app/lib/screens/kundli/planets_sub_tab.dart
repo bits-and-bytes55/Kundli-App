@@ -16,12 +16,14 @@ class PlanetsSubTab extends StatelessWidget {
   static const _planetOrder = [
     'Lagna', 'Sun', 'Moon', 'Mars', 'Mercury',
     'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu',
+    'Uranus', 'Neptune', 'Pluto',
   ];
 
   static const _abbrev = {
     'Lagna': 'Lag', 'Sun': 'Sun', 'Moon': 'Mon', 'Mars': 'Mar',
     'Mercury': 'Mer', 'Jupiter': 'Jup', 'Venus': 'Ven',
     'Saturn': 'Sat', 'Rahu': 'Rah', 'Ketu': 'Ket',
+    'Uranus': 'Ura', 'Neptune': 'Nep', 'Pluto': 'Plu',
   };
 
   static const _lordAbbrev = {

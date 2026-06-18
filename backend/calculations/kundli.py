@@ -57,7 +57,8 @@ def get_planets(jd, ayanamsa=swe.SIDM_LAHIRI):
     swe.set_sid_mode(ayanamsa)
     planet_ids = {
         'Sun':swe.SUN,'Moon':swe.MOON,'Mars':swe.MARS,'Mercury':swe.MERCURY,
-        'Jupiter':swe.JUPITER,'Venus':swe.VENUS,'Saturn':swe.SATURN,'Rahu':swe.MEAN_NODE
+        'Jupiter':swe.JUPITER,'Venus':swe.VENUS,'Saturn':swe.SATURN,'Rahu':swe.MEAN_NODE,
+        'Uranus':swe.URANUS,'Neptune':swe.NEPTUNE,'Pluto':swe.PLUTO
     }
     planets_data = {}
     for name, pid in planet_ids.items():

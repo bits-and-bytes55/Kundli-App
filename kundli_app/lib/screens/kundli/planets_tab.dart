@@ -183,7 +183,7 @@ class PlanetsTab extends StatelessWidget {
             style: const TextStyle(fontSize: 11, color: AppColors.textMedium),
           )),
           Expanded(flex: 3, child: Text(
-            isLagna ? '(1)' : house > 0 ? '($house)' : '-',
+            p['pada'] != null ? '(${p['pada']})' : '-',
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark),
           )),
