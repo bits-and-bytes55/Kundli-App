@@ -101,7 +101,7 @@ def get_planets(jd, ayanamsa=swe.SIDM_LAHIRI):
 def get_ascendant(jd, lat, lon, ayanamsa=swe.SIDM_LAHIRI, house_sys=b'W'):
     swe.set_sid_mode(ayanamsa)
     res = swe.houses_ex(jd, lat, lon, house_sys, swe.FLG_SIDEREAL)
-    asc_lon = res[0][0]
+    asc_lon = res[1][0]
     cusps = list(res[0])
     ri = int(asc_lon / 30); ni = int(asc_lon / (360/27))
     np_ = int((asc_lon % (360/27)) / (360/108)) + 1
