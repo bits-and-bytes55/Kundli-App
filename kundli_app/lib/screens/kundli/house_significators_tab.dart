@@ -68,7 +68,7 @@ class HouseSignificatorsTab extends StatelessWidget {
               Expanded(flex: 2, child: Text('Hs',   style: _hStyle)),
               Expanded(flex: 4, child: Text('Sign / Lord', style: _hStyle)),
               Expanded(flex: 4, child: Text('Occupants', style: _hStyle)),
-              Expanded(flex: 5, child: Text('Star Lord Sigs', style: _hStyle)),
+              Expanded(flex: 5, child: Text('Significators', style: _hStyle)),
             ]),
           ),
 
@@ -114,7 +114,7 @@ class HouseSignificatorsTab extends StatelessWidget {
   Widget _houseRow(int index, int hNum, Map<String, dynamic> data) {
     final bg = index.isOdd ? Colors.white : const Color(0xFFFFFBF5);
     final occupants = (data['occupant_abbrevs'] as List<dynamic>? ?? []).join(', ');
-    final starSigs = (data['star_lord_sig_abbrevs'] as List<dynamic>? ?? []).join(', ');
+    final sigsStr = (data['significators_abbrevs'] as List<dynamic>? ?? []).join(', ');
     final signLord = data['sign_lord_abbrev']?.toString() ?? '-';
     final sign = data['sign']?.toString() ?? '-';
     final color = _houseThemes[index % _houseThemes.length];
@@ -148,10 +148,10 @@ class HouseSignificatorsTab extends StatelessWidget {
           ),
         )),
         Expanded(flex: 5, child: Text(
-          starSigs.isEmpty ? '—' : starSigs,
+          sigsStr.isEmpty ? '—' : sigsStr,
           style: TextStyle(
             fontSize: 12, fontWeight: FontWeight.w600,
-            color: starSigs.isEmpty ? AppColors.textLight : const Color(0xFF2E7D32),
+            color: sigsStr.isEmpty ? AppColors.textLight : const Color(0xFF2E7D32),
           ),
         )),
       ]),
@@ -160,15 +160,13 @@ class HouseSignificatorsTab extends StatelessWidget {
 
   Widget _houseCard(int index, int hNum, Map<String, dynamic> data) {
     final color = _houseThemes[index % _houseThemes.length];
-    final occupants = data['occupants'] as List<dynamic>? ?? [];
-    final starSigs = data['star_lord_significators'] as List<dynamic>? ?? [];
     final sl = data['sign_lord']?.toString() ?? '-';
     final nl = data['nakshatra_lord']?.toString() ?? '-';
     final sb = data['sub_lord']?.toString() ?? '-';
     final houseName = _houseNames[index];
 
     // All significators combined
-    final allSigs = <String>{...occupants.map((e) => e.toString()), sl, ...starSigs.map((e) => e.toString())};
+    final allSigs = List<String>.from(data['significators'] ?? []);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -236,10 +234,10 @@ class HouseSignificatorsTab extends StatelessWidget {
             _detRow('Sign Lord (SL)', sl, Icons.star_rounded),
             _detRow('Nakshatra Lord (NL)', nl, Icons.brightness_2_rounded),
             _detRow('Sub Lord (SB)', sb, Icons.blur_circular_rounded),
-            if (occupants.isNotEmpty)
-              _detRow('Occupants', occupants.join(', '), Icons.people_rounded),
-            if (starSigs.isNotEmpty)
-              _detRow('Star Lord Sigs', starSigs.join(', '), Icons.auto_awesome_rounded),
+            _detRow('Level 1 (Grade A)', (data['grade_a'] as List<dynamic>? ?? []).join(', '), Icons.looks_one_rounded),
+            _detRow('Level 2 (Grade B)', (data['grade_b'] as List<dynamic>? ?? []).join(', '), Icons.looks_two_rounded),
+            _detRow('Level 3 (Grade C)', (data['grade_c'] as List<dynamic>? ?? []).join(', '), Icons.looks_3_rounded),
+            _detRow('Level 4 (Grade D)', (data['grade_d'] as List<dynamic>? ?? []).join(', '), Icons.looks_4_rounded),
           ]),
         ),
       ]),
