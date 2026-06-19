@@ -189,23 +189,43 @@ class HouseSignificatorsTab extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
             border: Border(bottom: BorderSide(color: color.withOpacity(0.2))),
           ),
-          child: Row(children: [
-            Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: color, shape: BoxShape.circle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text('$hNum', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('House $hNum', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+                        Text(houseName, style: const TextStyle(fontSize: 11, color: AppColors.textMedium)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              alignment: Alignment.center,
-              child: Text('$hNum', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('House $hNum', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
-              Text(houseName, style: const TextStyle(fontSize: 11, color: AppColors.textMedium)),
-            ])),
-            // Significators chips
-            Wrap(spacing: 4, children: allSigs.map((s) => _sigChip(s, color)).toList()),
-          ]),
+              if (allSigs.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: allSigs.map((s) => _sigChip(s, color)).toList(),
+                ),
+              ],
+            ],
+          ),
         ),
 
         // Details

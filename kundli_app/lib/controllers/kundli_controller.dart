@@ -7,7 +7,7 @@ class KundliController extends GetxController {
   var isLoading = false.obs;
   var kundliData = Rx<Map<String, dynamic>?>(null);
 
-  Future<void> fetchKundli(String name, String date, String time, double lat, double lon) async {
+  Future<void> fetchKundli(String name, String date, String time, double lat, double lon, {String? gender}) async {
     isLoading.value = true;
     try {
       var data = await apiService.generateKundli(
@@ -16,6 +16,7 @@ class KundliController extends GetxController {
         time: time,
         lat: lat,
         lon: lon,
+        gender: gender,
       );
       kundliData.value = data;
     } finally {

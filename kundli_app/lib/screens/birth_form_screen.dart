@@ -17,6 +17,7 @@ class BirthFormScreen extends StatelessWidget {
   final dateController = TextEditingController(text: "1995-03-15");
   final timeController = TextEditingController(text: "14:30");
   final placeController = TextEditingController(text: "New Delhi");
+  final selectedGender = "Male".obs;
 
   final kundliController = Get.put(KundliController());
 
@@ -159,6 +160,31 @@ class BirthFormScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
+
+              // Gender Field
+              const Text('Gender', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
+                child: Obx(() => DropdownButtonFormField<String>(
+                  value: selectedGender.value,
+                  dropdownColor: Colors.white,
+                  items: const [
+                    DropdownMenuItem(value: 'Male', child: Text('Male')),
+                    DropdownMenuItem(value: 'Female', child: Text('Female')),
+                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      selectedGender.value = val;
+                    }
+                  },
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 20),
               
               // Birth Place
               const Text('Birth Place', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
@@ -198,6 +224,7 @@ class BirthFormScreen extends StatelessWidget {
                           timeController.text,
                           lat,
                           lon,
+                          gender: selectedGender.value,
                         );
                         if (kundliController.kundliData.value != null) {
                           await _saveToHistory(
@@ -207,6 +234,7 @@ class BirthFormScreen extends StatelessWidget {
                             placeController.text,
                             lat,
                             lon,
+                            selectedGender.value,
                           );
                           Get.to(() => KundliScreen(initialTabIdx: initialTabIdx), transition: Transition.fadeIn);
                         } else {
@@ -224,7 +252,7 @@ class BirthFormScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _saveToHistory(String name, String date, String time, String place, double lat, double lon) async {
+  Future<void> _saveToHistory(String name, String date, String time, String place, double lat, double lon, String gender) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString('saved_charts');
@@ -244,6 +272,7 @@ class BirthFormScreen extends StatelessWidget {
           'place': place,
           'lat': lat,
           'lon': lon,
+          'gender': gender,
         });
         await prefs.setString('saved_charts', jsonEncode(list));
       }

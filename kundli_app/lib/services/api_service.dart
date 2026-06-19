@@ -49,6 +49,7 @@ class ApiService extends GetxService {
     required String time,
     required double lat,
     required double lon,
+    String? gender,
     String? partnerName,
     String? partnerDate,
     String? partnerTime,
@@ -62,6 +63,7 @@ class ApiService extends GetxService {
         'time': time,
         'lat': lat,
         'lon': lon,
+        'gender': gender ?? 'Male',
       };
       if (partnerName != null) reqData['partner_name'] = partnerName;
       if (partnerDate != null) reqData['partner_date'] = partnerDate;

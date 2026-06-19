@@ -190,62 +190,104 @@ def get_kp_lords(lon):
 
 
 def get_house_significators(kp_planets, kp_ascendant):
-    """
-    KP House Significators: for each house 1-12 collect planets that signify it.
-    A planet signifies a house if:
-      1. It occupies the house (direct significator)
-      2. It owns the house (rashi lord of that house cusp)
-      3. It is conjunct / aspecting the house lord (simplified: same sign as house lord)
-    Also include star lords (nakshatra lords) of occupants.
-    """
-    lord_order = ['Ketu','Shukra','Surya','Chandra','Mangal','Rahu','Guru','Shani','Budha']
-    planet_english = {
-        'Surya': 'Sun', 'Chandra': 'Moon', 'Mangal': 'Mars', 'Budha': 'Mercury',
-        'Guru': 'Jupiter', 'Shukra': 'Venus', 'Shani': 'Saturn',
-        'Rahu': 'Rahu', 'Ketu': 'Ketu'
-    }
     planet_abbrev = {
         'Sun': 'Su', 'Moon': 'Mo', 'Mars': 'Ma', 'Mercury': 'Me',
         'Jupiter': 'Ju', 'Venus': 'Ve', 'Saturn': 'Sa', 'Rahu': 'Ra', 'Ketu': 'Ke'
     }
-
+    planet_order = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu']
+    
+    # 1. House lords (cuspal lords)
     cusp_details = kp_ascendant.get('cusp_details', [])
+    house_lords = {}
+    for h in range(1, 13):
+        cusp = cusp_details[h-1] if h-1 < len(cusp_details) else {}
+        lord_name = cusp.get('rashi_lord', '')
+        lord_english = {
+            'Surya': 'Sun', 'Chandra': 'Moon', 'Mangal': 'Mars', 'Budha': 'Mercury',
+            'Guru': 'Jupiter', 'Shukra': 'Venus', 'Shani': 'Saturn',
+            'Rahu': 'Rahu', 'Ketu': 'Ketu', 'Sun': 'Sun', 'Moon': 'Moon',
+            'Mars': 'Mars', 'Mercury': 'Mercury', 'Jupiter': 'Jupiter',
+            'Venus': 'Venus', 'Saturn': 'Saturn'
+        }.get(lord_name, lord_name)
+        house_lords[h] = lord_english
+        
+    # 2. House occupants
+    house_occupants = {h: [] for h in range(1, 13)}
+    for p in planet_order:
+        pdata = kp_planets.get(p, {})
+        h = pdata.get('house')
+        if h and 1 <= h <= 12:
+            house_occupants[h].append(p)
+            
+    # 3. Nakshatra lords of all planets
+    planet_nak_lords = {}
+    for p in planet_order:
+        pdata = kp_planets.get(p, {})
+        nl = pdata.get('nakshatra_lord', '')
+        nl_english = {
+            'Surya': 'Sun', 'Chandra': 'Moon', 'Mangal': 'Mars', 'Budha': 'Mercury',
+            'Guru': 'Jupiter', 'Shukra': 'Venus', 'Shani': 'Saturn',
+            'Rahu': 'Rahu', 'Ketu': 'Ketu', 'Sun': 'Sun', 'Moon': 'Moon',
+            'Mars': 'Mars', 'Mercury': 'Mercury', 'Jupiter': 'Jupiter',
+            'Venus': 'Venus', 'Saturn': 'Saturn'
+        }.get(nl, nl)
+        planet_nak_lords[p] = nl_english
+        
+    # Compute significators for each house
     significators = {}
-
-    for house_num in range(1, 13):
-        house_idx = house_num - 1
-        cusp = cusp_details[house_idx] if house_idx < len(cusp_details) else {}
-        house_sign_lord = planet_english.get(cusp.get('rashi_lord', ''), cusp.get('rashi_lord', ''))
-
-        occupants = []      # Planets physically in this house
-        star_lord_sigs = [] # Planets whose star lord occupies this house
-
-        for pname, pdata in kp_planets.items():
-            if isinstance(pdata, dict):
-                if pdata.get('house') == house_num:
-                    occupants.append(pname)
-
-        # Planets whose nakshatra lord occupies this house
-        for pname, pdata in kp_planets.items():
-            if isinstance(pdata, dict):
-                nl = planet_english.get(pdata.get('nakshatra_lord', ''), pdata.get('nakshatra_lord', ''))
-                if nl in occupants and nl != pname:
-                    star_lord_sigs.append(pname)
-
-        significators[str(house_num)] = {
-            'house': house_num,
+    for h in range(1, 13):
+        # Grade B: Occupants of house H
+        grade_b = house_occupants[h]
+        
+        # Grade A: Planets in the nakshatra of occupants of house H
+        grade_a = [p for p in planet_order if planet_nak_lords.get(p) in grade_b]
+        
+        # Grade D: Lord of house H
+        lord = house_lords.get(h)
+        grade_d = [lord] if lord else []
+        
+        # Grade C: Planets in the nakshatra of lord of house H
+        grade_c = [p for p in planet_order if lord and planet_nak_lords.get(p) == lord]
+        
+        # Combine all significators in standard planet order
+        combined_set = set(grade_a + grade_b + grade_c + grade_d)
+        sorted_sigs = [p for p in planet_order if p in combined_set]
+        abbrevs = [planet_abbrev[p] for p in sorted_sigs]
+        
+        cusp = cusp_details[h-1] if h-1 < len(cusp_details) else {}
+        
+        significators[str(h)] = {
+            'house': h,
             'sign': cusp.get('rashi', '-'),
-            'sign_lord': house_sign_lord,
-            'sign_lord_abbrev': planet_abbrev.get(house_sign_lord, house_sign_lord[:2]),
-            'occupants': occupants,
-            'occupant_abbrevs': [planet_abbrev.get(p, p[:2]) for p in occupants],
-            'star_lord_significators': star_lord_sigs,
-            'star_lord_sig_abbrevs': [planet_abbrev.get(p, p[:2]) for p in star_lord_sigs],
+            'sign_lord': house_lords.get(h, '-'),
+            'sign_lord_abbrev': planet_abbrev.get(house_lords.get(h, ''), '-'),
+            'occupants': grade_b,
+            'occupant_abbrevs': [planet_abbrev[p] for p in grade_b],
+            'star_lord_significators': grade_a,
+            'star_lord_sig_abbrevs': [planet_abbrev[p] for p in grade_a],
             'nakshatra_lord': cusp.get('nakshatra_lord', '-'),
             'sub_lord': cusp.get('sub_lord', '-'),
+            'significators': sorted_sigs,
+            'significators_abbrevs': abbrevs,
+            'significators_str': ' '.join(abbrevs)
         }
+        
+    # Also calculate planet signification (transpose)
+    planet_significations = {}
+    for p in planet_order:
+        signified_houses = []
+        for h in range(1, 13):
+            if p in significators[str(h)]['significators']:
+                signified_houses.append(h)
+        planet_significations[p] = {
+            'planet': p,
+            'abbrev': planet_abbrev[p],
+            'houses': signified_houses,
+            'houses_str': ' '.join(str(h) for h in signified_houses)
+        }
+        
+    return significators, planet_significations
 
-    return significators
 
 
 def get_navamsa(lon):
@@ -510,7 +552,340 @@ def get_numerology(date_str):
         'bhagyank_report': MOOLANK_DESC.get(bhagyank % 9 or 9, '')
     }
 
-def calculate_kundli(date, time, lat, lon, name):
+ASHTAKVARGA_RULES = {
+    'Sun': {
+        'Sun': [1, 2, 4, 7, 8, 9, 10, 11],
+        'Moon': [3, 6, 10, 11],
+        'Mars': [1, 2, 4, 7, 8, 9, 10, 11],
+        'Mercury': [3, 5, 6, 9, 10, 11, 12],
+        'Jupiter': [5, 6, 9, 11],
+        'Venus': [6, 7, 12],
+        'Saturn': [1, 2, 4, 7, 8, 9, 10, 11],
+        'Lagna': [3, 4, 6, 10, 11, 12]
+    },
+    'Moon': {
+        'Sun': [3, 6, 7, 8, 10, 11],
+        'Moon': [1, 3, 6, 7, 10, 11],
+        'Mars': [2, 3, 5, 6, 9, 10, 11],
+        'Mercury': [1, 3, 4, 5, 7, 8, 10, 11],
+        'Jupiter': [1, 4, 7, 8, 10, 11, 12],
+        'Venus': [3, 4, 5, 7, 9, 10, 11],
+        'Saturn': [3, 5, 6, 11],
+        'Lagna': [3, 6, 10, 11]
+    },
+    'Mars': {
+        'Sun': [3, 5, 6, 10, 11],
+        'Moon': [3, 6, 11],
+        'Mars': [1, 2, 4, 7, 8, 10, 11],
+        'Mercury': [3, 5, 6, 11],
+        'Jupiter': [6, 10, 11, 12],
+        'Venus': [6, 8, 11, 12],
+        'Saturn': [1, 4, 7, 8, 9, 10, 11],
+        'Lagna': [1, 3, 6, 10, 11]
+    },
+    'Mercury': {
+        'Sun': [5, 6, 9, 11, 12],
+        'Moon': [2, 4, 6, 8, 10, 11],
+        'Mars': [1, 2, 4, 7, 8, 9, 10, 11],
+        'Mercury': [1, 3, 5, 6, 9, 10, 11, 12],
+        'Jupiter': [6, 8, 11, 12],
+        'Venus': [1, 2, 3, 4, 5, 8, 9, 11],
+        'Saturn': [1, 2, 4, 7, 8, 9, 10, 11],
+        'Lagna': [1, 2, 4, 6, 8, 10, 11]
+    },
+    'Jupiter': {
+        'Sun': [1, 2, 3, 4, 7, 8, 9, 10, 11],
+        'Moon': [2, 5, 7, 9, 11],
+        'Mars': [1, 2, 4, 7, 8, 10, 11],
+        'Mercury': [1, 2, 4, 5, 6, 9, 10, 11],
+        'Jupiter': [1, 2, 3, 4, 7, 8, 10, 11],
+        'Venus': [2, 5, 6, 9, 10, 11],
+        'Saturn': [3, 5, 6, 12],
+        'Lagna': [1, 2, 4, 5, 6, 7, 9, 10, 11]
+    },
+    'Venus': {
+        'Sun': [8, 11, 12],
+        'Moon': [1, 2, 3, 4, 5, 8, 9, 11, 12],
+        'Mars': [3, 5, 6, 9, 11, 12],
+        'Mercury': [3, 5, 6, 9, 11],
+        'Jupiter': [5, 8, 9, 10, 11],
+        'Venus': [1, 2, 3, 4, 5, 8, 9, 10, 11],
+        'Saturn': [3, 4, 5, 8, 9, 10, 11],
+        'Lagna': [1, 2, 3, 4, 5, 8, 9, 11]
+    },
+    'Saturn': {
+        'Sun': [1, 2, 4, 7, 8, 10, 11],
+        'Moon': [3, 6, 11],
+        'Mars': [3, 5, 6, 10, 11, 12],
+        'Mercury': [6, 8, 9, 10, 11, 12],
+        'Jupiter': [5, 6, 11, 12],
+        'Venus': [6, 11, 12],
+        'Saturn': [3, 5, 6, 11],
+        'Lagna': [1, 3, 4, 6, 10, 11]
+    }
+}
+
+def calculate_ashtakvarga(planets, ascendant):
+    positions = {
+        'Sun': planets['Sun']['rashi_num'],
+        'Moon': planets['Moon']['rashi_num'],
+        'Mars': planets['Mars']['rashi_num'],
+        'Mercury': planets['Mercury']['rashi_num'],
+        'Jupiter': planets['Jupiter']['rashi_num'],
+        'Venus': planets['Venus']['rashi_num'],
+        'Saturn': planets['Saturn']['rashi_num'],
+        'Lagna': ascendant['rashi_num']
+    }
+    
+    target_planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn']
+    contributors = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Lagna']
+    
+    contrib_abbrev = {
+        'Sun': 'SU', 'Moon': 'MO', 'Mars': 'MA', 'Mercury': 'ME',
+        'Jupiter': 'JU', 'Venus': 'VE', 'Saturn': 'SA', 'Lagna': 'AS'
+    }
+    
+    pat_tables = {}
+    bav_tables = {}
+    sav = {str(rashi): 0 for rashi in range(1, 13)}
+    
+    for tp in target_planets:
+        rules = ASHTAKVARGA_RULES[tp]
+        grid = []
+        bav = {str(rashi): 0 for rashi in range(1, 13)}
+        
+        for c in contributors:
+            natal_rashi = positions[c]
+            row_points = {str(rashi): 0 for rashi in range(1, 13)}
+            offsets = rules[c]
+            for offset in offsets:
+                abs_rashi = ((natal_rashi - 1) + (offset - 1)) % 12 + 1
+                row_points[str(abs_rashi)] = 1
+                bav[str(abs_rashi)] += 1
+                
+            row_points['TO'] = len(offsets)
+            row_points['contributor'] = contrib_abbrev[c]
+            grid.append(row_points)
+            
+        to_row = {'contributor': 'TO'}
+        total_bav_sum = 0
+        for rashi in range(1, 13):
+            val = bav[str(rashi)]
+            to_row[str(rashi)] = val
+            total_bav_sum += val
+            sav[str(rashi)] += val
+            
+        to_row['TO'] = total_bav_sum
+        grid.append(to_row)
+        
+        pat_tables[tp] = grid
+        bav_tables[tp] = bav
+        
+    sav_rows = []
+    for rashi in range(1, 13):
+        r_str = str(rashi)
+        row = {
+            'RN': rashi,
+            'Su': bav_tables['Sun'][r_str],
+            'Mo': bav_tables['Moon'][r_str],
+            'Ma': bav_tables['Mars'][r_str],
+            'Me': bav_tables['Mercury'][r_str],
+            'Ju': bav_tables['Jupiter'][r_str],
+            'Ve': bav_tables['Venus'][r_str],
+            'Sa': bav_tables['Saturn'][r_str],
+            'Tot': sav[r_str]
+        }
+        sav_rows.append(row)
+        
+    return {
+        'sarvashtakavarga': sav_rows,
+        'prasthara_ashtakavarga': pat_tables
+    }
+
+def calculate_shad_bala(planets, ascendant):
+    sun_house = planets['Sun']['house']
+    is_day_birth = sun_house in [7, 8, 9, 10, 11, 12]
+    planet_list = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn']
+    
+    exaltation = {'Sun': 10, 'Moon': 33, 'Mars': 298, 'Mercury': 165, 'Jupiter': 95, 'Venus': 357, 'Saturn': 20}
+    
+    own_signs = {
+        'Sun': ['Singh'], 'Moon': ['Kark'], 'Mars': ['Mesh', 'Vrischik'],
+        'Mercury': ['Mithun', 'Kanya'], 'Jupiter': ['Dhanu', 'Meen'],
+        'Venus': ['Vrishabh', 'Tula'], 'Saturn': ['Makar', 'Kumbh']
+    }
+    friendly_signs = {
+        'Sun': ['Mesh', 'Vrishabh', 'Dhanu', 'Meen'],
+        'Moon': ['Mesh', 'Vrishabh', 'Mithun', 'Kanya', 'Tula'],
+        'Mars': ['Singh', 'Dhanu', 'Meen'],
+        'Mercury': ['Vrishabh', 'Tula', 'Singh'],
+        'Jupiter': ['Mesh', 'Kark', 'Vrischik'],
+        'Venus': ['Mithun', 'Kanya', 'Makar', 'Kumbh'],
+        'Saturn': ['Vrishabh', 'Mithun', 'Kanya', 'Tula']
+    }
+    
+    natural_strength = {
+        'Sun': 60, 'Moon': 51.43, 'Venus': 42.86, 'Jupiter': 34.29,
+        'Mercury': 25.71, 'Mars': 17.14, 'Saturn': 8.57
+    }
+    
+    shad_bala_scores = {}
+    
+    for p in planet_list:
+        p_data = planets[p]
+        lon = p_data['longitude']
+        rashi = p_data['rashi']
+        house = p_data['house']
+        is_retro = p_data.get('is_retrograde', False)
+        
+        # 1. Sthana Bala
+        ex_lon = exaltation[p]
+        dist_ex = abs(lon - ex_lon)
+        if dist_ex > 180:
+            dist_ex = 360 - dist_ex
+        sth_ex = 60 * (1 - dist_ex / 180.0)
+        
+        sth_rashi = 7.5
+        if rashi in own_signs[p]:
+            sth_rashi = 30.0
+        elif rashi in friendly_signs[p]:
+            sth_rashi = 15.0
+        elif p == 'Sun' and rashi == 'Tula':
+            sth_rashi = 0.0
+        elif p == 'Moon' and rashi == 'Vrischik':
+            sth_rashi = 0.0
+        elif p == 'Mars' and rashi == 'Kark':
+            sth_rashi = 0.0
+        elif p == 'Mercury' and rashi == 'Meen':
+            sth_rashi = 0.0
+        elif p == 'Jupiter' and rashi == 'Makar':
+            sth_rashi = 0.0
+        elif p == 'Venus' and rashi == 'Kanya':
+            sth_rashi = 0.0
+        elif p == 'Saturn' and rashi == 'Mesh':
+            sth_rashi = 0.0
+            
+        sthana_bala = sth_ex + sth_rashi
+        
+        # 2. Dik Bala
+        if p in ['Sun', 'Mars']:
+            dist = abs(house - 10)
+            if dist > 6: dist = 12 - dist
+            dik_bala = 60 * (1 - dist / 6.0)
+        elif p in ['Moon', 'Venus']:
+            dist = abs(house - 4)
+            if dist > 6: dist = 12 - dist
+            dik_bala = 60 * (1 - dist / 6.0)
+        elif p in ['Mercury', 'Jupiter']:
+            dist = abs(house - 1)
+            if dist > 6: dist = 12 - dist
+            dik_bala = 60 * (1 - dist / 6.0)
+        else:
+            dist = abs(house - 7)
+            if dist > 6: dist = 12 - dist
+            dik_bala = 60 * (1 - dist / 6.0)
+            
+        # 3. Kala Bala
+        kala_bala = 0
+        if is_day_birth:
+            if p in ['Sun', 'Jupiter', 'Saturn']:
+                kala_bala = 30
+        else:
+            if p in ['Moon', 'Mars', 'Venus']:
+                kala_bala = 30
+        if p == 'Mercury':
+            kala_bala = 30
+            
+        # 4. Cheshta Bala
+        cheshta_bala = 50 if is_retro else 10
+        
+        # 5. Naisargika Bala
+        naisargika_bala = natural_strength[p]
+        
+        total_virupas = sthana_bala + dik_bala + kala_bala + cheshta_bala + naisargika_bala
+        total_rupas = total_virupas / 60.0
+        
+        shad_bala_scores[p] = round(total_rupas, 2)
+        
+    sorted_planets = sorted(shad_bala_scores.items(), key=lambda x: x[1], reverse=True)
+    ranks = {}
+    for rank, (p, score) in enumerate(sorted_planets, 1):
+        ranks[p] = rank
+        
+    p_abbrev = {
+        'Sun': 'SU', 'Moon': 'MO', 'Mars': 'MA', 'Mercury': 'ME',
+        'Jupiter': 'JU', 'Venus': 'VE', 'Saturn': 'SA'
+    }
+    
+    shad_bala_result = []
+    for p in planet_list:
+        score = shad_bala_scores[p]
+        rank = ranks[p]
+        percentage = min(100.0, max(20.0, (score - 1.5) / 6.0 * 100.0))
+        shad_bala_result.append({
+            'planet': p_abbrev[p],
+            'name': p,
+            'score': score,
+            'rank': rank,
+            'percentage': round(percentage, 1)
+        })
+        
+    # Bhav Bala
+    bhav_bala_scores = {}
+    for house in range(1, 13):
+        rashi_num = (ascendant['rashi_num'] - 1 + house - 1) % 12 + 1
+        lord_name = RASHI_LORDS[rashi_num - 1]
+        lord_english = {
+            'Mangal': 'Mars', 'Shukra': 'Venus', 'Budha': 'Mercury',
+            'Chandra': 'Moon', 'Surya': 'Sun', 'Guru': 'Jupiter', 'Shani': 'Saturn'
+        }[lord_name]
+        
+        lord_strength = shad_bala_scores[lord_english]
+        score = lord_strength * 0.6
+        
+        lord_house = planets[lord_english]['house']
+        if lord_house == house:
+            score += 2.0
+            
+        for p in planet_list:
+            if planets[p]['house'] == house:
+                if p in ['Jupiter', 'Venus', 'Mercury', 'Moon']:
+                    score += 1.5
+                else:
+                    score -= 0.8
+                    
+        if house in [1, 4, 7, 10]:
+            score += 1.0
+        elif house in [5, 9]:
+            score += 0.8
+        elif house in [6, 8, 12]:
+            score -= 0.5
+            
+        bhav_bala_scores[house] = round(max(1.0, score), 2)
+        
+    sorted_houses = sorted(bhav_bala_scores.items(), key=lambda x: x[1], reverse=True)
+    house_ranks = {}
+    for rank, (h, score) in enumerate(sorted_houses, 1):
+        house_ranks[h] = rank
+        
+    bhav_bala_result = []
+    for house in range(1, 13):
+        score = bhav_bala_scores[house]
+        rank = house_ranks[house]
+        percentage = min(100.0, max(20.0, (score - 1.0) / 7.0 * 100.0))
+        bhav_bala_result.append({
+            'house': house,
+            'score': score,
+            'rank': rank,
+            'percentage': round(percentage, 1)
+        })
+        
+    return {
+        'shad_bala': shad_bala_result,
+        'bhav_bala': bhav_bala_result
+    }
+
+def calculate_kundli(date, time, lat, lon, name, gender='Male'):
     jd = get_julian_day(date, time, lat, lon)
     
     # Lahiri (Traditional)
@@ -609,15 +984,24 @@ def calculate_kundli(date, time, lat, lon, name):
     kp_ascendant['cusp_details'] = kp_cusps_details
 
     # House Significators (KP)
-    house_significators = get_house_significators(kp_planets, kp_ascendant)
-
+    house_significators, planet_significators = get_house_significators(kp_planets, kp_ascendant)
     
+    # Ashtakvarga and Prastharashtakvarga
+    ashtakvarga = calculate_ashtakvarga(planets, ascendant)
+    
+    # Shad Bala and Bhav Bala
+    shad_bala_data = calculate_shad_bala(planets, ascendant)
+
     return {
-        'name': name, 'date': date, 'time': time, 'lat': lat, 'lon': lon,
+        'name': name, 'date': date, 'time': time, 'lat': lat, 'lon': lon, 'gender': gender,
         'planets': planets, 'ascendant': ascendant, 'house_positions': house_positions,
         'kp_planets': kp_planets, 'kp_ascendant': kp_ascendant,
         'navamsa': navamsa, 'shodashvarga': shodashvarga,
         'dasha': dasha, 'yogas': yogas, 'doshas': doshas,
         'lal_kitab': lal_kitab, 'numerology': numerology, 'jd': jd,
-        'house_significators': house_significators
+        'house_significators': house_significators,
+        'planet_significators': planet_significators,
+        'ashtakvarga': ashtakvarga['sarvashtakavarga'],
+        'prasthara_ashtakavarga': ashtakvarga['prasthara_ashtakavarga'],
+        'shad_bala': shad_bala_data
     }

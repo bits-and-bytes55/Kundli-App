@@ -15,6 +15,7 @@ class KundliRequest(BaseModel):
     time: str
     lat: float
     lon: float
+    gender: Optional[str] = 'Male'
     # Optional partner details for single-hit Milan matching
     partner_name: Optional[str] = None
     partner_date: Optional[str] = None
@@ -26,7 +27,7 @@ class KundliRequest(BaseModel):
 def generate(req: KundliRequest):
     try:
         # Calculate standard Kundli data
-        data = calculate_kundli(req.date, req.time, req.lat, req.lon, req.name)
+        data = calculate_kundli(req.date, req.time, req.lat, req.lon, req.name, gender=req.gender)
         
         # Inject Avakahada Chakra
         data['avakahada'] = get_avakahada_chakra(data['planets'], data['ascendant'], data['jd'])
@@ -55,7 +56,7 @@ def generate(req: KundliRequest):
 @router.post("/kundli/dasha")
 def dasha_only(req: KundliRequest):
     try:
-        data = calculate_kundli(req.date, req.time, req.lat, req.lon, req.name)
+        data = calculate_kundli(req.date, req.time, req.lat, req.lon, req.name, gender=req.gender)
         return {"success": True, "data": {"dasha": data["dasha"], "name": data["name"]}}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -74,7 +75,7 @@ def gochar():
 def graha_sthiti(req: KundliRequest):
     """Detailed Graha Sthiti table with full planet positions."""
     try:
-        data = calculate_kundli(req.date, req.time, req.lat, req.lon, req.name)
+        data = calculate_kundli(req.date, req.time, req.lat, req.lon, req.name, gender=req.gender)
         planets = data['planets']
         ascendant = data['ascendant']
         # Build structured table
