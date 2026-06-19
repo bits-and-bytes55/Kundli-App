@@ -1247,7 +1247,7 @@ def calculate_kundli(date, time, lat, lon, name, gender='Male'):
         h1 = house_positions.get(p1, 1)
         for p2 in planets_list:
             if p1 == p2:
-                temporal_friends[p1][p2] = '—'
+                temporal_friends[p1][p2] = '-'
                 continue
             h2 = house_positions.get(p2, 1)
             diff = (h2 - h1) % 12
@@ -1261,7 +1261,7 @@ def calculate_kundli(date, time, lat, lon, name, gender='Male'):
         permanent_formatted[p1] = {}
         for p2 in planets_list:
             if p1 == p2:
-                permanent_formatted[p1][p2] = '—'
+                permanent_formatted[p1][p2] = '-'
             else:
                 permanent_formatted[p1][p2] = PERMANENT_FRIENDS[p1].get(p2, 'N')
 
