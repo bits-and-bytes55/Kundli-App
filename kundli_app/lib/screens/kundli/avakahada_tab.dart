@@ -22,11 +22,7 @@ class AvakahadaTab extends StatefulWidget {
 class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const Color _orange      = AppColors.primary;
-  static const Color _orangeLight = AppColors.accentLight;
-  static const Color _orangeBorder= AppColors.border;
-  static const Color _textDark    = AppColors.textDark;
-  static const Color _textGrey    = AppColors.textLight;
+  static const Color _orangeBorder = AppColors.border;
 
   @override
   void initState() {
@@ -51,11 +47,11 @@ class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderSt
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.refresh_rounded, size: 52, color: AppColors.primary),
+                Icon(Icons.refresh_rounded, size: 52, color: Colors.black),
                 SizedBox(height: 16),
                 Text(
                   'Loading Avakahada details...',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -73,10 +69,10 @@ class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderSt
           color: Colors.white,
           child: TabBar(
             controller: _tabController,
-            indicatorColor: _orange,
-            labelColor: _orange,
-            unselectedLabelColor: _textGrey,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            indicatorColor: AppColors.primary,
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.black54,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
             tabs: const [
               Tab(text: 'Avakahada'),
               Tab(text: 'Ghatak'),
@@ -110,13 +106,13 @@ class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderSt
           _row('Nadi', widget.avakahada['nadi'] ?? '-'),
         ]),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         _sectionLabel('Dasha Balance'),
         _tableCard([
           _row('Balance Of Dasha', widget.avakahada['dasha_bhogya'] ?? '-'),
         ]),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         _sectionLabel('Lagna & Rasi Details'),
         _tableCard([
           _row('Lagna', widget.avakahada['lagna'] ?? '-'),
@@ -127,7 +123,7 @@ class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderSt
           _row('Nakshatra Lord', widget.avakahada['nakshatra_swami'] ?? '-'),
         ]),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         _sectionLabel('Astronomical Metrics'),
         _tableCard([
           _row('Julian Day', '${widget.avakahada['julian_day'] ?? '-'}'),
@@ -188,13 +184,13 @@ class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderSt
 
   Widget _buildHeader(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 4),
+      padding: const EdgeInsets.only(left: 4, bottom: 8, top: 4),
       child: Row(
         children: [
-          Icon(icon, color: _orange, size: 18),
+          Icon(icon, color: Colors.black, size: 20),
           const SizedBox(width: 8),
           Text(title, style: const TextStyle(
-            fontSize: 14, fontWeight: FontWeight.bold, color: _orange, letterSpacing: 0.3)),
+            fontSize: 16, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: 0.3)),
         ],
       ),
     );
@@ -202,9 +198,9 @@ class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderSt
 
   Widget _sectionLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6, left: 4),
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Text(text, style: const TextStyle(
-        fontSize: 13, fontWeight: FontWeight.bold, color: _orange, letterSpacing: 0.3)),
+        fontSize: 15, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: 0.3)),
     );
   }
 
@@ -214,7 +210,7 @@ class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderSt
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _orangeBorder.withOpacity(0.5)),
-        boxShadow: [BoxShadow(color: _orange.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(children: rows),
     );
@@ -227,11 +223,11 @@ class _AvakahadaTabState extends State<AvakahadaTab> with SingleTickerProviderSt
         border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
       ),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: _textGrey, fontWeight: FontWeight.w500)),
+        Text(label, style: const TextStyle(fontSize: 13, color: Colors.black, fontWeight: FontWeight.bold)),
         Flexible(
           child: Text(value,
             textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 13, color: _textDark, fontWeight: FontWeight.w700)),
+            style: const TextStyle(fontSize: 13, color: Colors.black, fontWeight: FontWeight.w900)),
         ),
       ]),
     );

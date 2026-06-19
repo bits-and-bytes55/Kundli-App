@@ -14,9 +14,9 @@ class BirthFormScreen extends StatelessWidget {
 
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
-  final dateController = TextEditingController(text: "1995-03-15");
-  final timeController = TextEditingController(text: "14:30");
-  final placeController = TextEditingController(text: "New Delhi");
+  final dateController = TextEditingController();
+  final timeController = TextEditingController();
+  final placeController = TextEditingController();
   final selectedGender = "Male".obs;
 
   final kundliController = Get.put(KundliController());
@@ -34,11 +34,11 @@ class BirthFormScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Generate Kundli'),
+          title: const Text('Generate Kundli', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
             onPressed: () => Get.back(),
           ),
         ),
@@ -51,22 +51,23 @@ class BirthFormScreen extends StatelessWidget {
             children: [
               const Text(
                 'Enter Birth Details',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF2C3E50)),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.black),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Please provide accurate details for precise astrological calculations.',
-                style: TextStyle(fontSize: 14, color: Color(0xFF7F8C8D)),
+                style: TextStyle(fontSize: 14, color: Color(0xFF555555), fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 32),
               
               // Name Field
-              const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
+              const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black)),
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
                 child: TextFormField(
                   controller: nameController,
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
                   decoration: const InputDecoration(hintText: 'e.g. Arjun Kumar'),
                   validator: (v) => v!.isEmpty ? 'Required' : null,
                 ),
@@ -80,12 +81,13 @@ class BirthFormScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Date of Birth', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
+                        const Text('Date of Birth', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black)),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
                           child: TextFormField(
                             controller: dateController,
+                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
                             readOnly: true,
                             onTap: () async {
                               DateTime? pickedDate = await showDatePicker(
@@ -122,12 +124,13 @@ class BirthFormScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Time of Birth', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
+                        const Text('Time of Birth', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black)),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
                           child: TextFormField(
                             controller: timeController,
+                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
                             readOnly: true,
                             onTap: () async {
                               TimeOfDay? pickedTime = await showTimePicker(
@@ -162,13 +165,14 @@ class BirthFormScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               // Gender Field
-              const Text('Gender', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
+              const Text('Gender', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black)),
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
                 child: Obx(() => DropdownButtonFormField<String>(
                   value: selectedGender.value,
                   dropdownColor: Colors.white,
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 15),
                   items: const [
                     DropdownMenuItem(value: 'Male', child: Text('Male')),
                     DropdownMenuItem(value: 'Female', child: Text('Female')),
@@ -187,12 +191,13 @@ class BirthFormScreen extends StatelessWidget {
               const SizedBox(height: 20),
               
               // Birth Place
-              const Text('Birth Place', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2C3E50))),
+              const Text('Birth Place', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black)),
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
                 child: TextFormField(
                   controller: placeController,
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
                   decoration: const InputDecoration(
                     hintText: 'e.g. New Delhi',
                     suffixIcon: Icon(Icons.location_on_rounded, color: Colors.grey),

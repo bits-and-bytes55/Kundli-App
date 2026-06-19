@@ -19,8 +19,8 @@ class AppColors {
   static const Color surfaceBg     = Color(0xFFFFF8F0); // Very slight warm tint
 
   // Text
-  static const Color textDark      = Color(0xFF2C3E50);
-  static const Color textMedium    = Color(0xFF5D6D7E);
+  static const Color textDark      = Color(0xFF000000);
+  static const Color textMedium    = Color(0xFF000000);
   static const Color textLight     = Color(0xFF7F8C8D);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
 

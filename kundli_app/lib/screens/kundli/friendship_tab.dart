@@ -12,11 +12,8 @@ class FriendshipTab extends StatefulWidget {
 class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const Color _orange      = AppColors.primary;
   static const Color _orangeLight = AppColors.accentLight;
-  static const Color _orangeBorder= AppColors.border;
-  static const Color _textDark    = AppColors.textDark;
-  static const Color _textGrey    = AppColors.textLight;
+  static const Color _orangeBorder = AppColors.border;
 
   final List<String> _planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
   final Map<String, String> _abbrevs = {
@@ -41,7 +38,7 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
     if (widget.friendship.isEmpty) {
       return const Scaffold(
         backgroundColor: AppColors.scaffoldBg,
-        body: Center(child: Text('Loading friendship tables...', style: TextStyle(color: _textDark))),
+        body: Center(child: Text('Loading friendship tables...', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
       );
     }
 
@@ -56,10 +53,10 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
           color: Colors.white,
           child: TabBar(
             controller: _tabController,
-            indicatorColor: _orange,
-            labelColor: _orange,
-            unselectedLabelColor: _textGrey,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            indicatorColor: AppColors.primary,
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.black54,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
             tabs: const [
               Tab(text: 'Permanent Friendship'),
               Tab(text: 'Temporal Friendship'),
@@ -87,18 +84,18 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _orangeLight,
-              border: Border.all(color: _orangeBorder, width: 1),
+              color: Colors.white,
+              border: Border.all(color: Colors.black, width: 1.5),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline_rounded, color: _orange, size: 20),
+                const Icon(Icons.info_outline_rounded, color: Colors.black, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     explanation,
-                    style: const TextStyle(fontSize: 12, color: _textDark, fontWeight: FontWeight.w500),
+                    style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -125,9 +122,9 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _orangeBorder.withOpacity(0.5)),
+              border: Border.all(color: Colors.black.withOpacity(0.3)),
               boxShadow: [
-                BoxShadow(color: _orange.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))
+                BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))
               ],
             ),
             child: ClipRRect(
@@ -144,13 +141,13 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
                   7: FlexColumnWidth(1.0),
                 },
                 border: TableBorder.symmetric(
-                  inside: BorderSide(color: Colors.grey.shade100, width: 1),
+                  inside: BorderSide(color: Colors.grey.shade300, width: 1),
                 ),
                 children: [
                   // Table Header
                   TableRow(
-                    decoration: const BoxDecoration(
-                      color: _orange,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
                     ),
                     children: [
                       _buildHeaderCell('Planets'),
@@ -166,19 +163,19 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
                         Container(
                           alignment: Alignment.center,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          color: _orangeLight.withOpacity(0.3),
+                          color: Colors.grey.shade50,
                           child: Text(
                             _abbrevs[p1]!,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: _orange,
-                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
                         ),
                         // Relationships
                         ..._planets.map((p2) {
-                          final rel = rowData[p2] ?? '—';
+                          final rel = rowData[p2] ?? '-';
                           return _buildRelCell(rel);
                         }),
                       ],
@@ -207,11 +204,11 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
           ),
           child: Text(
             code,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: color),
           ),
         ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 12, color: _textGrey, fontWeight: FontWeight.w600)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -223,8 +220,8 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
         child: Text(
           text,
           style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
             fontSize: 12,
           ),
         ),
@@ -233,18 +230,18 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
   }
 
   Widget _buildRelCell(String rel) {
-    Color txtColor = _textGrey;
+    Color txtColor = Colors.black54;
     Color bgColor = Colors.transparent;
 
     if (rel == 'F') {
-      txtColor = Colors.green.shade700;
-      bgColor = Colors.green.shade50.withOpacity(0.5);
+      txtColor = Colors.green.shade900;
+      bgColor = Colors.green.shade50.withOpacity(0.6);
     } else if (rel == 'E') {
-      txtColor = Colors.red.shade700;
-      bgColor = Colors.red.shade50.withOpacity(0.5);
+      txtColor = Colors.red.shade900;
+      bgColor = Colors.red.shade50.withOpacity(0.6);
     } else if (rel == 'N') {
-      txtColor = Colors.orange.shade800;
-      bgColor = Colors.orange.shade50.withOpacity(0.3);
+      txtColor = Colors.orange.shade900;
+      bgColor = Colors.orange.shade50.withOpacity(0.4);
     }
 
     return Container(
@@ -256,7 +253,7 @@ class _FriendshipTabState extends State<FriendshipTab> with SingleTickerProvider
         style: TextStyle(
           fontSize: 13,
           color: txtColor,
-          fontWeight: rel != '—' ? FontWeight.bold : FontWeight.normal,
+          fontWeight: rel != '-' ? FontWeight.w900 : FontWeight.bold,
         ),
       ),
     );

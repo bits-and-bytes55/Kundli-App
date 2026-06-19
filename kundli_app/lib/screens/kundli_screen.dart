@@ -108,16 +108,16 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
           backgroundColor: Colors.white,
           elevation: 0.5,
           leading: IconButton(
-            icon: const Icon(Icons.menu_rounded, color: AppColors.primary),
+            icon: const Icon(Icons.menu_rounded, color: Colors.black),
             onPressed: () => _scaffoldKey.currentState?.openDrawer()),
           title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(data['name'] ?? '', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 16)),
-            Text('${data['date']} • ${ascendant['rashi']} Lagna', style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+            Text(data['name'] ?? '', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 17)),
+            Text('${data['date']} • ${ascendant['rashi']} Lagna', style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w700)),
           ]),
-          actions: [IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primary), onPressed: () => Get.back())],
+          actions: [IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black), onPressed: () => Get.back())],
           bottom: TabBar(
             controller: _tabController, isScrollable: true,
-            labelColor: AppColors.primary, unselectedLabelColor: AppColors.textLight,
+            labelColor: Colors.black, unselectedLabelColor: Colors.black54,
             indicatorColor: AppColors.primary, indicatorWeight: 3,
             tabs: _tabs,
           ),

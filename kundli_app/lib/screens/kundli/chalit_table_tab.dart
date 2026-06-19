@@ -5,18 +5,15 @@ class ChalitTableTab extends StatelessWidget {
   final List<dynamic> chalitTable;
   const ChalitTableTab({super.key, required this.chalitTable});
 
-  static const Color _orange      = AppColors.primary;
   static const Color _orangeLight = AppColors.accentLight;
-  static const Color _orangeBorder= AppColors.border;
-  static const Color _textDark    = AppColors.textDark;
-  static const Color _textGrey    = AppColors.textLight;
+  static const Color _orangeBorder = AppColors.border;
 
   @override
   Widget build(BuildContext context) {
     if (chalitTable.isEmpty) {
       return const Scaffold(
         backgroundColor: AppColors.scaffoldBg,
-        body: Center(child: Text('Loading Chalit Table...', style: TextStyle(color: _textDark))),
+        body: Center(child: Text('Loading Chalit Table...', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
       );
     }
 
@@ -31,18 +28,18 @@ class ChalitTableTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _orangeLight,
-                border: Border.all(color: _orangeBorder, width: 1),
+                color: Colors.white,
+                border: Border.all(color: Colors.black, width: 1.5),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, color: _orange, size: 20),
+                  Icon(Icons.info_outline_rounded, color: Colors.black, size: 20),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Bhav Chalit (Shripati System) displays the astrological house boundaries (Bh. Begin) and house midpoints (Mid Bh).',
-                      style: TextStyle(fontSize: 12, color: _textDark, fontWeight: FontWeight.w500),
+                      style: TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -55,9 +52,9 @@ class ChalitTableTab extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _orangeBorder.withOpacity(0.5)),
+                border: Border.all(color: Colors.black.withOpacity(0.3)),
                 boxShadow: [
-                  BoxShadow(color: _orange.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))
                 ],
               ),
               child: ClipRRect(
@@ -69,13 +66,13 @@ class ChalitTableTab extends StatelessWidget {
                     2: FlexColumnWidth(2.5), // Mid Bh Sign + Deg
                   },
                   border: TableBorder.symmetric(
-                    inside: BorderSide(color: Colors.grey.shade100, width: 1),
+                    inside: BorderSide(color: Colors.grey.shade300, width: 1),
                   ),
                   children: [
                     // Table Header
                     TableRow(
-                      decoration: const BoxDecoration(
-                        color: _orange,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
                       ),
                       children: [
                         _buildHeaderCell('Bh.'),
@@ -115,9 +112,9 @@ class ChalitTableTab extends StatelessWidget {
         child: Text(
           text,
           style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
           ),
         ),
       ),
@@ -132,7 +129,7 @@ class ChalitTableTab extends StatelessWidget {
         text,
         style: TextStyle(
           fontSize: 13,
-          color: _textDark,
+          color: Colors.black,
           fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
         ),
       ),
@@ -157,8 +154,8 @@ class ChalitTableTab extends StatelessWidget {
               sign,
               style: const TextStyle(
                 fontSize: 11,
-                color: _orange,
-                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
@@ -168,8 +165,8 @@ class ChalitTableTab extends StatelessWidget {
             degree,
             style: const TextStyle(
               fontSize: 13,
-              color: _textDark,
-              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],

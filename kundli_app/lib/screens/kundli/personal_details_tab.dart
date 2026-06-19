@@ -5,18 +5,14 @@ class PersonalDetailsTab extends StatelessWidget {
   final Map<String, dynamic> personalDetails;
   const PersonalDetailsTab({super.key, required this.personalDetails});
 
-  static const Color _orange      = AppColors.primary;
-  static const Color _orangeLight = AppColors.accentLight;
-  static const Color _orangeBorder= AppColors.border;
-  static const Color _textDark    = AppColors.textDark;
-  static const Color _textGrey    = AppColors.textLight;
+  static const Color _orangeBorder = AppColors.border;
 
   @override
   Widget build(BuildContext context) {
     if (personalDetails.isEmpty) {
       return const Scaffold(
         backgroundColor: AppColors.scaffoldBg,
-        body: Center(child: Text('Loading details...', style: TextStyle(color: _textDark))),
+        body: Center(child: Text('Loading details...', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
       );
     }
 
@@ -69,13 +65,13 @@ class PersonalDetailsTab extends StatelessWidget {
 
   Widget _buildHeader(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      padding: const EdgeInsets.only(left: 4, bottom: 8, top: 4),
       child: Row(
         children: [
-          Icon(icon, color: _orange, size: 18),
+          Icon(icon, color: Colors.black, size: 20),
           const SizedBox(width: 8),
           Text(title, style: const TextStyle(
-            fontSize: 14, fontWeight: FontWeight.bold, color: _orange, letterSpacing: 0.3)),
+            fontSize: 16, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: 0.3)),
         ],
       ),
     );
@@ -87,7 +83,7 @@ class PersonalDetailsTab extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _orangeBorder.withOpacity(0.5)),
-        boxShadow: [BoxShadow(color: _orange.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(children: rows),
     );
@@ -102,11 +98,11 @@ class PersonalDetailsTab extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: _textGrey, fontWeight: FontWeight.w500)),
+          Text(label, style: const TextStyle(fontSize: 13, color: Colors.black, fontWeight: FontWeight.w700)),
           Flexible(
             child: Text(value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, color: _textDark, fontWeight: FontWeight.w700)),
+              style: const TextStyle(fontSize: 13, color: Colors.black, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
