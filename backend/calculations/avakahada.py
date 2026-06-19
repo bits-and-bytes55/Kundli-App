@@ -3,6 +3,8 @@ Avakahada Chakra Calculations
 Standard Jyotish formulas for Paya, Varna, Yoni, Gana, Vashya, Nadi, etc.
 """
 
+from datetime import datetime
+
 NAKSHATRAS = [
     'Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha',
     'Magha','P.Phalguni','U.Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha',
@@ -14,47 +16,47 @@ TOTAL_DASHA_YEARS = 120
 RASHIS = ['Mesh','Vrishabh','Mithun','Kark','Singh','Kanya','Tula','Vrischik','Dhanu','Makar','Kumbh','Meen']
 RASHI_LORDS = ['Mangal','Shukra','Budha','Chandra','Surya','Budha','Shukra','Mangal','Guru','Shani','Shani','Guru']
 
-# ── Paya (based on Nakshatra of Moon) ──────────────────────────────────────
-# Swarna=Gold, Rajat=Silver, Tamba=Copper, Loha=Iron
-PAYA_MAP = {
-    'Ashwini': 'Swarna (Gold)', 'Bharani': 'Rajat (Silver)', 'Krittika': 'Tamba (Copper)',
-    'Rohini': 'Swarna (Gold)', 'Mrigashira': 'Rajat (Silver)', 'Ardra': 'Tamba (Copper)',
-    'Punarvasu': 'Swarna (Gold)', 'Pushya': 'Rajat (Silver)', 'Ashlesha': 'Tamba (Copper)',
-    'Magha': 'Loha (Iron)', 'P.Phalguni': 'Swarna (Gold)', 'U.Phalguni': 'Rajat (Silver)',
-    'Hasta': 'Tamba (Copper)', 'Chitra': 'Loha (Iron)', 'Swati': 'Swarna (Gold)',
-    'Vishakha': 'Rajat (Silver)', 'Anuradha': 'Tamba (Copper)', 'Jyeshtha': 'Loha (Iron)',
-    'Moola': 'Swarna (Gold)', 'P.Ashadha': 'Rajat (Silver)', 'U.Ashadha': 'Tamba (Copper)',
-    'Shravana': 'Loha (Iron)', 'Dhanishtha': 'Swarna (Gold)', 'Shatabhisha': 'Rajat (Silver)',
-    'P.Bhadra': 'Tamba (Copper)', 'U.Bhadra': 'Loha (Iron)', 'Revati': 'Swarna (Gold)'
+SWAMI_ABBREV = {
+    'Sun': 'SUN', 'Chandra': 'MON', 'Moon': 'MON', 'Surya': 'SUN',
+    'Mangal': 'MAR', 'Mars': 'MAR', 'Budha': 'MER', 'Mercury': 'MER',
+    'Guru': 'JUP', 'Jupiter': 'JUP', 'Shukra': 'VEN', 'Venus': 'VEN',
+    'Shani': 'SAT', 'Saturn': 'SAT', 'Rahu': 'RAH', 'Ketu': 'KET'
 }
 
-# ── Varna (Caste) based on Moon Nakshatra ──────────────────────────────────
-VARNA_MAP = {
-    'Ashwini': 'Vaishya', 'Bharani': 'Mleccha', 'Krittika': 'Brahman',
-    'Rohini': 'Shudra', 'Mrigashira': 'Vaishya', 'Ardra': 'Mleccha',
-    'Punarvasu': 'Brahman', 'Pushya': 'Kshatriya', 'Ashlesha': 'Mleccha',
-    'Magha': 'Brahman', 'P.Phalguni': 'Brahman', 'U.Phalguni': 'Kshatriya',
-    'Hasta': 'Vaishya', 'Chitra': 'Mleccha', 'Swati': 'Mleccha',
-    'Vishakha': 'Mleccha', 'Anuradha': 'Shudra', 'Jyeshtha': 'Mleccha',
-    'Moola': 'Mleccha', 'P.Ashadha': 'Brahman', 'U.Ashadha': 'Kshatriya',
-    'Shravana': 'Mleccha', 'Dhanishtha': 'Mleccha', 'Shatabhisha': 'Mleccha',
-    'P.Bhadra': 'Brahman', 'U.Bhadra': 'Brahman', 'Revati': 'Brahman'
+RASHIS_ENG = {
+    'Mesh': 'Aries', 'Vrishabh': 'Taurus', 'Mithun': 'Gemini', 'Kark': 'Cancer',
+    'Singh': 'Leo', 'Kanya': 'Virgo', 'Tula': 'Libra', 'Vrischik': 'Scorpio',
+    'Dhanu': 'Sagittarius', 'Makar': 'Capricorn', 'Kumbh': 'Aquarius', 'Meen': 'Pisces'
 }
 
-# ── Yoni (Animal) based on Moon Nakshatra ─────────────────────────────────
+RASHI_VARNA = {
+    'Mesh': 'KSHATRIYA', 'Singh': 'KSHATRIYA', 'Dhanu': 'KSHATRIYA',
+    'Vrishabh': 'VAISHYA', 'Kanya': 'VAISHYA', 'Makar': 'VAISHYA',
+    'Mithun': 'SHUDRA', 'Tula': 'SHUDRA', 'Kumbh': 'SHUDRA',
+    'Kark': 'BRAHMAN', 'Vrischik': 'BRAHMAN', 'Meen': 'BRAHMAN'
+}
+
+RASHI_VASYA = {
+    'Mesh': 'Chatushpad', 'Vrishabh': 'Chatushpad',
+    'Mithun': 'Dwipada', 'Kark': 'Jalchar',
+    'Singh': 'Vanch', 'Kanya': 'Dwipada',
+    'Tula': 'Dwipada', 'Vrischik': 'Keeta',
+    'Dhanu': 'Chatushpad', 'Makar': 'Jalchar',
+    'Kumbh': 'Dwipada', 'Meen': 'Jalchar'
+}
+
 YONI_MAP = {
-    'Ashwini': 'Ashwa (Horse)', 'Bharani': 'Gaj (Elephant)', 'Krittika': 'Mesh (Ram)',
-    'Rohini': 'Sarpa (Snake)', 'Mrigashira': 'Sarpa (Snake)', 'Ardra': 'Shwan (Dog)',
-    'Punarvasu': 'Marjar (Cat)', 'Pushya': 'Mesh (Ram)', 'Ashlesha': 'Marjar (Cat)',
-    'Magha': 'Mushak (Rat)', 'P.Phalguni': 'Mushak (Rat)', 'U.Phalguni': 'Gau (Cow)',
-    'Hasta': 'Mahish (Buffalo)', 'Chitra': 'Vyaghra (Tiger)', 'Swati': 'Mahish (Buffalo)',
-    'Vishakha': 'Vyaghra (Tiger)', 'Anuradha': 'Mrig (Deer)', 'Jyeshtha': 'Mrig (Deer)',
-    'Moola': 'Shwan (Dog)', 'P.Ashadha': 'Vanar (Monkey)', 'U.Ashadha': 'Nakul (Mongoose)',
-    'Shravana': 'Vanar (Monkey)', 'Dhanishtha': 'Simha (Lion)', 'Shatabhisha': 'Ashwa (Horse)',
-    'P.Bhadra': 'Simha (Lion)', 'U.Bhadra': 'Gau (Cow)', 'Revati': 'Gaj (Elephant)'
+    'Ashwini': 'Ashwa', 'Bharani': 'Gaj', 'Krittika': 'Mesh',
+    'Rohini': 'Sarpa', 'Mrigashira': 'Sarpa', 'Ardra': 'Shwan',
+    'Punarvasu': 'Marjar', 'Pushya': 'Mesh', 'Ashlesha': 'Marjar',
+    'Magha': 'Mushak', 'P.Phalguni': 'Mushak', 'U.Phalguni': 'Gau',
+    'Hasta': 'Mahish', 'Chitra': 'Vyaghra', 'Swati': 'Mahish',
+    'Vishakha': 'Vyaghra', 'Anuradha': 'Mrig', 'Jyeshtha': 'Mrig',
+    'Moola': 'Shwan', 'P.Ashadha': 'Vanar', 'U.Ashadha': 'Nakul',
+    'Shravana': 'Vanar', 'Dhanishtha': 'Simha', 'Shatabhisha': 'Ashwa',
+    'P.Bhadra': 'Simha', 'U.Bhadra': 'Gau', 'Revati': 'Gaj'
 }
 
-# ── Gana (Nature) based on Moon Nakshatra ────────────────────────────────
 GANA_MAP = {
     'Ashwini': 'Dev', 'Bharani': 'Manushya', 'Krittika': 'Rakshasa',
     'Rohini': 'Manushya', 'Mrigashira': 'Dev', 'Ardra': 'Manushya',
@@ -67,29 +69,44 @@ GANA_MAP = {
     'P.Bhadra': 'Manushya', 'U.Bhadra': 'Manushya', 'Revati': 'Dev'
 }
 
-# ── Vashya (Control) based on Moon Rashi ─────────────────────────────────
-VASHYA_MAP = {
-    'Mesh': 'Chatushpad (Quadruped)', 'Vrishabh': 'Chatushpad (Quadruped)',
-    'Mithun': 'Dwi-pad (Biped)', 'Kark': 'Jalchar (Aquatic)',
-    'Singh': 'Chatushpad (Quadruped)', 'Kanya': 'Dwi-pad (Biped)',
-    'Tula': 'Dwi-pad (Biped)', 'Vrischik': 'Keeta (Insect)',
-    'Dhanu': 'Chatushpad (Quadruped)', 'Makar': 'Jalchar (Aquatic)',
-    'Kumbh': 'Jalchar (Aquatic)', 'Meen': 'Jalchar (Aquatic)'
-}
-
-# ── Nadi (Physical constitution) based on Moon Nakshatra ─────────────────
 NADI_MAP = {
-    'Ashwini': 'Vata (Aadi)', 'Bharani': 'Pitta (Madhya)', 'Krittika': 'Kapha (Antya)',
-    'Rohini': 'Kapha (Antya)', 'Mrigashira': 'Pitta (Madhya)', 'Ardra': 'Vata (Aadi)',
-    'Punarvasu': 'Vata (Aadi)', 'Pushya': 'Pitta (Madhya)', 'Ashlesha': 'Kapha (Antya)',
-    'Magha': 'Kapha (Antya)', 'P.Phalguni': 'Pitta (Madhya)', 'U.Phalguni': 'Vata (Aadi)',
-    'Hasta': 'Vata (Aadi)', 'Chitra': 'Pitta (Madhya)', 'Swati': 'Kapha (Antya)',
-    'Vishakha': 'Kapha (Antya)', 'Anuradha': 'Pitta (Madhya)', 'Jyeshtha': 'Vata (Aadi)',
-    'Moola': 'Vata (Aadi)', 'P.Ashadha': 'Pitta (Madhya)', 'U.Ashadha': 'Kapha (Antya)',
-    'Shravana': 'Kapha (Antya)', 'Dhanishtha': 'Pitta (Madhya)', 'Shatabhisha': 'Vata (Aadi)',
-    'P.Bhadra': 'Vata (Aadi)', 'U.Bhadra': 'Pitta (Madhya)', 'Revati': 'Kapha (Antya)'
+    'Ashwini': 'Aadi', 'Bharani': 'Madhya', 'Krittika': 'Antya',
+    'Rohini': 'Antya', 'Mrigashira': 'Madhya', 'Ardra': 'Aadi',
+    'Punarvasu': 'Aadi', 'Pushya': 'Madhya', 'Ashlesha': 'Antya',
+    'Magha': 'Antya', 'P.Phalguni': 'Madhya', 'U.Phalguni': 'Aadi',
+    'Hasta': 'Aadi', 'Chitra': 'Madhya', 'Swati': 'Antya',
+    'Vishakha': 'Antya', 'Anuradha': 'Madhya', 'Jyeshtha': 'Aadi',
+    'Moola': 'Aadi', 'P.Ashadha': 'Madhya', 'U.Ashadha': 'Antya',
+    'Shravana': 'Antya', 'Dhanishtha': 'Madhya', 'Shatabhisha': 'Aadi',
+    'P.Bhadra': 'Aadi', 'U.Bhadra': 'Madhya', 'Revati': 'Antya'
 }
 
+def get_western_sun_sign(dt):
+    m = dt.month
+    d = dt.day
+    if m == 3: return "Aries" if d >= 21 else "Pisces"
+    elif m == 4: return "Taurus" if d >= 20 else "Aries"
+    elif m == 5: return "Gemini" if d >= 21 else "Taurus"
+    elif m == 6: return "Cancer" if d >= 21 else "Gemini"
+    elif m == 7: return "Leo" if d >= 23 else "Cancer"
+    elif m == 8: return "Virgo" if d >= 23 else "Leo"
+    elif m == 9: return "Libra" if d >= 23 else "Virgo"
+    elif m == 10: return "Scorpio" if d >= 23 else "Libra"
+    elif m == 11: return "Sagittarius" if d >= 22 else "Scorpio"
+    elif m == 12: return "Capricorn" if d >= 22 else "Sagittarius"
+    elif m == 1: return "Aquarius" if d >= 20 else "Capricorn"
+    elif m == 2: return "Pisces" if d >= 19 else "Aquarius"
+    return "Aries"
+
+def get_paya(moon_house):
+    if moon_house in [1, 6, 11]:
+        return "Gold"
+    elif moon_house in [2, 5, 9]:
+        return "Silver"
+    elif moon_house in [3, 7, 10]:
+        return "Copper"
+    else:
+        return "Iron"
 
 def get_avakahada_chakra(planets, ascendant, jd):
     """
@@ -99,10 +116,10 @@ def get_avakahada_chakra(planets, ascendant, jd):
     moon_nak = moon['nakshatra']
     moon_rashi = moon['rashi']
     moon_lon = moon['longitude']
-    moon_nak_idx = int(moon_lon / (360 / 27))
+    moon_nak_idx = NAKSHATRAS.index(moon_nak)
     moon_pada = moon['pada']
 
-    # Dasha Bhogya (balance of current dasha at birth)
+    # Dasha Bhogya
     nak_lord = NAKSHATRA_LORDS[moon_nak_idx]
     nak_start_lon = moon_nak_idx * (360 / 27)
     nak_elapsed = (moon_lon - nak_start_lon) / (360 / 27)
@@ -112,29 +129,52 @@ def get_avakahada_chakra(planets, ascendant, jd):
     dasha_rem_m = int((dasha_remaining_years - dasha_rem_y) * 12)
     dasha_rem_d = int(((dasha_remaining_years - dasha_rem_y) * 12 - dasha_rem_m) * 30)
 
-    # Lagna details from ascendant
+    # Lagna details
     lagna_rashi = ascendant['rashi']
-    lagna_rashi_idx = RASHIS.index(lagna_rashi)
-    lagna_swami = RASHI_LORDS[lagna_rashi_idx]
+    lagna_swami = ascendant['rashi_lord']
 
-    # Julian Day Number (rounded)
-    julian_day = round(jd)
+    # Paya based on Moon house from Lagna
+    lagna_rashi_idx = RASHIS.index(lagna_rashi)
+    moon_rashi_idx = RASHIS.index(moon_rashi)
+    moon_house = (moon_rashi_idx - lagna_rashi_idx) % 12 + 1
+    paya_val = get_paya(moon_house)
+
+    # Western Sun Sign
+    # Convert Julian Day to a date estimation for western sun sign
+    import swisseph as swe
+    y, m, d, _ = swe.revjul(jd, swe.GREG_CAL)
+    dt_approx = datetime(y, m, d)
+    western_sign = get_western_sun_sign(dt_approx)
+
+    sun_rashi = planets['Sun']['rashi']
+
+    # Format the names/values
+    dasha_lord_abbrev = SWAMI_ABBREV.get(nak_lord, nak_lord[:3].upper())
+    balance_of_dasha = f"{dasha_lord_abbrev} {dasha_rem_y} Y {dasha_rem_m} M {dasha_rem_d} D"
+
+    # Abbreviated lords
+    lagna_lord_abbrev = SWAMI_ABBREV.get(lagna_swami, lagna_swami[:3].upper())
+    rasi_lord_abbrev = SWAMI_ABBREV.get(moon['rashi_lord'], moon['rashi_lord'][:3].upper())
+    nak_lord_abbrev = SWAMI_ABBREV.get(nak_lord, nak_lord[:3].upper())
+
+    # Nakshatra name in all caps (e.g. PURVAPHALGUNI)
+    nak_pada_str = f"{moon_nak.replace('.', '').replace(' ', '').upper()}-{moon_pada}"
 
     return {
-        'paya': PAYA_MAP.get(moon_nak, '-'),
-        'varna': VARNA_MAP.get(moon_nak, '-'),
+        'paya': paya_val,
+        'varna': RASHI_VARNA.get(moon_rashi, '-'),
         'yoni': YONI_MAP.get(moon_nak, '-'),
         'gana': GANA_MAP.get(moon_nak, '-'),
-        'vashya': VASHYA_MAP.get(moon_rashi, '-'),
-        'nadi': NADI_MAP.get(moon_nak, '-'),
-        'dasha_bhogya': f'{nak_lord} {dasha_rem_y} व {dasha_rem_m} मा {dasha_rem_d} दि',
-        'lagna': lagna_rashi,
-        'lagna_swami': lagna_swami,
-        'rashi': moon_rashi,
-        'rashi_swami': RASHI_LORDS[RASHIS.index(moon_rashi)],
-        'nakshatra_pad': f'{moon_nak}-{moon_pada}',
-        'nakshatra_swami': nak_lord,
-        'julian_day': julian_day,
-        'moon_nakshatra': moon_nak,
-        'moon_pada': moon_pada,
+        'vashya': RASHI_VASYA.get(moon_rashi, '-'),
+        'nadi': NADI_MAP.get(moon_nak, '-').upper(),
+        'dasha_bhogya': balance_of_dasha,
+        'lagna': RASHIS_ENG.get(lagna_rashi, lagna_rashi),
+        'lagna_swami': lagna_lord_abbrev,
+        'rashi': RASHIS_ENG.get(moon_rashi, moon_rashi),
+        'rashi_swami': rasi_lord_abbrev,
+        'nakshatra_pad': nak_pada_str,
+        'nakshatra_swami': nak_lord_abbrev,
+        'julian_day': int(jd),
+        'sun_sign_indian': RASHIS_ENG.get(sun_rashi, sun_rashi),
+        'sun_sign_western': western_sign
     }

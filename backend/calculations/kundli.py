@@ -1000,6 +1000,348 @@ def calculate_kundli(date, time, lat, lon, name, gender='Male'):
     # Shad Bala and Bhav Bala
     shad_bala_data = calculate_shad_bala(planets, ascendant)
 
+    # Personal Details
+    from calculations.panchang import calculate_panchang, get_timezone_offset_and_name
+    from datetime import timedelta
+    
+    panchang_data = calculate_panchang(date, time, lat, lon)
+    
+    dt = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+    day_name = dt.strftime("%A")
+    
+    offset, tz_name = get_timezone_offset_and_name(lat, lon, date, time)
+    offset_hours = offset.total_seconds() / 3600.0
+    
+    gmt_dt = dt - offset
+    gmt_str = gmt_dt.strftime("%H:%M:%S")
+    
+    # LMT: Longitude to LMT: 1 degree = 4 minutes = 240 seconds
+    lmt_diff_seconds = lon * 240.0
+    lmt_dt = gmt_dt + timedelta(seconds=lmt_diff_seconds)
+    lmt_str = lmt_dt.strftime("%H:%M:%S")
+    
+    # LTC: (Longitude - Standard Meridian) * 4 minutes
+    std_meridian = offset_hours * 15.0
+    ltc_seconds = (lon - std_meridian) * 240.0
+    ltc_abs = abs(int(ltc_seconds))
+    ltc_h = ltc_abs // 3600
+    ltc_m = (ltc_abs % 3600) // 60
+    ltc_s = ltc_abs % 60
+    ltc_sign = "-" if ltc_seconds < 0 else ""
+    ltc_str = f"{ltc_sign}{ltc_h:02d}.{ltc_m:02d}.{ltc_s:02d}"
+    
+    # Latitude / Longitude formatting
+    lat_abs = abs(lat)
+    lat_d = int(lat_abs)
+    lat_m = int((lat_abs - lat_d) * 60)
+    lat_dir = "N" if lat >= 0 else "S"
+    lat_str = f"{lat_d:02d} : {lat_m:02d} : {lat_dir}"
+    
+    lon_abs = abs(lon)
+    lon_d = int(lon_abs)
+    lon_m = int((lon_abs - lon_d) * 60)
+    lon_dir = "E" if lon >= 0 else "W"
+    lon_str = f"{lon_d:02d} : {lon_m:02d} : {lon_dir}"
+    
+    # Ishtkaal
+    sunrise_str = panchang_data['sun_moon_timings']['sunrise']
+    sunrise_dt_obj = datetime.strptime(f"{date} {sunrise_str}", "%Y-%m-%d %I:%M %p")
+    birth_dt_obj = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+    if birth_dt_obj < sunrise_dt_obj:
+        sunrise_dt_obj = sunrise_dt_obj - timedelta(days=1)
+        
+    diff_hours = (birth_dt_obj - sunrise_dt_obj).total_seconds() / 3600.0
+    isht_ghadis = diff_hours * 2.5
+    isht_g = int(isht_ghadis)
+    isht_rem = (isht_ghadis - isht_g) * 60
+    isht_v = int(isht_rem)
+    isht_l = int(round((isht_rem - isht_v) * 60))
+    if isht_l >= 60:
+        isht_v += 1
+        isht_l -= 60
+    if isht_v >= 60:
+        isht_g += 1
+        isht_v -= 60
+    ishtkaal_str = f"{isht_g:03d}-{isht_v:02d}-{isht_l:02d}"
+    
+    astro_vara = panchang_data['vara']['astrological']
+    astro_day_english = astro_vara.split('(')[1].replace(')', '') if '(' in astro_vara else day_name
+    
+    personal_details = {
+        'sex': gender,
+        'dob': dt.strftime("%d : %m : %Y"),
+        'tob': dt.strftime("%H : %M : %S"),
+        'day': day_name,
+        'ishtkaal': ishtkaal_str,
+        'place': name,
+        'timezone': f"{offset_hours}",
+        'latitude': lat_str,
+        'longitude': lon_str,
+        'local_time_corr': ltc_str,
+        'war_time_corr': "00.00.00",
+        'lmt': lmt_str,
+        'gmt': gmt_str,
+        'tithi': panchang_data['tithi']['name'].upper(),
+        'hindu_weekday': astro_day_english,
+        'paksha': panchang_data['tithi']['paksha'].upper()
+    }
+
+    # Ghatak and Favourable Data Lookup based on Moon Rashi
+    GHATAK_DATA = {
+        'Mesh': {
+            'bad_day': 'Sunday', 'bad_karan': 'Shakuni', 'bad_lagna': 'Aries',
+            'bad_month': 'Kartika', 'bad_nakshatra': 'Magha', 'bad_prahar': '1',
+            'bad_rasi': 'Aries', 'bad_tithi': '1, 6, 11', 'bad_yoga': 'Vishkumbha',
+            'bad_planets': 'Sun'
+        },
+        'Vrishabh': {
+            'bad_day': 'Saturday', 'bad_karan': 'Shakuni', 'bad_lagna': 'Taurus',
+            'bad_month': 'Margashirsha', 'bad_nakshatra': 'Hasta', 'bad_prahar': '1',
+            'bad_rasi': 'Virgo', 'bad_tithi': '5, 10, 15', 'bad_yoga': 'Harshan',
+            'bad_planets': 'Venus'
+        },
+        'Mithun': {
+            'bad_day': 'Monday', 'bad_karan': 'Chatushpada', 'bad_lagna': 'Gemini',
+            'bad_month': 'Ashadha', 'bad_nakshatra': 'Swati', 'bad_prahar': '2',
+            'bad_rasi': 'Scorpio', 'bad_tithi': '2, 7, 12', 'bad_yoga': 'Vyatipata',
+            'bad_planets': 'Moon'
+        },
+        'Kark': {
+            'bad_day': 'Wednesday', 'bad_karan': 'Naga', 'bad_lagna': 'Cancer',
+            'bad_month': 'Pausha', 'bad_nakshatra': 'Anuradha', 'bad_prahar': '4',
+            'bad_rasi': 'Capricorn', 'bad_tithi': '3, 8, 13', 'bad_yoga': 'Vyatipata',
+            'bad_planets': 'Mercury'
+        },
+        'Singh': {
+            'bad_day': 'Saturday', 'bad_karan': 'Balava', 'bad_lagna': 'Makar',
+            'bad_month': 'Jyeshtha', 'bad_nakshatra': 'Moola', 'bad_prahar': '1',
+            'bad_rasi': 'Makar', 'bad_tithi': '3, 8, 13', 'bad_yoga': 'Preeti',
+            'bad_planets': 'Saturn, Venus'
+        },
+        'Kanya': {
+            'bad_day': 'Saturday', 'bad_karan': 'Shakuni', 'bad_lagna': 'Virgo',
+            'bad_month': 'Bhadrapada', 'bad_nakshatra': 'Shravana', 'bad_prahar': '1',
+            'bad_rasi': 'Virgo', 'bad_tithi': '5, 10, 15', 'bad_yoga': 'Harshan',
+            'bad_planets': 'Venus'
+        },
+        'Tula': {
+            'bad_day': 'Thursday', 'bad_karan': 'Chatushpada', 'bad_lagna': 'Libra',
+            'bad_month': 'Magha', 'bad_nakshatra': 'Shatabhisha', 'bad_prahar': '1',
+            'bad_rasi': 'Capricorn', 'bad_tithi': '4, 9, 14', 'bad_yoga': 'Vyatipata',
+            'bad_planets': 'Jupiter'
+        },
+        'Vrischik': {
+            'bad_day': 'Friday', 'bad_karan': 'Naga', 'bad_lagna': 'Scorpio',
+            'bad_month': 'Kartika', 'bad_nakshatra': 'Revati', 'bad_prahar': '4',
+            'bad_rasi': 'Taurus', 'bad_tithi': '1, 6, 11', 'bad_yoga': 'Vishkumbha',
+            'bad_planets': 'Sun'
+        },
+        'Dhanu': {
+            'bad_day': 'Friday', 'bad_karan': 'Balava', 'bad_lagna': 'Sagittarius',
+            'bad_month': 'Shravana', 'bad_nakshatra': 'Uttarashadha', 'bad_prahar': '2',
+            'bad_rasi': 'Gemini', 'bad_tithi': '3, 8, 13', 'bad_yoga': 'Preeti',
+            'bad_planets': 'Mars'
+        },
+        'Makar': {
+            'bad_day': 'Tuesday', 'bad_karan': 'Vishti', 'bad_lagna': 'Capricorn',
+            'bad_month': 'Ashvina', 'bad_nakshatra': 'Bharani', 'bad_prahar': '1',
+            'bad_rasi': 'Leo', 'bad_tithi': '4, 9, 14', 'bad_yoga': 'Vyatipata',
+            'bad_planets': 'Mars'
+        },
+        'Kumbh': {
+            'bad_day': 'Thursday', 'bad_karan': 'Bava', 'bad_lagna': 'Aquarius',
+            'bad_month': 'Phalguna', 'bad_nakshatra': 'Ardra', 'bad_prahar': '3',
+            'bad_rasi': 'Sagittarius', 'bad_tithi': '3, 8, 13', 'bad_yoga': 'Vajra',
+            'bad_planets': 'Jupiter'
+        },
+        'Meen': {
+            'bad_day': 'Friday', 'bad_karan': 'Kaulava', 'bad_lagna': 'Pisces',
+            'bad_month': 'Margashirsha', 'bad_nakshatra': 'Aslesha', 'bad_prahar': '2',
+            'bad_rasi': 'Aquarius', 'bad_tithi': '5, 10, 15', 'bad_yoga': 'Harshan',
+            'bad_planets': 'Venus'
+        }
+    }
+
+    FAVOURABLE_DATA = {
+        'Mesh': {
+            'lucky_num': '9', 'good_num': '1, 2, 3, 5', 'evil_num': '8',
+            'good_years': '9, 18, 27, 36, 45, 54, 63, 72', 'lucky_days': 'Tuesday, Friday, Saturday',
+            'good_planets': 'Mars, Sun, Jupiter'
+        },
+        'Vrishabh': {
+            'lucky_num': '6', 'good_num': '2, 5, 8, 9', 'evil_num': '1, 3',
+            'good_years': '6, 15, 24, 33, 42, 51, 60, 69', 'lucky_days': 'Friday, Wednesday, Monday',
+            'good_planets': 'Venus, Mercury, Saturn'
+        },
+        'Mithun': {
+            'lucky_num': '5', 'good_num': '3, 6, 7, 8', 'evil_num': '4',
+            'good_years': '5, 14, 23, 32, 41, 50, 59, 68', 'lucky_days': 'Wednesday, Friday, Monday',
+            'good_planets': 'Mercury, Venus, Saturn'
+        },
+        'Kark': {
+            'lucky_num': '2', 'good_num': '1, 3, 9', 'evil_num': '5, 8',
+            'good_years': '2, 11, 20, 29, 38, 47, 56, 65', 'lucky_days': 'Monday, Tuesday, Thursday',
+            'good_planets': 'Moon, Mars, Jupiter'
+        },
+        'Singh': {
+            'lucky_num': '5', 'good_num': '1, 3, 7, 9', 'evil_num': '8',
+            'good_years': '14, 23, 32, 41, 50', 'lucky_days': 'Thursday, Tuesday',
+            'good_planets': 'Jupiter, Mars, Moon'
+        },
+        'Kanya': {
+            'lucky_num': '5', 'good_num': '2, 3, 6, 7', 'evil_num': '4, 8',
+            'good_years': '5, 14, 23, 32, 41, 50, 59, 68', 'lucky_days': 'Wednesday, Friday, Monday',
+            'good_planets': 'Mercury, Venus, Saturn'
+        },
+        'Tula': {
+            'lucky_num': '6', 'good_num': '1, 5, 8', 'evil_num': '3, 9',
+            'good_years': '6, 15, 24, 33, 42, 51, 60, 69', 'lucky_days': 'Friday, Wednesday, Monday',
+            'good_planets': 'Venus, Mercury, Saturn'
+        },
+        'Vrischik': {
+            'lucky_num': '9', 'good_num': '1, 2, 3, 7', 'evil_num': '8',
+            'good_years': '9, 18, 27, 36, 45, 54, 63, 72', 'lucky_days': 'Tuesday, Thursday, Sunday',
+            'good_planets': 'Mars, Jupiter, Sun'
+        },
+        'Dhanu': {
+            'lucky_num': '3', 'good_num': '5, 6, 8', 'evil_num': '1, 2',
+            'good_years': '12, 21, 30, 39, 48, 57, 66, 75', 'lucky_days': 'Thursday, Sunday, Tuesday',
+            'good_planets': 'Jupiter, Sun, Mars'
+        },
+        'Makar': {
+            'lucky_num': '8', 'good_num': '5, 6, 9', 'evil_num': '1, 2',
+            'good_years': '8, 17, 26, 35, 44, 53, 62, 71', 'lucky_days': 'Saturday, Friday, Wednesday',
+            'good_planets': 'Saturn, Venus, Mercury'
+        },
+        'Kumbh': {
+            'lucky_num': '8', 'good_num': '5, 6, 9', 'evil_num': '1, 2',
+            'good_years': '8, 17, 26, 35, 44, 53, 62, 71', 'lucky_days': 'Friday, Wednesday, Saturday',
+            'good_planets': 'Saturn, Venus, Mercury'
+        },
+        'Meen': {
+            'lucky_num': '3', 'good_num': '1, 2, 9', 'evil_num': '4, 8',
+            'good_years': '12, 21, 30, 39, 48, 57, 66, 75', 'lucky_days': 'Thursday, Monday, Tuesday',
+            'good_planets': 'Jupiter, Moon, Mars'
+        }
+    }
+
+    moon_rashi = planets['Moon']['rashi']
+    ghatak = GHATAK_DATA.get(moon_rashi, GHATAK_DATA['Singh'])
+    favourable = FAVOURABLE_DATA.get(moon_rashi, FAVOURABLE_DATA['Singh'])
+
+    # Permanent and Temporal Friendship
+    PERMANENT_FRIENDS = {
+        'Sun': {'Moon': 'F', 'Mars': 'F', 'Mercury': 'N', 'Jupiter': 'F', 'Venus': 'E', 'Saturn': 'E'},
+        'Moon': {'Sun': 'F', 'Mars': 'N', 'Mercury': 'F', 'Jupiter': 'N', 'Venus': 'N', 'Saturn': 'N'},
+        'Mars': {'Sun': 'F', 'Moon': 'F', 'Mercury': 'E', 'Jupiter': 'F', 'Venus': 'N', 'Saturn': 'N'},
+        'Mercury': {'Sun': 'F', 'Moon': 'E', 'Mars': 'N', 'Jupiter': 'N', 'Venus': 'F', 'Saturn': 'N'},
+        'Jupiter': {'Sun': 'F', 'Moon': 'F', 'Mars': 'F', 'Mercury': 'E', 'Venus': 'E', 'Saturn': 'N'},
+        'Venus': {'Sun': 'E', 'Moon': 'E', 'Mars': 'N', 'Mercury': 'F', 'Jupiter': 'N', 'Saturn': 'F'},
+        'Saturn': {'Sun': 'E', 'Moon': 'E', 'Mars': 'E', 'Mercury': 'F', 'Jupiter': 'N', 'Venus': 'F'}
+    }
+
+    planets_list = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn']
+    temporal_friends = {}
+    for p1 in planets_list:
+        temporal_friends[p1] = {}
+        h1 = house_positions.get(p1, 1)
+        for p2 in planets_list:
+            if p1 == p2:
+                temporal_friends[p1][p2] = '—'
+                continue
+            h2 = house_positions.get(p2, 1)
+            diff = (h2 - h1) % 12
+            if diff in [1, 2, 3, 9, 10, 11]:
+                temporal_friends[p1][p2] = 'F'
+            else:
+                temporal_friends[p1][p2] = 'E'
+                
+    permanent_formatted = {}
+    for p1 in planets_list:
+        permanent_formatted[p1] = {}
+        for p2 in planets_list:
+            if p1 == p2:
+                permanent_formatted[p1][p2] = '—'
+            else:
+                permanent_formatted[p1][p2] = PERMANENT_FRIENDS[p1].get(p2, 'N')
+
+    friendship = {
+        'permanent': permanent_formatted,
+        'temporal': temporal_friends
+    }
+
+    # Chalit Table calculation
+    swe.set_sid_mode(swe.SIDM_LAHIRI)
+    res_chalit = swe.houses_ex(jd, lat, lon, b'P', swe.FLG_SIDEREAL) # Porphyry/Shripati
+    chalit_asc = res_chalit[1][0]
+    chalit_mc = res_chalit[1][1]
+    
+    midpoints = [0.0] * 12
+    midpoints[0] = chalit_asc
+    midpoints[9] = chalit_mc
+    midpoints[3] = (chalit_mc + 180) % 360
+    midpoints[6] = (chalit_asc + 180) % 360
+    
+    span_q1 = (chalit_asc - chalit_mc) % 360
+    step_q1 = span_q1 / 3
+    midpoints[10] = (chalit_mc + step_q1) % 360
+    midpoints[11] = (chalit_mc + 2 * step_q1) % 360
+    
+    span_q2 = (midpoints[3] - chalit_asc) % 360
+    step_q2 = span_q2 / 3
+    midpoints[1] = (chalit_asc + step_q2) % 360
+    midpoints[2] = (chalit_asc + 2 * step_q2) % 360
+    
+    midpoints[4] = (midpoints[10] + 180) % 360
+    midpoints[5] = (midpoints[11] + 180) % 360
+    
+    midpoints[7] = (midpoints[1] + 180) % 360
+    midpoints[8] = (midpoints[2] + 180) % 360
+    
+    chalit_table = []
+    RASHIS_SHORT = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir', 'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
+    for i in range(12):
+        prev_idx = (i - 1) % 12
+        prev_mid = midpoints[prev_idx]
+        curr_mid = midpoints[i]
+        
+        diff = (curr_mid - prev_mid) % 360
+        begin_lon = (prev_mid + diff / 2) % 360
+        
+        begin_sign = RASHIS_SHORT[int(begin_lon / 30) % 12]
+        rem_b = begin_lon % 30
+        db = int(rem_b)
+        mb = int((rem_b - db) * 60)
+        sb = int(round(((rem_b - db) * 60 - mb) * 60))
+        if sb >= 60:
+            mb += 1
+            sb -= 60
+        if mb >= 60:
+            db += 1
+            mb -= 60
+        begin_deg_str = f"{db:02d}°{mb:02d}'{sb:02d}\""
+        
+        mid_sign = RASHIS_SHORT[int(curr_mid / 30) % 12]
+        rem_m = curr_mid % 30
+        dm = int(rem_m)
+        mm = int((rem_m - dm) * 60)
+        sm = int(round(((rem_m - dm) * 60 - mm) * 60))
+        if sm >= 60:
+            mm += 1
+            sm -= 60
+        if mm >= 60:
+            dm += 1
+            mm -= 60
+        mid_deg_str = f"{dm:02d}°{mm:02d}'{sm:02d}\""
+        
+        chalit_table.append({
+            'house': i + 1,
+            'begin_sign': begin_sign,
+            'begin_deg_str': begin_deg_str,
+            'mid_sign': mid_sign,
+            'mid_deg_str': mid_deg_str
+        })
+
     return {
         'name': name, 'date': date, 'time': time, 'lat': lat, 'lon': lon, 'gender': gender,
         'planets': planets, 'ascendant': ascendant, 'house_positions': house_positions,
@@ -1011,5 +1353,10 @@ def calculate_kundli(date, time, lat, lon, name, gender='Male'):
         'planet_significators': planet_significators,
         'ashtakvarga': ashtakvarga['sarvashtakavarga'],
         'prasthara_ashtakavarga': ashtakvarga['prasthara_ashtakavarga'],
-        'shad_bala': shad_bala_data
+        'shad_bala': shad_bala_data,
+        'personal_details': personal_details,
+        'ghatak': ghatak,
+        'favourable': favourable,
+        'friendship': friendship,
+        'chalit_table': chalit_table
     }
