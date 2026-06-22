@@ -7,6 +7,8 @@ import '../kundli_screen.dart';
 import '../../controllers/kundli_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/custom_shadows.dart';
+import 'package:geocoding/geocoding.dart';
+import '../../services/api_service.dart';
 
 class BookmarksTab extends StatefulWidget {
   const BookmarksTab({super.key});
@@ -29,6 +31,25 @@ class _BookmarksTabState extends State<BookmarksTab> {
   Future<void> _loadCharts() async {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
+    final String phone = prefs.getString('logged_phone') ?? '9999999999';
+
+    // 1. Try to load from API
+    try {
+      final apiService = Get.find<ApiService>();
+      final apiList = await apiService.getSavedCharts(phone);
+      if (apiList != null) {
+        setState(() {
+          _savedCharts = apiList;
+        });
+        await prefs.setString('saved_charts', jsonEncode(apiList));
+        setState(() => _isLoading = false);
+        return;
+      }
+    } catch (e) {
+      print("API getSavedCharts failed: $e");
+    }
+
+    // 2. Fallback to SharedPreferences
     final raw = prefs.getString('saved_charts');
     if (raw != null) {
       try {
@@ -45,11 +66,168 @@ class _BookmarksTabState extends State<BookmarksTab> {
 
   Future<void> _deleteChart(int index) async {
     final prefs = await SharedPreferences.getInstance();
+    final chart = _savedCharts[index];
+    final String? chartId = chart['id']?.toString() ?? chart['_id']?.toString();
+
     setState(() {
       _savedCharts.removeAt(index);
     });
     await prefs.setString('saved_charts', jsonEncode(_savedCharts));
+
+    if (chartId != null) {
+      try {
+        final apiService = Get.find<ApiService>();
+        await apiService.deleteChart(chartId);
+      } catch (e) {
+        print("API delete failed: $e");
+      }
+    }
     Get.snackbar('Deleted', 'Profile removed from saved charts.', snackPosition: SnackPosition.BOTTOM);
+  }
+
+  void _showEditDialog(Map<String, dynamic> chart, int index) {
+    final nameCtrl = TextEditingController(text: chart['name']);
+    final dateCtrl = TextEditingController(text: chart['date']);
+    final timeCtrl = TextEditingController(text: chart['time']);
+    final placeCtrl = TextEditingController(text: chart['place']);
+    final selectedGender = (chart['gender'] ?? 'Male').toString().obs;
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Edit Chart Details', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                decoration: const InputDecoration(hintText: 'Name'),
+              ),
+              const SizedBox(height: 12),
+              
+              const Text('Date of Birth (YYYY-MM-DD)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: dateCtrl,
+                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                decoration: const InputDecoration(hintText: 'e.g. 2005-10-01'),
+              ),
+              const SizedBox(height: 12),
+              
+              const Text('Time of Birth (HH:MM)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: timeCtrl,
+                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                decoration: const InputDecoration(hintText: 'e.g. 09:12'),
+              ),
+              const SizedBox(height: 12),
+              
+              const Text('Birth Place', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: placeCtrl,
+                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                decoration: const InputDecoration(hintText: 'e.g. New Delhi'),
+              ),
+              const SizedBox(height: 12),
+              
+              const Text('Gender', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
+              const SizedBox(height: 6),
+              Obx(() => Row(
+                children: [
+                  Radio<String>(
+                    value: 'Male',
+                    groupValue: selectedGender.value,
+                    onChanged: (v) => selectedGender.value = v!,
+                  ),
+                  const Text('Male', style: TextStyle(color: Colors.black)),
+                  const SizedBox(width: 12),
+                  Radio<String>(
+                    value: 'Female',
+                    groupValue: selectedGender.value,
+                    onChanged: (v) => selectedGender.value = v!,
+                  ),
+                  const Text('Female', style: TextStyle(color: Colors.black)),
+                ],
+              )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back();
+              setState(() => _isLoading = true);
+              try {
+                double lat = (chart['lat'] as num? ?? 28.6139).toDouble();
+                double lon = (chart['lon'] as num? ?? 77.2090).toDouble();
+                if (placeCtrl.text != chart['place']) {
+                  try {
+                    List<Location> locations = await locationFromAddress(placeCtrl.text);
+                    if (locations.isNotEmpty) {
+                      lat = locations.first.latitude;
+                      lon = locations.first.longitude;
+                    }
+                  } catch (e) {
+                    print("Geocoding failed during edit: $e");
+                  }
+                }
+
+                final String? chartId = chart['id']?.toString() ?? chart['_id']?.toString();
+                if (chartId != null) {
+                  final apiService = Get.find<ApiService>();
+                  final success = await apiService.editChart(
+                    id: chartId,
+                    name: nameCtrl.text,
+                    date: dateCtrl.text,
+                    time: timeCtrl.text,
+                    lat: lat,
+                    lon: lon,
+                    gender: selectedGender.value,
+                    place: placeCtrl.text,
+                  );
+                  if (success) {
+                    Get.snackbar('Success', 'Chart updated successfully!', backgroundColor: Colors.green.shade100);
+                  } else {
+                    Get.snackbar('Error', 'Failed to update chart in API');
+                  }
+                }
+
+                final prefs = await SharedPreferences.getInstance();
+                _savedCharts[index] = {
+                  'id': chartId,
+                  'name': nameCtrl.text,
+                  'date': dateCtrl.text,
+                  'time': timeCtrl.text,
+                  'place': placeCtrl.text,
+                  'lat': lat,
+                  'lon': lon,
+                  'gender': selectedGender.value,
+                };
+                await prefs.setString('saved_charts', jsonEncode(_savedCharts));
+
+                await _loadCharts();
+              } catch (e) {
+                Get.snackbar('Error', 'Failed to save: $e');
+              } finally {
+                setState(() => _isLoading = false);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openChart(Map<String, dynamic> chart) async {
@@ -178,9 +356,18 @@ class _BookmarksTabState extends State<BookmarksTab> {
             ],
           ),
         ),
-        trailing: IconButton(
-          icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400),
-          onPressed: () => _deleteChart(index),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              onPressed: () => _showEditDialog(item, index),
+            ),
+            IconButton(
+              icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400),
+              onPressed: () => _deleteChart(index),
+            ),
+          ],
         ),
         onTap: () => _openChart(item),
       ),

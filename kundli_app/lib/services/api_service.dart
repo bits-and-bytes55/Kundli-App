@@ -174,4 +174,87 @@ class ApiService extends GetxService {
       return null;
     }
   }
+
+  Future<List<Map<String, dynamic>>?> getSavedCharts(String phone) async {
+    try {
+      final response = await dio.get('/charts', queryParameters: {'phone': phone});
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final List<dynamic> list = response.data['data'];
+        return list.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      return null;
+    } catch (e) {
+      print('getSavedCharts API Error: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> saveChart({
+    required String phone,
+    required String name,
+    required String date,
+    required String time,
+    required double lat,
+    required double lon,
+    String? gender,
+    String? place,
+  }) async {
+    try {
+      final response = await dio.post('/charts', data: {
+        'phone': phone,
+        'name': name,
+        'date': date,
+        'time': time,
+        'lat': lat,
+        'lon': lon,
+        'gender': gender ?? 'Male',
+        'place': place ?? '',
+      });
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      }
+      return null;
+    } catch (e) {
+      print('saveChart API Error: $e');
+      return null;
+    }
+  }
+
+  Future<bool> editChart({
+    required String id,
+    String? name,
+    String? date,
+    String? time,
+    double? lat,
+    double? lon,
+    String? gender,
+    String? place,
+  }) async {
+    try {
+      final Map<String, dynamic> updateData = {};
+      if (name != null) updateData['name'] = name;
+      if (date != null) updateData['date'] = date;
+      if (time != null) updateData['time'] = time;
+      if (lat != null) updateData['lat'] = lat;
+      if (lon != null) updateData['lon'] = lon;
+      if (gender != null) updateData['gender'] = gender;
+      if (place != null) updateData['place'] = place;
+
+      final response = await dio.put('/charts/$id', data: updateData);
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('editChart API Error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteChart(String id) async {
+    try {
+      final response = await dio.delete('/charts/$id');
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('deleteChart API Error: $e');
+      return false;
+    }
+  }
 }

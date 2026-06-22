@@ -5,11 +5,22 @@ import '../../theme/app_theme.dart';
 /// Shows for each planet: which houses it signifies via KP rules
 class PlanetSignificationTab extends StatelessWidget {
   final Map<String, dynamic> planetSignificators;
+  final Map<String, dynamic> kpPlanets;
 
   const PlanetSignificationTab({
     super.key,
     required this.planetSignificators,
+    required this.kpPlanets,
   });
+
+  static const _lordAbbrev = {
+    'Surya': 'Su', 'Chandra': 'Mo', 'Mangal': 'Ma', 'Budha': 'Me',
+    'Guru': 'Ju', 'Shukra': 'Ve', 'Shani': 'Sa', 'Rahu': 'Ra', 'Ketu': 'Ke',
+    'Sun': 'Su', 'Moon': 'Mo', 'Mars': 'Ma', 'Mercury': 'Me',
+    'Jupiter': 'Ju', 'Venus': 'Ve', 'Saturn': 'Sa',
+  };
+
+  String _lordAbb(String? lord) => _lordAbbrev[lord] ?? (lord?.substring(0, 2) ?? '-');
 
   static const _planetOrder = [
     'Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'
@@ -76,6 +87,7 @@ class PlanetSignificationTab extends StatelessWidget {
             ),
             child: Row(children: const [
               Expanded(flex: 3, child: Text('Planet', style: _hStyle)),
+              Expanded(flex: 2, child: Text('NL', style: _hStyle)),
               Expanded(flex: 7, child: Text('Houses Signified', style: _hStyle)),
             ]),
           ),
@@ -115,6 +127,10 @@ class PlanetSignificationTab extends StatelessWidget {
     final fullName = _planetNames[planet] ?? planet;
     final icon = _planetIcons[planet] ?? '★';
     
+    final kpPlanetData = kpPlanets[planet] as Map<String, dynamic>?;
+    final String nlRaw = kpPlanetData?['nakshatra_lord']?.toString() ?? '-';
+    final String nlAbb = _lordAbb(nlRaw);
+
     // Retrieve houses list from response
     final houses = (data?['houses'] as List<dynamic>? ?? []).map((e) => (e as num).toInt()).toList();
     houses.sort();
@@ -147,6 +163,19 @@ class PlanetSignificationTab extends StatelessWidget {
                 ],
               ),
             ],
+          ),
+        ),
+
+        // NL column
+        Expanded(
+          flex: 2,
+          child: Text(
+            nlAbb,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1565C0),
+            ),
           ),
         ),
 

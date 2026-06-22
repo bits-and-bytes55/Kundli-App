@@ -7,10 +7,11 @@ import 'kundli_screen.dart';
 import '../controllers/kundli_controller.dart';
 import '../theme/custom_shadows.dart';
 import '../theme/app_theme.dart';
+import '../services/api_service.dart';
 
 class BirthFormScreen extends StatelessWidget {
   final int initialTabIdx;
-  BirthFormScreen({super.key, this.initialTabIdx = 0});
+  BirthFormScreen({super.key, this.initialTabIdx = 1});
 
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
@@ -260,6 +261,25 @@ class BirthFormScreen extends StatelessWidget {
   Future<void> _saveToHistory(String name, String date, String time, String place, double lat, double lon, String gender) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final String phone = prefs.getString('logged_phone') ?? '9999999999';
+
+      // Save to API
+      try {
+        final apiService = Get.find<ApiService>();
+        await apiService.saveChart(
+          phone: phone,
+          name: name,
+          date: date,
+          time: time,
+          lat: lat,
+          lon: lon,
+          gender: gender,
+          place: place,
+        );
+      } catch (ae) {
+        print("API save failed: $ae");
+      }
+
       final raw = prefs.getString('saved_charts');
       List<dynamic> list = [];
       if (raw != null) {

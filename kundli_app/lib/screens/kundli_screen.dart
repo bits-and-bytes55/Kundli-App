@@ -26,7 +26,7 @@ import 'kundli/friendship_tab.dart';
 
 class KundliScreen extends StatefulWidget {
   final int initialTabIdx;
-  const KundliScreen({super.key, this.initialTabIdx = 0});
+  const KundliScreen({super.key, this.initialTabIdx = 1});
   @override
   State<KundliScreen> createState() => _KundliScreenState();
 }
@@ -151,7 +151,10 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
             // 5 - Cusps
             CuspsTab(kpAscendant: kpAscendant),
             // 6 - Planet Signification
-            PlanetSignificationTab(planetSignificators: planetSignificators),
+            PlanetSignificationTab(
+              planetSignificators: planetSignificators,
+              kpPlanets: kpPlanets,
+            ),
             // 7 - House Significators
             HouseSignificatorsTab(houseSignificators: houseSignificators, kpPlanets: kpPlanets),
             // 8 - Ashtakvarga SAV

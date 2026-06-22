@@ -16,11 +16,13 @@ from routes.chart import router as chart_router
 from routes.milan import router as milan_router
 from routes.panchang import router as panchang_router
 from routes.horoscope import router as horoscope_router
+from routes.saved_charts import router as saved_charts_router
 
 app.include_router(chart_router, prefix="/api")
 app.include_router(milan_router, prefix="/api")
 app.include_router(panchang_router, prefix="/api")
 app.include_router(horoscope_router, prefix="/api")
+app.include_router(saved_charts_router, prefix="/api")
 
 @app.get("/")
 def root():

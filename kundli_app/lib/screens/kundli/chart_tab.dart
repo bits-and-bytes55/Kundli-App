@@ -80,6 +80,30 @@ class _ChartTabState extends State<ChartTab> {
     final lagnaDeg = (ascendant['degree'] as num? ?? 0).toDouble();
     final lagnaDegStr = _dms(lagnaDeg);
 
+    final sunData = planets['Sun'] as Map<String, dynamic>?;
+    final double sunLon = sunData != null ? (sunData['longitude'] as num? ?? 0.0).toDouble() : 0.0;
+
+    bool isCombust(String pName, double pLon) {
+      if (pName == 'Sun' || pName == 'Rahu' || pName == 'Ketu') return false;
+      double diff = (pLon - sunLon).abs();
+      diff = diff > 180 ? 360 - diff : diff;
+      switch (pName) {
+        case 'Moon': return diff < 12.0;
+        case 'Mars': return diff < 17.0;
+        case 'Mercury': return diff < 14.0;
+        case 'Jupiter': return diff < 11.0;
+        case 'Venus': return diff < 10.0;
+        case 'Saturn': return diff < 15.0;
+        default: return false;
+      }
+    }
+
+    bool isVargottama(double pLon) {
+      int d1Sign = (pLon / 30.0).floor() % 12;
+      int d9Sign = (pLon / (360.0 / 108.0)).floor() % 12;
+      return d1Sign == d9Sign;
+    }
+
     // Build per-house planet lists
     final List<List<_PlanetLabel>> houses = List.generate(12, (_) => []);
     planets.forEach((key, value) {
@@ -102,9 +126,14 @@ class _ChartTabState extends State<ChartTab> {
       }
 
       final deg   = (value['degree'] as num? ?? 0.0).toDouble();
+      final pLon  = (value['longitude'] as num? ?? 0.0).toDouble();
       final retro = value['is_retrograde'] == true;
       final exalt = value['is_exalted'] == true;
-      houses[hi].add(_PlanetLabel(abbrev[key]!, deg, retro, exalt));
+      final debil = value['is_debilitated'] == true;
+      final combust = isCombust(key, pLon);
+      final vargottama = isVargottama(pLon);
+
+      houses[hi].add(_PlanetLabel(abbrev[key]!, deg, retro, exalt, debil, combust, vargottama));
     });
 
     final double chartSize = MediaQuery.of(context).size.width - 32;
@@ -181,12 +210,12 @@ class _ChartTabState extends State<ChartTab> {
               color: const Color(0xFFFDE8D8),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFE8A87C))),
-            child: Wrap(spacing: 18, runSpacing: 6, children: const [
-              _LegItem('* Retrograde',      Color(0xFF333333)),
-              _LegItem('^ Combust',         Color(0xFF333333)),
-              _LegItem('\u25a1 Vargottama', Color(0xFF333333)),
-              _LegItem('\u2191 Exalted',    Color(0xFF333333)),
-              _LegItem('\u2193 Debilitated',Color(0xFF333333)),
+            child: Wrap(spacing: 18, runSpacing: 6, children: [
+              _LegItem('* Retrograde',      Colors.red),
+              _LegItem('^ Combust',         Colors.orange),
+              _LegItem('\u25a1 Vargottama', Colors.blue),
+              _LegItem('\u2191 Exalted',    Colors.green),
+              _LegItem('\u2193 Debilitated',Colors.red),
             ]),
           ),
           const SizedBox(height: 10),
@@ -215,6 +244,29 @@ class _ChartTabState extends State<ChartTab> {
     final m  = mt.floor();
     final s  = ((mt - m) * 60).round();
     return "$d°${m.toString().padLeft(2,'0')}'${s.toString().padLeft(2,'0')}\"";
+  }
+
+  Widget _buildPlanetWidget(_PlanetLabel p, {double fontSize = 10}) {
+    return Text.rich(
+      TextSpan(
+        text: p.label,
+        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.black87),
+        children: [
+          TextSpan(text: '${p.deg.floor()}°', style: TextStyle(fontSize: fontSize - 1, color: Colors.black54)),
+          if (p.retro)
+            const TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10)),
+          if (p.combust)
+            const TextSpan(text: '^', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 10)),
+          if (p.vargottama)
+            const TextSpan(text: '□', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 9)),
+          if (p.exalt)
+            const TextSpan(text: '↑', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 10)),
+          if (p.debil)
+            const TextSpan(text: '↓', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10)),
+        ],
+      ),
+      textAlign: TextAlign.center,
+    );
   }
 
   // ── North Indian ──────────────────────────────────────────────────
@@ -267,10 +319,7 @@ class _ChartTabState extends State<ChartTab> {
               Wrap(
                 alignment: WrapAlignment.center,
                 spacing: 2, runSpacing: 0,
-                children: houses[i].map((p) => Text(
-                  '${p.label}${p.deg.floor()}°${p.retro ? '*' : ''}${p.exalt ? '↑' : ''}',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87),
-                )).toList(),
+                children: houses[i].map((p) => _buildPlanetWidget(p, fontSize: 10)).toList(),
               ),
           ],
         ),
@@ -335,10 +384,7 @@ class _ChartTabState extends State<ChartTab> {
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 1, runSpacing: 0,
-                  children: cellPlanets.map((p) => Text(
-                    '${p.label}${p.deg.floor()}${p.retro ? '*' : ''}${p.exalt ? '↑' : ''}',
-                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black87),
-                  )).toList(),
+                  children: cellPlanets.map((p) => _buildPlanetWidget(p, fontSize: 9)).toList(),
                 ),
               ),
           ],
@@ -549,8 +595,8 @@ class _ChartTabState extends State<ChartTab> {
 class _PlanetLabel {
   final String label;
   final double deg;
-  final bool retro, exalt;
-  const _PlanetLabel(this.label, this.deg, this.retro, this.exalt);
+  final bool retro, exalt, debil, combust, vargottama;
+  const _PlanetLabel(this.label, this.deg, this.retro, this.exalt, this.debil, this.combust, this.vargottama);
 }
 
 class _PlanetDeg {
