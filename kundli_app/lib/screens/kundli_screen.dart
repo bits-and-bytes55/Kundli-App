@@ -81,6 +81,9 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
     final kpPlanets   = data['kp_planets']   as Map<String, dynamic>? ?? planets;
     final kpAscendant = data['kp_ascendant'] ?? ascendant;
     final dasha     = data['dasha']     as List<dynamic>? ?? [];
+    final charDasha = data['char_dasha'] as List<dynamic>? ?? [];
+    final yoginiDasha = data['yogini_dasha'] as List<dynamic>? ?? [];
+    final mahadashaPhala = data['mahadasha_phala'] as List<dynamic>? ?? [];
     final yogas     = data['yogas']     as List<dynamic>? ?? [];
     final doshas    = data['doshas']    as Map<String, dynamic>? ?? {};
     final numerology  = data['numerology']  as Map<String, dynamic>? ?? {};
@@ -166,9 +169,14 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
             // 14 - Avakahada
             AvakahadaTab(avakahada: avakahada, ascendant: ascendant, ghatak: ghatak, favourable: favourable),
             // 15 - Gochar
-            const GocharTab(),
+            GocharTab(birthAscendant: ascendant, birthPlanets: planets),
             // 16 - Dasha
-            DashaTab(dasha: dasha),
+            DashaTab(
+              dasha: dasha,
+              charDasha: charDasha,
+              yoginiDasha: yoginiDasha,
+              mahadashaPhala: mahadashaPhala,
+            ),
             // 17 - Yogas
             YogaTab(yogas: yogas),
             // 18 - Shodashvarga

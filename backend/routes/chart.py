@@ -35,8 +35,8 @@ def generate(req: KundliRequest):
         # Inject detailed Panchang calculated for the given date, time, and location
         data['panchang'] = calculate_panchang(req.date, req.time, req.lat, req.lon)
         
-        # Inject current Transits (Gochar)
-        data['gochar'] = get_current_transits()
+        # Inject current Transits (Gochar) for the client's location
+        data['gochar'] = get_current_transits(obs_lat=req.lat, obs_lon=req.lon)
         
         # Inject Milan matching if partner details are supplied in the request
         if req.partner_date and req.partner_time and req.partner_lat is not None and req.partner_lon is not None:
@@ -57,7 +57,16 @@ def generate(req: KundliRequest):
 def dasha_only(req: KundliRequest):
     try:
         data = calculate_kundli(req.date, req.time, req.lat, req.lon, req.name, gender=req.gender)
-        return {"success": True, "data": {"dasha": data["dasha"], "name": data["name"]}}
+        return {
+            "success": True,
+            "data": {
+                "dasha": data["dasha"],
+                "char_dasha": data["char_dasha"],
+                "yogini_dasha": data["yogini_dasha"],
+                "mahadasha_phala": data["mahadasha_phala"],
+                "name": data["name"]
+            }
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 

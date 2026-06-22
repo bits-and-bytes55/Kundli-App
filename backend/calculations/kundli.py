@@ -2,6 +2,7 @@ import swisseph as swe
 from timezonefinder import TimezoneFinder
 import pytz
 from datetime import datetime
+from calculations.dasha import calculate_chara_dasha, calculate_yogini_dasha, get_mahadasha_phala
 
 RASHIS = ['Mesh','Vrishabh','Mithun','Kark','Singh','Kanya','Tula','Vrischik','Dhanu','Makar','Kumbh','Meen']
 RASHI_LORDS = ['Mangal','Shukra','Budha','Chandra','Surya','Budha','Shukra','Mangal','Guru','Shani','Shani','Guru']
@@ -933,6 +934,9 @@ def calculate_kundli(date, time, lat, lon, name, gender='Male'):
     
     # Dashas
     dasha = get_vimshottari_dasha(planets, jd)
+    char_dasha = calculate_chara_dasha(planets, ascendant, jd)
+    yogini_dasha = calculate_yogini_dasha(planets, jd)
+    mahadasha_phala = get_mahadasha_phala(planets, house_positions)
     
     # Yogas
     yogas = check_yogas(planets, ascendant, house_positions)
@@ -1348,6 +1352,7 @@ def calculate_kundli(date, time, lat, lon, name, gender='Male'):
         'kp_planets': kp_planets, 'kp_ascendant': kp_ascendant,
         'navamsa': navamsa, 'shodashvarga': shodashvarga,
         'dasha': dasha, 'yogas': yogas, 'doshas': doshas,
+        'char_dasha': char_dasha, 'yogini_dasha': yogini_dasha, 'mahadasha_phala': mahadasha_phala,
         'lal_kitab': lal_kitab, 'numerology': numerology, 'jd': jd,
         'house_significators': house_significators,
         'planet_significators': planet_significators,
