@@ -3,6 +3,7 @@ from timezonefinder import TimezoneFinder
 import pytz
 from datetime import datetime
 from calculations.dasha import calculate_chara_dasha, calculate_yogini_dasha, get_mahadasha_phala
+from calculations.predictions import generate_predictions
 
 RASHIS = ['Mesh','Vrishabh','Mithun','Kark','Singh','Kanya','Tula','Vrischik','Dhanu','Makar','Kumbh','Meen']
 RASHI_LORDS = ['Mangal','Shukra','Budha','Chandra','Surya','Budha','Shukra','Mangal','Guru','Shani','Shani','Guru']
@@ -1346,6 +1347,9 @@ def calculate_kundli(date, time, lat, lon, name, gender='Male'):
             'mid_deg_str': mid_deg_str
         })
 
+    # Generate predictions
+    predictions = generate_predictions(planets, ascendant, house_positions)
+
     return {
         'name': name, 'date': date, 'time': time, 'lat': lat, 'lon': lon, 'gender': gender,
         'planets': planets, 'ascendant': ascendant, 'house_positions': house_positions,
@@ -1363,5 +1367,6 @@ def calculate_kundli(date, time, lat, lon, name, gender='Male'):
         'ghatak': ghatak,
         'favourable': favourable,
         'friendship': friendship,
-        'chalit_table': chalit_table
+        'chalit_table': chalit_table,
+        'predictions': predictions
     }
