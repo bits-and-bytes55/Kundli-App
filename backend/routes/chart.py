@@ -6,6 +6,7 @@ from calculations.avakahada import get_avakahada_chakra
 from calculations.gochar import get_current_transits
 from calculations.panchang import calculate_panchang
 from calculations.milan import calculate_milan
+from calculations.varshphal import calculate_varshphal
 
 router = APIRouter()
 
@@ -96,3 +97,30 @@ def graha_sthiti(req: KundliRequest):
         return {"success": True, "data": {"rows": rows, "name": data["name"]}}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+class VarshphalRequest(BaseModel):
+    name: str
+    date: str
+    time: str
+    lat: float
+    lon: float
+    gender: Optional[str] = 'Male'
+    target_year: int
+
+@router.post("/kundli/varshphal")
+def generate_varshphal(req: VarshphalRequest):
+    """Generates Tajika Solar Return (Varshphal) for a given target year."""
+    try:
+        data = calculate_varshphal(
+            birth_date_str=req.date,
+            birth_time_str=req.time,
+            lat=req.lat,
+            lon=req.lon,
+            name=req.name,
+            target_year=req.target_year,
+            gender=req.gender
+        )
+        return {"success": True, "data": data}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
