@@ -21,28 +21,63 @@ class _BookmarksTabState extends State<BookmarksTab> {
   final KundliController _kundliController = Get.put(KundliController());
   List<Map<String, dynamic>> _savedCharts = [];
   bool _isLoading = true;
+  bool _isFetchingMore = false;
+  bool _hasMore = true;
+  int _page = 1;
+  String _searchQuery = '';
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadCharts();
+    _loadCharts(isRefresh: true);
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+        if (!_isFetchingMore && _hasMore) {
+          _loadCharts(isRefresh: false);
+        }
+      }
+    });
   }
 
-  Future<void> _loadCharts() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadCharts({bool isRefresh = true}) async {
+    if (isRefresh) {
+      setState(() {
+        _isLoading = true;
+        _page = 1;
+        _hasMore = true;
+      });
+    } else {
+      setState(() => _isFetchingMore = true);
+    }
     final prefs = await SharedPreferences.getInstance();
     final String phone = prefs.getString('logged_phone') ?? '9999999999';
 
     // 1. Try to load from API
     try {
       final apiService = Get.find<ApiService>();
-      final apiList = await apiService.getSavedCharts(phone);
+      final apiList = await apiService.getSavedCharts(phone, query: _searchQuery, page: _page, limit: 20);
       if (apiList != null) {
         setState(() {
-          _savedCharts = apiList;
+          if (isRefresh) {
+            _savedCharts = apiList;
+          } else {
+            _savedCharts.addAll(apiList);
+          }
+          if (apiList.length < 20) {
+            _hasMore = false;
+          } else {
+            _page++;
+          }
         });
-        await prefs.setString('saved_charts', jsonEncode(apiList));
-        setState(() => _isLoading = false);
+        if (isRefresh && _searchQuery.isEmpty) {
+          await prefs.setString('saved_charts', jsonEncode(apiList));
+        }
+        setState(() {
+          _isLoading = false;
+          _isFetchingMore = false;
+        });
         return;
       }
     } catch (e) {
@@ -50,18 +85,23 @@ class _BookmarksTabState extends State<BookmarksTab> {
     }
 
     // 2. Fallback to SharedPreferences
-    final raw = prefs.getString('saved_charts');
-    if (raw != null) {
-      try {
-        final List<dynamic> decoded = jsonDecode(raw);
-        setState(() {
-          _savedCharts = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
-        });
-      } catch (e) {
-        print("Failed to decode saved charts: $e");
+    if (isRefresh && _searchQuery.isEmpty) {
+      final raw = prefs.getString('saved_charts');
+      if (raw != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(raw);
+          setState(() {
+            _savedCharts = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+          });
+        } catch (e) {
+          print("Failed to decode saved charts: $e");
+        }
       }
     }
-    setState(() => _isLoading = false);
+    setState(() {
+      _isLoading = false;
+      _isFetchingMore = false;
+    });
   }
 
   Future<void> _deleteChart(int index) async {
@@ -216,7 +256,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
                 };
                 await prefs.setString('saved_charts', jsonEncode(_savedCharts));
 
-                await _loadCharts();
+                await _loadCharts(isRefresh: true);
               } catch (e) {
                 Get.snackbar('Error', 'Failed to save: $e');
               } finally {
@@ -262,28 +302,65 @@ class _BookmarksTabState extends State<BookmarksTab> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
-            onPressed: _loadCharts,
+            onPressed: () => _loadCharts(isRefresh: true),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : _savedCharts.isEmpty
-              ? _buildEmptyState()
-              : RefreshIndicator(
-                  onRefresh: _loadCharts,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _savedCharts.length,
-                    itemBuilder: (context, index) {
-                      final item = _savedCharts[index];
-                      return _buildChartCard(item, index);
-                    },
-                  ),
-                ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by name...',
+                prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                          _loadCharts(isRefresh: true);
+                        })
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+              ),
+              onChanged: (value) {
+                setState(() => _searchQuery = value);
+                _loadCharts(isRefresh: true);
+              },
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : _savedCharts.isEmpty
+                    ? _buildEmptyState()
+                    : RefreshIndicator(
+                        onRefresh: () => _loadCharts(isRefresh: true),
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: _savedCharts.length + (_hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == _savedCharts.length) {
+                              return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: AppColors.primary)));
+                            }
+                            final item = _savedCharts[index];
+                            return _buildChartCard(item, index);
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
-        onPressed: () => Get.to(() => BirthFormScreen())?.then((_) => _loadCharts()),
+        onPressed: () => Get.to(() => BirthFormScreen())?.then((_) => _loadCharts(isRefresh: true)),
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
     );
@@ -312,7 +389,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
             ElevatedButton.icon(
               icon: const Icon(Icons.add_rounded),
               label: const Text('Create New Chart'),
-              onPressed: () => Get.to(() => BirthFormScreen())?.then((_) => _loadCharts()),
+              onPressed: () => Get.to(() => BirthFormScreen())?.then((_) => _loadCharts(isRefresh: true)),
             ),
           ],
         ),
@@ -365,7 +442,29 @@ class _BookmarksTabState extends State<BookmarksTab> {
             ),
             IconButton(
               icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400),
-              onPressed: () => _deleteChart(index),
+              onPressed: () {
+                Get.dialog(
+                  AlertDialog(
+                    backgroundColor: Colors.white,
+                    title: const Text('Delete Kundli', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    content: const Text('Are you sure you want to delete this saved chart?', style: TextStyle(color: Colors.black87)),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Get.back(),
+                        child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
+                        onPressed: () {
+                          Get.back();
+                          _deleteChart(index);
+                        },
+                        child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),

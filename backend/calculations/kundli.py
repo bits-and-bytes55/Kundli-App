@@ -29,8 +29,8 @@ DASHA_YEARS = {'Ketu':7,'Shukra':20,'Surya':6,'Chandra':10,'Mangal':7,'Rahu':18,
 TOTAL_DASHA_YEARS = 120
 
 # Exaltation/Debilitation degrees
-EXALTATION = {'Sun':10,'Moon':33,'Mars':298,'Mercury':165,'Jupiter':95,'Venus':357,'Saturn':200,'Rahu':60,'Ketu':240}
-DEBILITATION = {'Sun':190,'Moon':213,'Mars':118,'Mercury':345,'Jupiter':275,'Venus':177,'Saturn':20,'Rahu':240,'Ketu':60}
+EXALTATION = {'Sun':10,'Moon':33,'Mars':298,'Mercury':165,'Jupiter':95,'Venus':357,'Saturn':200,'Rahu':50,'Ketu':230}
+DEBILITATION = {'Sun':190,'Moon':213,'Mars':118,'Mercury':345,'Jupiter':275,'Venus':177,'Saturn':20,'Rahu':230,'Ketu':50}
 
 def get_julian_day(date_str, time_str, lat, lon):
     dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
@@ -717,7 +717,7 @@ def calculate_shad_bala(planets, ascendant):
     is_day_birth = sun_house in [7, 8, 9, 10, 11, 12]
     planet_list = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn']
     
-    exaltation = {'Sun': 10, 'Moon': 33, 'Mars': 298, 'Mercury': 165, 'Jupiter': 95, 'Venus': 357, 'Saturn': 20}
+    exaltation = {'Sun': 10, 'Moon': 33, 'Mars': 298, 'Mercury': 165, 'Jupiter': 95, 'Venus': 357, 'Saturn': 200}
     
     own_signs = {
         'Sun': ['Singh'], 'Moon': ['Kark'], 'Mars': ['Mesh', 'Vrischik'],

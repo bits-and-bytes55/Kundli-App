@@ -54,10 +54,14 @@ async def save_chart(req: SavedChartModel):
         return {"success": False, "error": str(e)}
 
 @router.get("/charts")
-async def get_charts(phone: str = Query(...)):
+async def get_charts(phone: str = Query(...), query: str = "", page: int = 1, limit: int = 20):
     try:
+        skip = (page - 1) * limit
         if bookmarks_col is not None:
-            cursor = bookmarks_col.find({"phone": phone})
+            db_query = {"phone": phone}
+            if query:
+                db_query["name"] = {"$regex": query, "$options": "i"}
+            cursor = bookmarks_col.find(db_query).skip(skip).limit(limit)
             charts = []
             async for doc in cursor:
                 doc['id'] = str(doc['_id'])
@@ -67,6 +71,9 @@ async def get_charts(phone: str = Query(...)):
             return {"success": True, "data": charts}
         else:
             charts = [c for c in _in_memory_charts if c.get("phone") == phone]
+            if query:
+                charts = [c for c in charts if query.lower() in c.get("name", "").lower()]
+            charts = charts[skip : skip + limit]
             return {"success": True, "data": charts}
     except Exception as e:
         return {"success": False, "error": str(e)}

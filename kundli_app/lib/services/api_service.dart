@@ -139,6 +139,35 @@ class ApiService extends GetxService {
     }
   }
 
+  Future<Map<String, dynamic>?> getVarshphal({
+    required String name,
+    required String date,
+    required String time,
+    required double lat,
+    required double lon,
+    required int targetYear,
+    String? gender,
+  }) async {
+    try {
+      final response = await dio.post('/kundli/varshphal', data: {
+        'name': name,
+        'date': date,
+        'time': time,
+        'lat': lat,
+        'lon': lon,
+        'gender': gender ?? 'Male',
+        'target_year': targetYear,
+      });
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      }
+      return null;
+    } catch (e) {
+      print('Varshphal API Error: $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> getPanchang({
     required String date,
     required String time,
@@ -175,9 +204,14 @@ class ApiService extends GetxService {
     }
   }
 
-  Future<List<Map<String, dynamic>>?> getSavedCharts(String phone) async {
+  Future<List<Map<String, dynamic>>?> getSavedCharts(String phone, {String query = '', int page = 1, int limit = 20}) async {
     try {
-      final response = await dio.get('/charts', queryParameters: {'phone': phone});
+      final response = await dio.get('/charts', queryParameters: {
+        'phone': phone,
+        'query': query,
+        'page': page,
+        'limit': limit,
+      });
       if (response.statusCode == 200 && response.data['success'] == true) {
         final List<dynamic> list = response.data['data'];
         return list.map((e) => Map<String, dynamic>.from(e)).toList();

@@ -97,17 +97,12 @@ class HomeTab extends StatelessWidget {
             const SizedBox(height: 12),
             GridView.count(
               shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.88,
+              crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.3,
               children: [
                 _svc(Icons.auto_awesome_rounded, 'Kundli', AppColors.primary, () => Get.to(() => BirthFormScreen(initialTabIdx: 0))),
                 _svc(Icons.favorite_rounded, 'Milan', const Color(0xFFE91E63), () => Get.to(() => const MilanScreen())),
-                _svc(Icons.timelapse_rounded, 'Dasha', const Color(0xFF9C27B0), () => Get.to(() => BirthFormScreen(initialTabIdx: 5))),
                 _svc(Icons.calendar_month_rounded, 'Panchang', const Color(0xFFFF5722), () => Get.to(() => const PanchangScreen())),
                 _svc(Icons.stars_rounded, 'Horoscope', AppColors.primary, () => Get.to(() => const HoroscopeScreen())),
-                _svc(Icons.format_list_numbered_rounded, 'Numerology', const Color(0xFF4CAF50), () => Get.to(() => BirthFormScreen(initialTabIdx: 9))),
-                _svc(Icons.book_rounded, 'Lal Kitab', const Color(0xFF795548), () => Get.to(() => BirthFormScreen(initialTabIdx: 8))),
-                _svc(Icons.layers_rounded, 'Shodashvarga', const Color(0xFF607D8B), () => Get.to(() => BirthFormScreen(initialTabIdx: 7))),
-                _svc(Icons.wb_twilight_rounded, 'Transit', const Color(0xFF2196F3), () => Get.to(() => const TransitScreen())),
               ],
             ),
             const SizedBox(height: 20),

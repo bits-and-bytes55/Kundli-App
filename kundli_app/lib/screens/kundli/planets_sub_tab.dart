@@ -152,7 +152,7 @@ class PlanetsSubTab extends StatelessWidget {
       } else if (kpPlanets.containsKey(pname)) {
         p = kpPlanets[pname] as Map<String, dynamic>;
         lon = (p['longitude'] as num?)?.toDouble();
-        isRetro = p['is_retrograde'] == true;
+        isRetro = p['is_retrograde'] == true || pname == 'Rahu' || pname == 'Ketu';
         isCombust = p['is_combust'] == true;
         sl = _lordAbb(p['rashi_lord']?.toString());
         nl = _lordAbb(p['nakshatra_lord']?.toString());

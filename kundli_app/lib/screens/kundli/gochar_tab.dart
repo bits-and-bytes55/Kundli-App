@@ -483,7 +483,8 @@ class _GocharTabState extends State<GocharTab> {
                 final pName = entry.value;
                 final pData = transits[pName] as Map<String, dynamic>?;
                 if (pData == null) return const SizedBox.shrink();
-                final retro = pData['is_retrograde'] == true;
+                bool retro = pData['is_retrograde'] == true;
+                if (pName == 'Rahu' || pName == 'Ketu') retro = true;
                 final col = planetColors[pName] ?? _textDark;
                 final house = ((((pData['rashi_num'] as num?)
                                     ?.toInt() ??
@@ -576,7 +577,8 @@ class _GocharTabState extends State<GocharTab> {
             ),
             // Planets
             ...planetsInCell.map((p) {
-              final retro = p['is_retrograde'] == true;
+              bool retro = p['is_retrograde'] == true;
+              if (p['name'] == 'Rahu' || p['name'] == 'Ketu') retro = true;
               final col =
                   planetColors[p['name'] as String] ?? _textDark;
               return Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lottie/lottie.dart';
 import '../controllers/kundli_controller.dart';
 import '../theme/app_theme.dart';
 import 'kundli/dasha_tab.dart';
@@ -8,6 +9,7 @@ import 'kundli/lal_kitab_tab.dart';
 import 'kundli/chart_tab.dart';
 import 'kundli/planets_tab.dart';
 import 'kundli/planets_sub_tab.dart';
+import 'kundli/varshphal_tab.dart';
 import 'kundli/cusps_tab.dart';
 import 'kundli/planet_signification_tab.dart';
 import 'kundli/house_significators_tab.dart';
@@ -23,6 +25,7 @@ import 'kundli/shad_bala_tab.dart';
 import 'kundli/personal_details_tab.dart';
 import 'kundli/chalit_table_tab.dart';
 import 'kundli/friendship_tab.dart';
+import 'kundli/predictions_tab.dart';
 
 class KundliScreen extends StatefulWidget {
   final int initialTabIdx;
@@ -34,28 +37,31 @@ class KundliScreen extends StatefulWidget {
 class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _showLottie = true;
 
   final List<Tab> _tabs = const [
     Tab(text: 'Basic'),
     Tab(text: 'Chart'),
-    Tab(text: 'Chalit Table'),
+    Tab(text: 'Graha Sthiti'),
     Tab(text: 'Planets'),
     Tab(text: 'Planets-Sub'),
     Tab(text: 'Cusps'),
     Tab(text: 'Planet Sig.'),
     Tab(text: 'House Sig.'),
-    Tab(text: 'Ashtakvarga'),
-    Tab(text: 'Prasthara'),
-    Tab(text: 'Friendship'),
-    Tab(text: 'Shad Bala'),
-    Tab(text: 'Graha Sthiti'),
     Tab(text: 'KP System'),
-    Tab(text: 'Avakahada'),
+    Tab(text: 'Ashtakvarga'),
+    Tab(text: 'Shad Bala'),
     Tab(text: 'Gochar'),
     Tab(text: 'Dasha'),
+    Tab(text: 'Varshphal'),
+    Tab(text: 'Avakahada'),
+    Tab(text: 'Chalit Table'),
+    Tab(text: 'Prasthara'),
+    Tab(text: 'Friendship'),
     Tab(text: 'Yogas'),
     Tab(text: 'Shodashvarga'),
     Tab(text: 'Lal Kitab'),
+    Tab(text: 'Predictions'),
     Tab(text: 'Reports'),
   ];
 
@@ -63,6 +69,13 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this, initialIndex: widget.initialTabIdx);
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      if (mounted) {
+        setState(() {
+          _showLottie = false;
+        });
+      }
+    });
   }
 
   @override
@@ -102,95 +115,128 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
     final favourable = data['favourable'] as Map<String, dynamic>? ?? {};
     final friendship = data['friendship'] as Map<String, dynamic>? ?? {};
     final chalitTable = data['chalit_table'] as List<dynamic>? ?? [];
+    final predictions = data['predictions'] as List<dynamic>? ?? [];
 
-    return Scaffold(
-        backgroundColor: AppColors.scaffoldBg,
-        key: _scaffoldKey,
-        drawer: _buildDrawer(data['name'] ?? ''),
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0.5,
-          leading: IconButton(
-            icon: const Icon(Icons.menu_rounded, color: Colors.black),
-            onPressed: () => _scaffoldKey.currentState?.openDrawer()),
-          title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(data['name'] ?? '', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 17)),
-            Text('${data['date']} • ${ascendant['rashi']} Lagna', style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w700)),
-          ]),
-          actions: [IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black), onPressed: () => Get.back())],
-          bottom: TabBar(
-            controller: _tabController, isScrollable: true,
-            labelColor: Colors.black, unselectedLabelColor: Colors.black54,
-            indicatorColor: AppColors.primary, indicatorWeight: 3,
-            tabs: _tabs,
+    return Stack(
+      children: [
+        Scaffold(
+            backgroundColor: AppColors.scaffoldBg,
+            key: _scaffoldKey,
+            drawer: _buildDrawer(data['name'] ?? ''),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0.5,
+              leading: IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.black),
+                onPressed: () => _scaffoldKey.currentState?.openDrawer()),
+              title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(data['name'] ?? '', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 17)),
+                Text('${data['date']} • ${ascendant['rashi']} Lagna', style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w700)),
+              ]),
+              actions: [IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black), onPressed: () => Get.back())],
+              bottom: TabBar(
+                controller: _tabController, isScrollable: true,
+                labelColor: Colors.black, unselectedLabelColor: Colors.black54,
+                indicatorColor: AppColors.primary, indicatorWeight: 3,
+                tabs: _tabs,
+              ),
+            ),
+            body: RefreshIndicator(
+              onRefresh: () async {
+                await c.fetchKundli(
+                  data['name'] ?? '',
+                  data['date'] ?? '',
+                  data['time'] ?? '',
+                  (data['lat'] as num?)?.toDouble() ?? 28.6139,
+                  (data['lon'] as num?)?.toDouble() ?? 77.2090,
+                  gender: data['gender'] ?? 'Male',
+                );
+              },
+              color: AppColors.primary,
+              child: TabBarView(controller: _tabController, children: [
+                // 0 - Basic Details
+                PersonalDetailsTab(personalDetails: personalDetails),
+                // 1 - Chart
+                ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets),
+                // 2 - Graha Sthiti
+                GrahaSthitiTab(planets: planets, ascendant: ascendant),
+                // 3 - Planets (AstroSage style)
+                PlanetsTab(planets: planets, ascendant: ascendant),
+                // 4 - Planets-Sub (KP SL/NL/SB/SS)
+                PlanetsSubTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
+                // 5 - Cusps
+                CuspsTab(kpAscendant: kpAscendant),
+                // 6 - Planet Signification
+                PlanetSignificationTab(
+                  planetSignificators: planetSignificators,
+                  kpPlanets: kpPlanets,
+                ),
+                // 7 - House Significators
+                HouseSignificatorsTab(houseSignificators: houseSignificators, kpPlanets: kpPlanets),
+                // 8 - KP System
+                KpTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
+                // 9 - Ashtakvarga SAV
+                AshtakvargaTab(ashtakvarga: ashtakvarga),
+                // 10 - Shad Bala & Bhav Bala
+                ShadBalaTab(shadBala: shadBala),
+                // 11 - Gochar
+                GocharTab(birthAscendant: ascendant, birthPlanets: planets),
+                // 12 - Dasha
+                DashaTab(
+                  dasha: dasha,
+                  charDasha: charDasha,
+                  yoginiDasha: yoginiDasha,
+                  mahadashaPhala: mahadashaPhala,
+                ),
+                // 13 - Varshphal
+                const VarshphalTab(),
+                // 14 - Avakahada
+                AvakahadaTab(avakahada: avakahada, ascendant: ascendant, ghatak: ghatak, favourable: favourable),
+                // 15 - Chalit Table
+                ChalitTableTab(chalitTable: chalitTable),
+                // 16 - Prastharashtakvarga PAT
+                PrastharashtakvargaTab(prastharaAshtakvarga: prastharaAshtakvarga),
+                // 17 - Friendship
+                FriendshipTab(friendship: friendship),
+                // 18 - Yogas
+                YogaTab(yogas: yogas),
+                // 19 - Shodashvarga
+                ShodashvargaTab(shodashvarga: shodashvarga),
+                // 20 - Lal Kitab
+                LalKitabTab(lalKitab: lalKitab),
+                // 21 - Predictions
+                PredictionsTab(predictions: predictions),
+                // 22 - Reports
+                ReportsTab(doshas: doshas, numerology: numerology),
+              ]),
+            ),
           ),
-        ),
-        body: RefreshIndicator(
-          onRefresh: () async {
-            await c.fetchKundli(
-              data['name'] ?? '',
-              data['date'] ?? '',
-              data['time'] ?? '',
-              (data['lat'] as num?)?.toDouble() ?? 28.6139,
-              (data['lon'] as num?)?.toDouble() ?? 77.2090,
-              gender: data['gender'] ?? 'Male',
-            );
-          },
-          color: AppColors.primary,
-          child: TabBarView(controller: _tabController, children: [
-            // 0 - Basic Details
-            PersonalDetailsTab(personalDetails: personalDetails),
-            // 1 - Chart
-            ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets),
-            // 2 - Chalit Table
-            ChalitTableTab(chalitTable: chalitTable),
-            // 3 - Planets (AstroSage style)
-            PlanetsTab(planets: planets, ascendant: ascendant),
-            // 4 - Planets-Sub (KP SL/NL/SB/SS)
-            PlanetsSubTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
-            // 5 - Cusps
-            CuspsTab(kpAscendant: kpAscendant),
-            // 6 - Planet Signification
-            PlanetSignificationTab(
-              planetSignificators: planetSignificators,
-              kpPlanets: kpPlanets,
+        if (_showLottie)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showLottie = false;
+                });
+              },
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: Lottie.network(
+                    'https://assets9.lottiefiles.com/packages/lf20_u4yrau.json',
+                    width: 350,
+                    height: 350,
+                    repeat: false,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.flare_rounded, color: Colors.amber, size: 100);
+                    },
+                  ),
+                ),
+              ),
             ),
-            // 7 - House Significators
-            HouseSignificatorsTab(houseSignificators: houseSignificators, kpPlanets: kpPlanets),
-            // 8 - Ashtakvarga SAV
-            AshtakvargaTab(ashtakvarga: ashtakvarga),
-            // 9 - Prastharashtakvarga PAT
-            PrastharashtakvargaTab(prastharaAshtakvarga: prastharaAshtakvarga),
-            // 10 - Friendship
-            FriendshipTab(friendship: friendship),
-            // 11 - Shad Bala & Bhav Bala
-            ShadBalaTab(shadBala: shadBala),
-            // 12 - Graha Sthiti
-            GrahaSthitiTab(planets: planets, ascendant: ascendant),
-            // 13 - KP System
-            KpTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
-            // 14 - Avakahada
-            AvakahadaTab(avakahada: avakahada, ascendant: ascendant, ghatak: ghatak, favourable: favourable),
-            // 15 - Gochar
-            GocharTab(birthAscendant: ascendant, birthPlanets: planets),
-            // 16 - Dasha
-            DashaTab(
-              dasha: dasha,
-              charDasha: charDasha,
-              yoginiDasha: yoginiDasha,
-              mahadashaPhala: mahadashaPhala,
-            ),
-            // 17 - Yogas
-            YogaTab(yogas: yogas),
-            // 18 - Shodashvarga
-            ShodashvargaTab(shodashvarga: shodashvarga),
-            // 19 - Lal Kitab
-            LalKitabTab(lalKitab: lalKitab),
-            // 20 - Reports
-            ReportsTab(doshas: doshas, numerology: numerology),
-          ]),
-        ),
-      );
+          ),
+      ],
+    );
   }
 
   Widget _buildDrawer(String name) {
@@ -209,25 +255,27 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
         Expanded(child: ListView(padding: EdgeInsets.zero, children: [
           _dItem('Basic (Personal)', Icons.info_outline_rounded, 0),
           _dItem('चार्ट (Chart)', Icons.grid_view_rounded, 1),
-          _dItem('Chalit Table', Icons.table_view_rounded, 2),
+          _dItem('ग्रह स्थिति (Graha Sthiti)', Icons.table_rows_rounded, 2),
           _dItem('ग्रह (Planets)', Icons.stars_rounded, 3),
           _dItem('Planets-Sub (KP)', Icons.table_chart_rounded, 4),
           _dItem('Cusps (KP)', Icons.border_all_rounded, 5),
           _dItem('Planet Signification', Icons.text_snippet_rounded, 6),
           _dItem('House Significators', Icons.home_work_rounded, 7),
-          _dItem('अष्टकवर्ग (Ashtakvarga)', Icons.apps_rounded, 8),
-          _dItem('प्रस्तार अष्टकवर्ग (Prasthara)', Icons.grid_on_rounded, 9),
-          _dItem('Planetary Friendship', Icons.people_rounded, 10),
-          _dItem('षडबल (Shad Bala)', Icons.bar_chart_rounded, 11),
-          _dItem('ग्रह स्थिति', Icons.table_rows_rounded, 12),
-          _dItem('केपी सिस्टम (KP System)', Icons.auto_stories_rounded, 13),
-          _dItem('अवकहड़ा चक्र', Icons.grid_on_rounded, 14),
-          _dItem('गोचर (Transit)', Icons.satellite_alt_rounded, 15),
-          _dItem('दशा (Dasha)', Icons.timelapse_rounded, 16),
-          _dItem('योग (Yogas)', Icons.auto_awesome_rounded, 17),
-          _dItem('षोडशवर्ग', Icons.layers_rounded, 18),
-          _dItem('लाल किताब', Icons.book_rounded, 19),
-          _dItem('रिपोर्ट (Reports)', Icons.analytics_rounded, 20),
+          _dItem('केपी सिस्टम (KP System)', Icons.auto_stories_rounded, 8),
+          _dItem('अष्टकवर्ग (Ashtakvarga)', Icons.apps_rounded, 9),
+          _dItem('षडबल (Shad Bala)', Icons.bar_chart_rounded, 10),
+          _dItem('गोचर (Transit)', Icons.satellite_alt_rounded, 11),
+          _dItem('दशा (Dasha)', Icons.timelapse_rounded, 12),
+          _dItem('वर्षफल (Varshphal)', Icons.event_repeat_rounded, 13),
+          _dItem('अवकहड़ा चक्र (Avakahada)', Icons.grid_on_rounded, 14),
+          _dItem('Chalit Table', Icons.table_view_rounded, 15),
+          _dItem('प्रस्तार अष्टकवर्ग (Prasthara)', Icons.grid_on_rounded, 16),
+          _dItem('Planetary Friendship', Icons.people_rounded, 17),
+          _dItem('योग (Yogas)', Icons.auto_awesome_rounded, 18),
+          _dItem('षोडशवर्ग', Icons.layers_rounded, 19),
+          _dItem('लाल किताब', Icons.book_rounded, 20),
+          _dItem('Predictions', Icons.online_prediction_rounded, 21),
+          _dItem('रिपोर्ट (Reports)', Icons.analytics_rounded, 22),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),

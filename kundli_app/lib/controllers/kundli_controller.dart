@@ -6,6 +6,9 @@ class KundliController extends GetxController {
 
   var isLoading = false.obs;
   var kundliData = Rx<Map<String, dynamic>?>(null);
+  
+  var isVarshphalLoading = false.obs;
+  var varshphalData = Rx<Map<String, dynamic>?>(null);
 
   Future<void> fetchKundli(String name, String date, String time, double lat, double lon, {String? gender}) async {
     isLoading.value = true;
@@ -21,6 +24,24 @@ class KundliController extends GetxController {
       kundliData.value = data;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> fetchVarshphal(String name, String date, String time, double lat, double lon, int targetYear, {String? gender}) async {
+    isVarshphalLoading.value = true;
+    try {
+      var data = await apiService.getVarshphal(
+        name: name,
+        date: date,
+        time: time,
+        lat: lat,
+        lon: lon,
+        targetYear: targetYear,
+        gender: gender,
+      );
+      varshphalData.value = data;
+    } finally {
+      isVarshphalLoading.value = false;
     }
   }
 }

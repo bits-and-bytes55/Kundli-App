@@ -3,7 +3,15 @@ import '../../theme/app_theme.dart';
 
 class ChartTab extends StatefulWidget {
   final Map<String, dynamic> ascendant, planets, kpAscendant, kpPlanets;
-  const ChartTab({super.key, required this.ascendant, required this.planets, required this.kpAscendant, required this.kpPlanets});
+  final bool showDirections;
+  const ChartTab({
+    super.key,
+    required this.ascendant,
+    required this.planets,
+    required this.kpAscendant,
+    required this.kpPlanets,
+    this.showDirections = false,
+  });
   @override
   State<ChartTab> createState() => _ChartTabState();
 }
@@ -127,7 +135,10 @@ class _ChartTabState extends State<ChartTab> {
 
       final deg   = (value['degree'] as num? ?? 0.0).toDouble();
       final pLon  = (value['longitude'] as num? ?? 0.0).toDouble();
-      final retro = value['is_retrograde'] == true;
+      bool retro  = value['is_retrograde'] == true;
+      if (key == 'Rahu' || key == 'Ketu') {
+        retro = true;
+      }
       final exalt = value['is_exalted'] == true;
       final debil = value['is_debilitated'] == true;
       final combust = isCombust(key, pLon);
@@ -224,9 +235,6 @@ class _ChartTabState extends State<ChartTab> {
           _infoCard(ascendant),
           const SizedBox(height: 12),
 
-          // ── Rashi sign grid (colorful) ───────────────────────────
-          _rashiSignGrid(lagnaIdx),
-          const SizedBox(height: 12),
 
           // ── Planet degree summary (bottom, 3-per-row) ──────────────
           _planetDegreeGrid(ascendant, planets),
@@ -306,10 +314,29 @@ class _ChartTabState extends State<ChartTab> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('$houseRashiNum',
-              style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold,
-                color: rashiColors[(houseRashiNum - 1) % 12])),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('$houseRashiNum',
+                  style: TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.bold,
+                    color: rashiColors[(houseRashiNum - 1) % 12])),
+                if (widget.showDirections) ...[
+                  const SizedBox(width: 2),
+                  Text(
+                    '(${const [
+                      'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
+                      'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
+                    ][(houseRashiNum - 1) % 12]})',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
+                ],
+              ],
+            ),
             if (isLagnaHouse)
               Text('La $lagnaDegStr',
                 style: TextStyle(
@@ -345,6 +372,7 @@ class _ChartTabState extends State<ChartTab> {
 
       // House number label for this rashi cell
       String houseLabel;
+      int hIdx = (rashiI - lagnaIdx + 12) % 12;
       if (_showKP && kpCusps.isNotEmpty) {
         // Which house cusps fall in this rashi?
         final List<int> housesInRashi = [];
@@ -353,6 +381,9 @@ class _ChartTabState extends State<ChartTab> {
           if (cuspRashiIdx == rashiI) housesInRashi.add(h + 1);
         }
         houseLabel = housesInRashi.isNotEmpty ? 'H${housesInRashi.join(",")}' : '';
+        if (housesInRashi.isNotEmpty) {
+          hIdx = housesInRashi.first - 1;
+        }
       } else {
         final hNum = (rashiI - lagnaIdx + 12) % 12 + 1;
         houseLabel = '$hNum';
@@ -372,8 +403,27 @@ class _ChartTabState extends State<ChartTab> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 2),
-            Text(houseLabel,
-              style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(houseLabel,
+                  style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.bold)),
+                if (widget.showDirections) ...[
+                  const SizedBox(width: 2),
+                  Text(
+                    '(${const [
+                      'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
+                      'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
+                    ][rashiI % 12]})',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
+                ],
+              ],
+            ),
             if (isLagna)
               Text('La $lagnaDegStr',
                 style: TextStyle(
@@ -416,9 +466,18 @@ class _ChartTabState extends State<ChartTab> {
       for (final e in slice) {
         final data   = e.data as Map<String, dynamic>?;
         final deg    = (data?['degree'] as num? ?? 0).toDouble();
-        final retro  = data?['is_retrograde'] == true;
+        bool retro   = data?['is_retrograde'] == true;
+        if (e.abbr == 'Ra' || e.abbr == 'Ke') {
+          retro = true;
+        }
         final comb   = data?['is_combust']    == true;
-        final suffix = '${retro ? '*' : ''}${comb ? '^' : ''}';
+        final exalt  = data?['is_exalted'] == true;
+        final debil  = data?['is_debilitated'] == true;
+        final pLon   = (data?['longitude'] as num? ?? 0.0).toDouble();
+        int d1Sign = (pLon / 30.0).floor() % 12;
+        int d9Sign = (pLon / (360.0 / 108.0)).floor() % 12;
+        final varg = (e.abbr != 'La' && d1Sign == d9Sign);
+        final suffix = '${retro ? '*' : ''}${comb ? '^' : ''}${varg ? '□' : ''}${exalt ? '↑' : ''}${debil ? '↓' : ''}';
         cells.add(Expanded(
           child: Row(children: [
             SizedBox(width: 26,
@@ -447,60 +506,6 @@ class _ChartTabState extends State<ChartTab> {
     );
   }
 
-  // ── Colorful rashi sign grid ──────────────────────────────────────
-  Widget _rashiSignGrid(int lagnaIdx) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text('Rashi (Signs) Reference',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-      ),
-      GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          childAspectRatio: 1.15,
-          crossAxisSpacing: 6,
-          mainAxisSpacing: 6,
-        ),
-        itemCount: 12,
-        itemBuilder: (_, i) {
-          final color = rashiColors[i];
-          final isLagna = i == lagnaIdx;
-          return Container(
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isLagna ? AppColors.primary : color.withOpacity(0.4),
-                width: isLagna ? 2 : 1,
-              ),
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(rashiSymbols[i],
-                      style: TextStyle(fontSize: 16, color: color)),
-                    Text('${i + 1}',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
-                    Text(rashiList[i].substring(0, 4),
-                      style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w600)),
-                    Text(rashiEngNames[i].substring(0, 3),
-                      style: TextStyle(fontSize: 8, color: color.withOpacity(0.7))),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    ]);
-  }
 
   // ── Widgets ───────────────────────────────────────────────────────
   Widget _toggle(String label, String val) {

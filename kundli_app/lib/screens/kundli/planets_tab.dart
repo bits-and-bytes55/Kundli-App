@@ -73,6 +73,7 @@ class PlanetsTab extends StatelessWidget {
             child: Wrap(spacing: 16, runSpacing: 4, children: const [
               _LegChip('* Retrograde'),
               _LegChip('^ Combust'),
+              _LegChip('□ Vargottama'),
               _LegChip('↑ Exalted'),
               _LegChip('↓ Debilitated'),
             ]),
@@ -139,15 +140,21 @@ class PlanetsTab extends StatelessWidget {
       }
       if (p == null) continue;
 
-      final retro  = p['is_retrograde'] == true;
+      bool retro  = p['is_retrograde'] == true;
+      if (pname == 'Rahu' || pname == 'Ketu') retro = true;
       final exalt  = p['is_exalted'] == true;
       final debil  = p['is_debilitated'] == true;
       final comb   = p['is_combust'] == true;
+      final pLon = (p['longitude'] as num? ?? 0.0).toDouble();
+      int d1Sign = (pLon / 30.0).floor() % 12;
+      int d9Sign = (pLon / (360.0 / 108.0)).floor() % 12;
+      final varg = (pname != 'Lagna' && d1Sign == d9Sign);
       final isLagna = pname == 'Lagna';
 
       String suffix = '';
       if (retro)  suffix += ' *';
       if (comb)   suffix += ' ^';
+      if (varg)   suffix += ' □';
 
       Color nameColor = AppColors.textDark;
       if (exalt) nameColor = const Color(0xFF2E7D32);
@@ -206,10 +213,15 @@ class PlanetsTab extends StatelessWidget {
   }
 
   Widget _detailCard(String name, Map<String, dynamic> p) {
-    final retro  = p['is_retrograde'] == true;
+    bool retro  = p['is_retrograde'] == true;
+    if (name == 'Rahu' || name == 'Ketu') retro = true;
     final exalt  = p['is_exalted'] == true;
     final debil  = p['is_debilitated'] == true;
     final comb   = p['is_combust'] == true;
+    final pLon = (p['longitude'] as num? ?? 0.0).toDouble();
+    int d1Sign = (pLon / 30.0).floor() % 12;
+    int d9Sign = (pLon / (360.0 / 108.0)).floor() % 12;
+    final varg = (d1Sign == d9Sign);
     final house  = (p['house'] as num? ?? 0).toInt();
 
     Color accentColor = AppColors.primary;
@@ -243,6 +255,7 @@ class PlanetsTab extends StatelessWidget {
             const SizedBox(width: 8),
             if (retro) _badge('Retrograde *', Colors.orange.shade800),
             if (comb)  _badge('Combust ^',   Colors.red.shade700),
+            if (varg)  _badge('Vargottama □', Colors.blue.shade700),
             if (exalt) _badge('Exalted ↑',   Colors.green.shade700),
             if (debil) _badge('Debilitated ↓', Colors.red.shade700),
             const Spacer(),

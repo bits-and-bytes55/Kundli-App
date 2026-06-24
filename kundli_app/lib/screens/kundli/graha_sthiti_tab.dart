@@ -177,6 +177,8 @@ class _GrahaSthitiTabState extends State<GrahaSthitiTab> {
     final lagnaDeg = (widget.ascendant['degree'] as num? ?? 0).toDouble();
     final lagnaDegStr = _formatDegree(lagnaDeg);
 
+    final sunData = widget.planets['Sun'] as Map<String, dynamic>?;
+    final double sunLon = sunData != null ? (sunData['longitude'] as num? ?? 0.0).toDouble() : 0.0;
     final List<List<_PlanetLabel>> houses = List.generate(12, (_) => []);
     widget.planets.forEach((key, value) {
       if (!abbrev.containsKey(key) || value is! Map) return;
@@ -184,9 +186,26 @@ class _GrahaSthitiTabState extends State<GrahaSthitiTab> {
       if (pRashiIdx == -1) return;
       int hi = (pRashiIdx - lagnaIdx + 12) % 12;
       final deg = (value['degree'] as num? ?? 0.0).toDouble();
-      final retro = value['is_retrograde'] == true;
+      final pLon = (value['longitude'] as num? ?? 0.0).toDouble();
+      bool retro = value['is_retrograde'] == true;
+      if (key == 'Rahu' || key == 'Ketu') retro = true;
       final exalt = value['is_exalted'] == true;
-      houses[hi].add(_PlanetLabel(abbrev[key]!, deg, retro, exalt));
+      final debil = value['is_debilitated'] == true;
+      bool combust = false;
+      if (key != 'Sun' && key != 'Rahu' && key != 'Ketu') {
+        double diff = (pLon - sunLon).abs();
+        diff = diff > 180 ? 360 - diff : diff;
+        if (key == 'Moon' && diff < 12.0) combust = true;
+        else if (key == 'Mars' && diff < 17.0) combust = true;
+        else if (key == 'Mercury' && diff < 14.0) combust = true;
+        else if (key == 'Jupiter' && diff < 11.0) combust = true;
+        else if (key == 'Venus' && diff < 10.0) combust = true;
+        else if (key == 'Saturn' && diff < 15.0) combust = true;
+      }
+      int d1Sign = (pLon / 30.0).floor() % 12;
+      int d9Sign = (pLon / (360.0 / 108.0)).floor() % 12;
+      final varg = d1Sign == d9Sign;
+      houses[hi].add(_PlanetLabel(abbrev[key]!, deg, retro, exalt, debil, combust, varg));
     });
 
     final double chartSize = MediaQuery.of(context).size.width - 32;
@@ -432,7 +451,7 @@ class _GrahaSthitiTabState extends State<GrahaSthitiTab> {
                 spacing: 2,
                 runSpacing: 0,
                 children: houses[i].map((p) => Text(
-                  '${p.label}${p.deg.floor()}°${p.retro ? '*' : ''}${p.exalt ? '↑' : ''}',
+                  '${p.label}${p.deg.floor()}°${p.retro ? '*' : ''}${p.combust ? '^' : ''}${p.vargottama ? '□' : ''}${p.exalt ? '↑' : ''}${p.debil ? '↓' : ''}',
                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87),
                 )).toList(),
               ),
@@ -460,8 +479,8 @@ class _GrahaSthitiTabState extends State<GrahaSthitiTab> {
 class _PlanetLabel {
   final String label;
   final double deg;
-  final bool retro, exalt;
-  const _PlanetLabel(this.label, this.deg, this.retro, this.exalt);
+  final bool retro, exalt, debil, combust, vargottama;
+  const _PlanetLabel(this.label, this.deg, this.retro, this.exalt, this.debil, this.combust, this.vargottama);
 }
 
 class _NorthPainter extends CustomPainter {
