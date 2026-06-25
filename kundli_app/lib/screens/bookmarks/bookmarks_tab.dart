@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../birth_form_screen.dart';
 import '../kundli_screen.dart';
+import '../premium_kundli_screen.dart';
 import '../../controllers/kundli_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/custom_shadows.dart';
@@ -18,15 +19,93 @@ class BookmarksTab extends StatefulWidget {
 }
 
 class _BookmarksTabState extends State<BookmarksTab> {
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.scaffoldBg,
+        appBar: AppBar(
+          title: const Text('Saved Charts (कुंडली संग्रह)'),
+          elevation: 0.5,
+          bottom: const TabBar(
+            labelColor: AppColors.primary,
+            unselectedLabelColor: Colors.black54,
+            indicatorColor: AppColors.primary,
+            indicatorWeight: 3,
+            tabs: [
+              Tab(text: 'Basic Kundli'),
+              Tab(text: 'Premium Kundli'),
+            ],
+          ),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search by name...',
+                  prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          })
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+                ),
+                onChanged: (value) {
+                  setState(() => _searchQuery = value);
+                },
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  SavedChartsList(mode: 'Basic', searchQuery: _searchQuery),
+                  SavedChartsList(mode: 'Premium', searchQuery: _searchQuery),
+                ],
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: AppColors.primary,
+          onPressed: () => Get.to(() => BirthFormScreen()),
+          child: const Icon(Icons.add_rounded, color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+class SavedChartsList extends StatefulWidget {
+  final String mode;
+  final String searchQuery;
+
+  const SavedChartsList({super.key, required this.mode, required this.searchQuery});
+
+  @override
+  State<SavedChartsList> createState() => _SavedChartsListState();
+}
+
+class _SavedChartsListState extends State<SavedChartsList> {
   final KundliController _kundliController = Get.put(KundliController());
   List<Map<String, dynamic>> _savedCharts = [];
   bool _isLoading = true;
   bool _isFetchingMore = false;
   bool _hasMore = true;
   int _page = 1;
-  String _searchQuery = '';
   final ScrollController _scrollController = ScrollController();
-  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -34,11 +113,19 @@ class _BookmarksTabState extends State<BookmarksTab> {
     _loadCharts(isRefresh: true);
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-        if (!_isFetchingMore && _hasMore) {
+        if (!_isFetchingMore && _hasMore && !_isLoading) {
           _loadCharts(isRefresh: false);
         }
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(SavedChartsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.searchQuery != widget.searchQuery) {
+      _loadCharts(isRefresh: true);
+    }
   }
 
   Future<void> _loadCharts({bool isRefresh = true}) async {
@@ -54,11 +141,12 @@ class _BookmarksTabState extends State<BookmarksTab> {
     final prefs = await SharedPreferences.getInstance();
     final String phone = prefs.getString('logged_phone') ?? '9999999999';
 
-    // 1. Try to load from API
     try {
       final apiService = Get.find<ApiService>();
-      final apiList = await apiService.getSavedCharts(phone, query: _searchQuery, page: _page, limit: 20);
-      if (apiList != null) {
+      final apiListRaw = await apiService.getSavedCharts(phone, query: widget.searchQuery, mode: widget.mode, page: _page, limit: 100);
+      if (apiListRaw != null) {
+        // Local filtering to support production backend not having mode yet
+        final apiList = apiListRaw.where((chart) => (chart['mode'] ?? 'Basic') == widget.mode).toList();
         setState(() {
           if (isRefresh) {
             _savedCharts = apiList;
@@ -71,8 +159,8 @@ class _BookmarksTabState extends State<BookmarksTab> {
             _page++;
           }
         });
-        if (isRefresh && _searchQuery.isEmpty) {
-          await prefs.setString('saved_charts', jsonEncode(apiList));
+        if (isRefresh && widget.searchQuery.isEmpty) {
+          await prefs.setString('saved_charts_${widget.mode}', jsonEncode(apiList));
         }
         setState(() {
           _isLoading = false;
@@ -84,9 +172,8 @@ class _BookmarksTabState extends State<BookmarksTab> {
       print("API getSavedCharts failed: $e");
     }
 
-    // 2. Fallback to SharedPreferences
-    if (isRefresh && _searchQuery.isEmpty) {
-      final raw = prefs.getString('saved_charts');
+    if (isRefresh && widget.searchQuery.isEmpty) {
+      final raw = prefs.getString('saved_charts_${widget.mode}');
       if (raw != null) {
         try {
           final List<dynamic> decoded = jsonDecode(raw);
@@ -112,7 +199,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
     setState(() {
       _savedCharts.removeAt(index);
     });
-    await prefs.setString('saved_charts', jsonEncode(_savedCharts));
+    await prefs.setString('saved_charts_${widget.mode}', jsonEncode(_savedCharts));
 
     if (chartId != null) {
       try {
@@ -254,7 +341,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
                   'lon': lon,
                   'gender': selectedGender.value,
                 };
-                await prefs.setString('saved_charts', jsonEncode(_savedCharts));
+                await prefs.setString('saved_charts_${widget.mode}', jsonEncode(_savedCharts));
 
                 await _loadCharts(isRefresh: true);
               } catch (e) {
@@ -282,7 +369,11 @@ class _BookmarksTabState extends State<BookmarksTab> {
       );
       setState(() => _isLoading = false);
       if (_kundliController.kundliData.value != null) {
-        Get.to(() => const KundliScreen());
+        if (widget.mode == 'Premium') {
+          Get.to(() => const PremiumKundliScreen());
+        } else {
+          Get.to(() => const KundliScreen(initialTabIdx: 1));
+        }
       } else {
         Get.snackbar('Error', 'Failed to calculate Kundli calculations.');
       }
@@ -294,75 +385,65 @@ class _BookmarksTabState extends State<BookmarksTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      appBar: AppBar(
-        title: const Text('Saved Charts (कुंडली संग्रह)'),
-        elevation: 0.5,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
-            onPressed: () => _loadCharts(isRefresh: true),
-          ),
-        ],
+    if (_isLoading) {
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: 6,
+        itemBuilder: (context, index) => _buildSkeletonCard(),
+      );
+    }
+
+    if (_savedCharts.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _loadCharts(isRefresh: true),
+      color: AppColors.primary,
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: _savedCharts.length + (_isFetchingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _savedCharts.length) {
+            return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: AppColors.primary)));
+          }
+          final item = _savedCharts[index];
+          return _buildChartCard(item, index);
+        },
       ),
-      body: Column(
+    );
+  }
+
+  Widget _buildSkeletonCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withOpacity(0.3)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name...',
-                prefixIcon: const Icon(Icons.search, color: AppColors.primary),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                          _loadCharts(isRefresh: true);
-                        })
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
-              ),
-              onChanged: (value) {
-                setState(() => _searchQuery = value);
-                _loadCharts(isRefresh: true);
-              },
-            ),
-          ),
+          Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle)),
+          const SizedBox(width: 16),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : _savedCharts.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        onRefresh: () => _loadCharts(isRefresh: true),
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          itemCount: _savedCharts.length + (_hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == _savedCharts.length) {
-                              return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: AppColors.primary)));
-                            }
-                            final item = _savedCharts[index];
-                            return _buildChartCard(item, index);
-                          },
-                        ),
-                      ),
-          ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(height: 14, width: 150, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4))),
+                const SizedBox(height: 8),
+                Container(height: 10, width: 100, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4))),
+                const SizedBox(height: 6),
+                Container(height: 10, width: 80, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4))),
+              ],
+            ),
+          )
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        onPressed: () => Get.to(() => BirthFormScreen())?.then((_) => _loadCharts(isRefresh: true)),
-        child: const Icon(Icons.add_rounded, color: Colors.white),
-      ),
+      )
     );
   }
 
@@ -375,22 +456,25 @@ class _BookmarksTabState extends State<BookmarksTab> {
           children: [
             Icon(Icons.bookmark_outline_rounded, size: 72, color: AppColors.primary.withOpacity(0.3)),
             const SizedBox(height: 16),
-            const Text(
-              'No Saved Profiles',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textDark),
+            Text(
+              widget.searchQuery.isNotEmpty ? 'No Matching Charts' : 'No Saved ${widget.mode} Profiles',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textDark),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Charts you generate will be saved here for instant calculation access.',
+            Text(
+              widget.searchQuery.isNotEmpty 
+                  ? 'Try searching with a different name.' 
+                  : 'Charts you generate in ${widget.mode} mode will be saved here for instant access.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textLight, fontSize: 13),
+              style: const TextStyle(color: AppColors.textLight, fontSize: 13),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Create New Chart'),
-              onPressed: () => Get.to(() => BirthFormScreen())?.then((_) => _loadCharts(isRefresh: true)),
-            ),
+            if (widget.searchQuery.isEmpty)
+              ElevatedButton.icon(
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Create New Chart'),
+                onPressed: () => Get.to(() => BirthFormScreen()),
+              ),
           ],
         ),
       ),

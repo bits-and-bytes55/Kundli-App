@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'kundli_screen.dart';
 import 'premium_kundli_screen.dart';
@@ -26,6 +28,15 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
   final timeController = TextEditingController();
   final placeController = TextEditingController();
   final passcodeController = TextEditingController();
+  
+  // Premium Fields
+  final deathDateController = TextEditingController();
+  final deathTimeController = TextEditingController();
+  final deathPlaceController = TextEditingController();
+  final Rx<File?> signatureImage = Rx<File?>(null);
+  final includeDeathDetails = false.obs;
+  final includeSignature = false.obs;
+
   final selectedGender = "Male".obs;
   final selectedMode = "Basic".obs;
 
@@ -53,7 +64,45 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
     timeController.dispose();
     placeController.dispose();
     passcodeController.dispose();
+    deathDateController.dispose();
+    deathTimeController.dispose();
+    deathPlaceController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickSignature() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                title: const Text('Take a Photo'),
+                onTap: () async {
+                  Get.back();
+                  final pickedFile = await ImagePicker().pickImage(source: ImageSource.camera);
+                  if (pickedFile != null) signatureImage.value = File(pickedFile.path);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                title: const Text('Choose from Gallery'),
+                onTap: () async {
+                  Get.back();
+                  final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+                  if (pickedFile != null) signatureImage.value = File(pickedFile.path);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -354,13 +403,215 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                 ),
               ),
               
-              // Passcode field for Premium Kundli
+              // Premium Fields
               Obx(() {
                 if (selectedMode.value == "Premium") {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8.0),
+                            child: Text('Premium Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text('Death Details', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  Checkbox(
+                                    value: includeDeathDetails.value,
+                                    activeColor: AppColors.primary,
+                                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                    onChanged: (val) {
+                                      if (val != null) includeDeathDetails.value = val;
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Text('Signature', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  Checkbox(
+                                    value: includeSignature.value,
+                                    activeColor: AppColors.primary,
+                                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                    onChanged: (val) {
+                                      if (val != null) includeSignature.value = val;
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
+
+                      if (includeDeathDetails.value) ...[
+                      // Death Date & Time Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Death Date', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+                                const SizedBox(height: 6),
+                                Container(
+                                  decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
+                                  child: TextFormField(
+                                    controller: deathDateController,
+                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
+                                    readOnly: true,
+                                    onTap: () async {
+                                      DateTime? pickedDate = await showDatePicker(
+                                        context: context,
+                                        initialDate: DateTime.now(),
+                                        firstDate: DateTime(1900),
+                                        lastDate: DateTime(2100),
+                                        builder: (context, child) => Theme(
+                                          data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.primary)),
+                                          child: child!,
+                                        ),
+                                      );
+                                      if (pickedDate != null) {
+                                        deathDateController.text = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+                                      }
+                                    },
+                                    decoration: const InputDecoration(
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      isDense: true,
+                                      hintText: 'YYYY-MM-DD',
+                                      hintStyle: TextStyle(fontSize: 12, color: AppColors.textLight),
+                                      suffixIcon: Icon(Icons.calendar_month_rounded, color: Colors.grey, size: 18),
+                                    ),
+                                    validator: (v) {
+                                      if (selectedMode.value == "Premium" && (v == null || v.isEmpty)) return 'Required';
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Death Time(Optional)', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+                                const SizedBox(height: 6),
+                                Container(
+                                  decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
+                                  child: TextFormField(
+                                    controller: deathTimeController,
+                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
+                                    readOnly: true,
+                                    onTap: () async {
+                                      TimeOfDay? pickedTime = await showTimePicker(
+                                        context: context,
+                                        initialTime: TimeOfDay.now(),
+                                        builder: (context, child) => Theme(
+                                          data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.primary)),
+                                          child: child!,
+                                        ),
+                                      );
+                                      if (pickedTime != null) {
+                                        deathTimeController.text = "${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}";
+                                      }
+                                    },
+                                    decoration: const InputDecoration(
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      isDense: true,
+                                      hintText: 'HH:MM',
+                                      hintStyle: TextStyle(fontSize: 12, color: AppColors.textLight),
+                                      suffixIcon: Icon(Icons.access_time_rounded, color: Colors.grey, size: 18),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Death Place
+                      const Text('Death Place', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      Container(
+                        decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
+                        child: TextFormField(
+                          controller: deathPlaceController,
+                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
+                          decoration: const InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            isDense: true,
+                            hintText: 'e.g. Mumbai',
+                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textLight),
+                            suffixIcon: Icon(Icons.location_on_rounded, color: Colors.grey, size: 18),
+                          ),
+                          validator: (v) {
+                            if (selectedMode.value == "Premium" && (v == null || v.isEmpty)) return 'Required';
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ],
+
+                      if (includeSignature.value) ...[
+                      // Upload Signature
+                      const Text('Upload Signature', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: _pickSignature,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Obx(() {
+                            if (signatureImage.value != null) {
+                              return Column(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.file(signatureImage.value!, height: 100, fit: BoxFit.contain),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text('Tap to change signature', style: TextStyle(fontSize: 12, color: AppColors.textMedium)),
+                                ],
+                              );
+                            }
+                            return Column(
+                              children: [
+                                const Icon(Icons.draw_rounded, size: 32, color: AppColors.textLight),
+                                const SizedBox(height: 8),
+                                const Text('Tap to upload or take a photo', style: TextStyle(fontSize: 13, color: AppColors.textMedium, fontWeight: FontWeight.w500)),
+                              ],
+                            );
+                          }),
+                        ),
+                      ),
+                      ],
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 16),
+
+                      // Passcode
                       const Text('Owner Passcode', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
                       const SizedBox(height: 6),
                       Container(
@@ -398,6 +649,18 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
                         if (selectedMode.value == "Premium") {
+                          if (includeSignature.value && signatureImage.value == null) {
+                            Get.snackbar(
+                              'Missing Signature',
+                              'Please upload a signature image for the Premium Kundli.',
+                              backgroundColor: Colors.red.shade800,
+                              colorText: Colors.white,
+                              snackPosition: SnackPosition.BOTTOM,
+                              margin: const EdgeInsets.all(16),
+                            );
+                            return;
+                          }
+
                           final code = passcodeController.text.trim();
                           final prefs = await SharedPreferences.getInstance();
                           final loggedPhone = prefs.getString('logged_phone') ?? authController.phoneNumber.value;
@@ -446,6 +709,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                             lat,
                             lon,
                             selectedGender.value,
+                            selectedMode.value,
                           );
                           if (selectedMode.value == "Premium") {
                             Get.to(() => const PremiumKundliScreen(), transition: Transition.fadeIn);
@@ -467,7 +731,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
     );
   }
 
-  Future<void> _saveToHistory(String name, String date, String time, String place, double lat, double lon, String gender) async {
+  Future<void> _saveToHistory(String name, String date, String time, String place, double lat, double lon, String gender, String mode) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final String phone = prefs.getString('logged_phone') ?? '9999999999';
@@ -484,6 +748,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
           lon: lon,
           gender: gender,
           place: place,
+          mode: mode,
         );
       } catch (ae) {
         print("API save failed: $ae");

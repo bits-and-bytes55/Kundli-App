@@ -12,6 +12,36 @@ class VarshphalTab extends StatefulWidget {
 }
 
 class _VarshphalTabState extends State<VarshphalTab> {
+  static const rashiList = [
+    'Mesh', 'Vrishabh', 'Mithun', 'Kark', 'Singh', 'Kanya',
+    'Tula', 'Vrischik', 'Dhanu', 'Makar', 'Kumbh', 'Meen'
+  ];
+  static const abbrev = {
+    'Sun': 'Su', 'Moon': 'Mo', 'Mars': 'Ma', 'Mercury': 'Me',
+    'Jupiter': 'Ju', 'Venus': 'Ve', 'Saturn': 'Sa', 'Rahu': 'Ra', 'Ketu': 'Ke'
+  };
+  static const rashiColors = [
+    Color(0xFFE53935), Color(0xFF8E24AA), Color(0xFF1E88E5), Color(0xFF00897B),
+    Color(0xFFE67E22), Color(0xFF43A047), Color(0xFF1565C0), Color(0xFFAD1457),
+    Color(0xFF6D4C41), Color(0xFF546E7A), Color(0xFF00838F), Color(0xFF558B2F),
+  ];
+  static const northCentroids = [
+    [0.500, 0.250], [0.250, 0.115], [0.115, 0.250], [0.250, 0.500],
+    [0.115, 0.750], [0.250, 0.885], [0.500, 0.750], [0.750, 0.885],
+    [0.885, 0.750], [0.750, 0.500], [0.885, 0.250], [0.750, 0.115],
+  ];
+  static const northMaxW = [80.0, 70.0, 60.0, 70.0, 80.0, 70.0, 60.0, 70.0, 55.0, 60.0, 55.0, 55.0];
+
+  String _formatDegree(dynamic deg) {
+    if (deg == null) return '-';
+    final d = (deg as num).toDouble();
+    final degrees = d.floor();
+    final minsTotal = ((d - degrees) * 60);
+    final minutes = minsTotal.floor();
+    final seconds = ((minsTotal - minutes) * 60).round();
+    return "${degrees.toString().padLeft(2, '0')}°${minutes.toString().padLeft(2, '0')}'${seconds.toString().padLeft(2, '0')}\"";
+  }
+
   final TextEditingController _yearController = TextEditingController();
   final KundliController c = Get.find<KundliController>();
 
@@ -159,17 +189,31 @@ class _VarshphalTabState extends State<VarshphalTab> {
               }
 
               return SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildOverviewCard(vData),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildOverviewCard(vData),
+                    ),
                     const SizedBox(height: 16),
-                    _buildPredictionsSection(vData),
+                    _buildVarshphalChart(vData),
                     const SizedBox(height: 16),
-                    _buildPanchadhikariCard(vData),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildPredictionsSection(vData),
+                    ),
                     const SizedBox(height: 16),
-                    _buildVarshaPlanetsCard(vData),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildPanchadhikariCard(vData),
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: _buildVarshaPlanetsCard(vData),
+                    ),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -478,4 +522,147 @@ class _VarshphalTabState extends State<VarshphalTab> {
       ),
     );
   }
+
+  Widget _buildVarshphalChart(Map<String, dynamic> data) {
+    final vl = data['varsha_lagna'] as Map<String, dynamic>? ?? {};
+    final rashiStr = vl['rashi'] as String? ?? 'Mesh';
+    int lagnaIdx = rashiList.indexOf(rashiStr);
+    if (lagnaIdx == -1) lagnaIdx = 0;
+    final lagnaDegStr = _formatDegree(vl['degree']);
+
+    final planets = data['planets'] as Map<String, dynamic>? ?? {};
+    final sunData = planets['Sun'] as Map<String, dynamic>?;
+    final double sunLon = sunData != null ? (sunData['longitude'] as num? ?? 0.0).toDouble() : 0.0;
+
+    final List<List<_PlanetLabel>> houses = List.generate(12, (_) => []);
+    planets.forEach((key, value) {
+      if (!abbrev.containsKey(key) || value is! Map) return;
+      final pRashiIdx = rashiList.indexOf(value['rashi'] ?? '');
+      if (pRashiIdx == -1) return;
+      int hi = (pRashiIdx - lagnaIdx + 12) % 12;
+      final deg = (value['degree'] as num? ?? 0.0).toDouble();
+      final pLon = (value['longitude'] as num? ?? 0.0).toDouble();
+
+      bool retro = value['is_retrograde'] == true;
+      if (key == 'Rahu' || key == 'Ketu') retro = true;
+      final exalt = value['is_exalted'] == true;
+      final debil = value['is_debilitated'] == true;
+      bool combust = false;
+      if (key != 'Sun' && key != 'Rahu' && key != 'Ketu') {
+        double diff = (pLon - sunLon).abs();
+        diff = diff > 180 ? 360 - diff : diff;
+        if (key == 'Moon' && diff < 12.0) combust = true;
+        else if (key == 'Mars' && diff < 17.0) combust = true;
+        else if (key == 'Mercury' && diff < 14.0) combust = true;
+        else if (key == 'Jupiter' && diff < 11.0) combust = true;
+        else if (key == 'Venus' && diff < 10.0) combust = true;
+        else if (key == 'Saturn' && diff < 15.0) combust = true;
+      }
+      int d1Sign = (pLon / 30.0).floor() % 12;
+      int d9Sign = (pLon / (360.0 / 108.0)).floor() % 12;
+      final varg = d1Sign == d9Sign;
+      houses[hi].add(_PlanetLabel(abbrev[key]!, deg, retro, exalt, debil, combust, varg));
+    });
+
+    final double chartSize = MediaQuery.of(context).size.width - 64;
+
+    return Container(
+      width: chartSize,
+      height: chartSize,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5),
+        boxShadow: CustomShadows.cardShadow,
+      ),
+      child: Stack(
+        children: [
+          CustomPaint(
+            size: Size(chartSize, chartSize),
+            painter: _NorthPainter(),
+          ),
+          ..._buildNorthHouses(houses, lagnaIdx, lagnaDegStr, chartSize),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildNorthHouses(List<List<_PlanetLabel>> houses, int lagnaIdx, String lagnaDegStr, double chartSize) {
+    final widgets = <Widget>[];
+    for (int i = 0; i < 12; i++) {
+      final cx = northCentroids[i][0] * chartSize;
+      final cy = northCentroids[i][1] * chartSize;
+      final w = northMaxW[i];
+      int houseRashiNum = (lagnaIdx + i) % 12 + 1;
+      final isLagnaHouse = (i == 0);
+
+      widgets.add(Positioned(
+        left: cx - w / 2,
+        top: cy - 24,
+        width: w,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              '$houseRashiNum',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: rashiColors[(houseRashiNum - 1) % 12],
+              ),
+            ),
+            if (isLagnaHouse)
+              Text(
+                'La $lagnaDegStr',
+                style: const TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            if (houses[i].isNotEmpty)
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 2,
+                runSpacing: 0,
+                children: houses[i].map((p) => Text(
+                  '${p.label}${p.deg.floor()}°${p.retro ? '*' : ''}${p.combust ? '^' : ''}${p.vargottama ? '□' : ''}${p.exalt ? '↑' : ''}${p.debil ? '↓' : ''}',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black87),
+                )).toList(),
+              ),
+          ],
+        ),
+      ));
+    }
+    return widgets;
+  }
+}
+
+class _PlanetLabel {
+  final String label;
+  final double deg;
+  final bool retro, exalt, debil, combust, vargottama;
+  const _PlanetLabel(this.label, this.deg, this.retro, this.exalt, this.debil, this.combust, this.vargottama);
+}
+
+class _NorthPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size s) {
+    final p = Paint()
+      ..color = AppColors.primary
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawRect(Rect.fromLTWH(0, 0, s.width, s.height), p);
+    canvas.drawLine(const Offset(0, 0), Offset(s.width, s.height), p);
+    canvas.drawLine(Offset(s.width, 0), Offset(0, s.height), p);
+    canvas.drawLine(Offset(s.width / 2, 0), Offset(0, s.height / 2), p);
+    canvas.drawLine(Offset(s.width / 2, 0), Offset(s.width, s.height / 2), p);
+    canvas.drawLine(Offset(0, s.height / 2), Offset(s.width / 2, s.height), p);
+    canvas.drawLine(Offset(s.width, s.height / 2), Offset(s.width / 2, s.height), p);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
 }

@@ -7,7 +7,14 @@ import '../theme/app_theme.dart';
 import '../theme/custom_shadows.dart';
 import 'kundli/chart_tab.dart';
 import 'kundli/planets_tab.dart';
+import 'kundli/planets_sub_tab.dart';
 import 'kundli/cusps_tab.dart';
+import 'kundli/planet_signification_tab.dart';
+import 'kundli/house_significators_tab.dart';
+import 'kundli/kp_tab.dart';
+import 'kundli/ashtakvarga_tab.dart';
+import 'kundli/shad_bala_tab.dart';
+import 'kundli/gochar_tab.dart';
 import 'kundli/dasha_tab.dart';
 import 'kundli/yoga_tab.dart';
 import 'kundli/lal_kitab_tab.dart';
@@ -15,16 +22,54 @@ import 'kundli/personal_details_tab.dart';
 import 'kundli/reports_tab.dart';
 import 'kundli/varshphal_tab.dart';
 import 'kundli/predictions_tab.dart';
+import 'kundli/shodashvarga_tab.dart';
+import 'kundli/graha_sthiti_tab.dart';
+import 'kundli/avakahada_tab.dart';
+import 'kundli/prastharashtakvarga_tab.dart';
+import 'kundli/chalit_table_tab.dart';
+import 'kundli/friendship_tab.dart';
+import 'kundli/numerology_premium_section.dart';
+
 
 class PremiumKundliScreen extends StatefulWidget {
-  const PremiumKundliScreen({super.key});
+  final int initialTabIdx;
+  const PremiumKundliScreen({super.key, this.initialTabIdx = 0});
 
   @override
   State<PremiumKundliScreen> createState() => _PremiumKundliScreenState();
 }
 
-class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
+class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _showLottie = true;
+
+  final List<Tab> _tabs = const [
+    Tab(text: 'Premium'),
+    Tab(text: 'Basic'),
+    Tab(text: 'Chart'),
+    Tab(text: 'Graha Sthiti'),
+    Tab(text: 'Planets'),
+    Tab(text: 'Planets-Sub'),
+    Tab(text: 'Cusps'),
+    Tab(text: 'Planet Sig.'),
+    Tab(text: 'House Sig.'),
+    Tab(text: 'KP System'),
+    Tab(text: 'Ashtakvarga'),
+    Tab(text: 'Shad Bala'),
+    Tab(text: 'Gochar'),
+    Tab(text: 'Dasha'),
+    Tab(text: 'Varshphal'),
+    Tab(text: 'Avakahada'),
+    Tab(text: 'Chalit Table'),
+    Tab(text: 'Prasthara'),
+    Tab(text: 'Friendship'),
+    Tab(text: 'Yogas'),
+    Tab(text: 'Shodashvarga'),
+    Tab(text: 'Lal Kitab'),
+    Tab(text: 'Predictions'),
+    Tab(text: 'Reports'),
+  ];
 
   // 12 directions data mapping
   final List<Map<String, dynamic>> _directionConfigs = [
@@ -139,6 +184,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: _tabs.length, vsync: this, initialIndex: widget.initialTabIdx);
     Future.delayed(const Duration(milliseconds: 3500), () {
       if (mounted) {
         setState(() {
@@ -146,6 +192,12 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
         });
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -174,24 +226,25 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
     final lalKitab    = data['lal_kitab']   as Map<String, dynamic>? ?? {};
     final personalDetails = data['personal_details'] as Map<String, dynamic>? ?? {};
     final predictions = data['predictions'] as List<dynamic>? ?? [];
+    final shodashvarga = data['shodashvarga'] as Map<String, dynamic>? ?? {};
+    final avakahada   = data['avakahada']   as Map<String, dynamic>? ?? {};
+    final planetSignificators = data['planet_significators'] as Map<String, dynamic>? ?? {};
+    final houseSignificators = data['house_significators'] as Map<String, dynamic>? ?? {};
+    final ashtakvarga = data['ashtakvarga'] as List<dynamic>? ?? [];
+    final prastharaAshtakvarga = data['prasthara_ashtakavarga'] as Map<String, dynamic>? ?? {};
+    final shadBala = data['shad_bala'] as Map<String, dynamic>? ?? {};
+    final ghatak = data['ghatak'] as Map<String, dynamic>? ?? {};
+    final favourable = data['favourable'] as Map<String, dynamic>? ?? {};
+    final friendship = data['friendship'] as Map<String, dynamic>? ?? {};
+    final chalitTable = data['chalit_table'] as List<dynamic>? ?? [];
 
-    // Get planets in each house to display alongside directions
     int lagnaIdx = rashiList.indexOf(ascendant['rashi'] ?? '');
     if (lagnaIdx == -1) lagnaIdx = 0;
-
-    // Planets grouped by their Rashi (sign) for the directions Vastu analysis
-    final List<List<String>> planetsInRashis = List.generate(12, (_) => []);
-    planets.forEach((key, value) {
-      if (!abbrev.containsKey(key) || value is! Map) return;
-      final pRashiIdx = rashiList.indexOf(value['rashi'] ?? '');
-      if (pRashiIdx >= 0 && pRashiIdx < 12) {
-        planetsInRashis[pRashiIdx].add(key);
-      }
-    });
 
     return Stack(
       children: [
         Scaffold(
+          key: _scaffoldKey,
           backgroundColor: AppColors.scaffoldBg,
           appBar: AppBar(
             backgroundColor: Colors.white,
@@ -225,157 +278,105 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
                 onPressed: () => Get.back(),
               )
             ],
-          ),
-          body: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Kundli Chart directly (without card container/border/title)
-                SizedBox(
-                  height: 540,
-                  child: ChartTab(
-                    ascendant: ascendant,
-                    planets: planets,
-                    kpAscendant: kpAscendant,
-                    kpPlanets: kpPlanets,
-                    showDirections: true,
-                  ),
-                ),
-
-                // Other details with padding below the chart
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Premium Banner Card
-                      _buildPremiumHeader(data),
-                      const SizedBox(height: 12),
-
-                      // Chandra (Moon) House Sign Card
-                      _buildMoonHouseSignCard(planets, lagnaIdx),
-                      const SizedBox(height: 12),
-
-                      // Naam Rashi (Name Sign) House Sign Card
-                      _buildNameHouseSignCard(data['name'] ?? '', lagnaIdx, planets),
-                      const SizedBox(height: 12),
-
-                      // Name Astrology Section (Only in Premium Kundli)
-                      _buildNameAnalysisCard(data['name'] ?? '', lagnaIdx, planets),
-                      const SizedBox(height: 12),
-
-                      // 12 Directions Vastu Section
-                      _buildDirectionsSection(planetsInRashis, lagnaIdx),
-                      const SizedBox(height: 12),
-
-                      // Personal Details Section
-                      _buildSectionCard(
-                        title: 'Personal Details',
-                        icon: Icons.person_outline_rounded,
-                        child: SizedBox(
-                          height: 400,
-                          child: PersonalDetailsTab(personalDetails: personalDetails),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Planets Section
-                      _buildSectionCard(
-                        title: 'Planet Degrees & Positions',
-                        icon: Icons.stars_rounded,
-                        child: SizedBox(
-                          height: 480,
-                          child: PlanetsTab(planets: planets, ascendant: ascendant),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Cusps Section
-                      _buildSectionCard(
-                        title: 'Cusps & KP System Details',
-                        icon: Icons.border_all_rounded,
-                        child: SizedBox(
-                          height: 480,
-                          child: CuspsTab(kpAscendant: kpAscendant),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Dasha Timeline
-                      _buildSectionCard(
-                        title: 'Dasha / Planetary Periods',
-                        icon: Icons.timelapse_rounded,
-                        child: SizedBox(
-                          height: 500,
-                          child: DashaTab(
-                            dasha: dasha,
-                            charDasha: charDasha,
-                            yoginiDasha: yoginiDasha,
-                            mahadashaPhala: mahadashaPhala,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Yogas Section
-                      _buildSectionCard(
-                        title: 'Yogas & Astrological Combinations',
-                        icon: Icons.auto_awesome_rounded,
-                        child: SizedBox(
-                          height: 480,
-                          child: YogaTab(yogas: yogas),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Lal Kitab Remedies
-                      _buildSectionCard(
-                        title: 'Lal Kitab & Remedies',
-                        icon: Icons.book_rounded,
-                        child: SizedBox(
-                          height: 480,
-                          child: LalKitabTab(lalKitab: lalKitab),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Reports & Doshas
-                      _buildSectionCard(
-                        title: 'Vedic Reports (Doshas & Numerology)',
-                        icon: Icons.analytics_rounded,
-                        child: SizedBox(
-                          height: 480,
-                          child: ReportsTab(doshas: doshas, numerology: numerology),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Kundli Predictions Section
-                      _buildSectionCard(
-                        title: 'Kundli Predictions / फलादेश',
-                        icon: Icons.description_rounded,
-                        child: SizedBox(
-                          height: 480,
-                          child: PredictionsTab(predictions: predictions),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Varshphal Report Section
-                      _buildSectionCard(
-                        title: 'Varshphal / Annual Predictions',
-                        icon: Icons.calendar_month_rounded,
-                        child: const SizedBox(
-                          height: 600,
-                          child: VarshphalTab(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ],
+            bottom: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.black54,
+              indicatorColor: Colors.amber,
+              indicatorWeight: 3,
+              tabs: _tabs,
             ),
+          ),
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              // 0 - Premium Tab (Everything that was previously the body)
+              SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      height: 540,
+                      child: ChartTab(
+                        ascendant: ascendant,
+                        planets: planets,
+                        kpAscendant: kpAscendant,
+                        kpPlanets: kpPlanets,
+                        showDirections: true,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildPremiumHeader(data),
+                          const SizedBox(height: 12),
+                          _buildMoonHouseSignCard(planets, lagnaIdx),
+                          const SizedBox(height: 12),
+                          _buildNameHouseSignCard(data['name'] ?? '', lagnaIdx, planets),
+                          const SizedBox(height: 12),
+                          _buildNameAnalysisCard(data['name'] ?? '', lagnaIdx, planets),
+                          const SizedBox(height: 12),
+                          NumerologyPremiumSection(
+                            personalDetails: personalDetails,
+                            name: data['name'] ?? '',
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 1 - Basic Details
+              PersonalDetailsTab(personalDetails: personalDetails),
+              // 2 - Chart
+              ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets, showDirections: true),
+              // 3 - Graha Sthiti
+              GrahaSthitiTab(planets: planets, ascendant: ascendant),
+              // 4 - Planets
+              PlanetsTab(planets: planets, ascendant: ascendant),
+              // 5 - Planets-Sub
+              PlanetsSubTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
+              // 6 - Cusps
+              CuspsTab(kpAscendant: kpAscendant),
+              // 7 - Planet Sig.
+              PlanetSignificationTab(planetSignificators: planetSignificators, kpPlanets: kpPlanets),
+              // 8 - House Sig.
+              HouseSignificatorsTab(houseSignificators: houseSignificators, kpPlanets: kpPlanets),
+              // 9 - KP System
+              KpTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
+              // 10 - Ashtakvarga
+              AshtakvargaTab(ashtakvarga: ashtakvarga),
+              // 11 - Shad Bala
+              ShadBalaTab(shadBala: shadBala),
+              // 12 - Gochar
+              GocharTab(birthAscendant: ascendant, birthPlanets: planets),
+              // 13 - Dasha
+              DashaTab(dasha: dasha, charDasha: charDasha, yoginiDasha: yoginiDasha, mahadashaPhala: mahadashaPhala),
+              // 14 - Varshphal
+              const VarshphalTab(),
+              // 15 - Avakahada
+              AvakahadaTab(avakahada: avakahada, ascendant: ascendant, ghatak: ghatak, favourable: favourable),
+              // 16 - Chalit Table
+              ChalitTableTab(chalitTable: chalitTable),
+              // 17 - Prasthara
+              PrastharashtakvargaTab(prastharaAshtakvarga: prastharaAshtakvarga),
+              // 18 - Friendship
+              FriendshipTab(friendship: friendship),
+              // 19 - Yogas
+              YogaTab(yogas: yogas),
+              // 20 - Shodashvarga
+              ShodashvargaTab(shodashvarga: shodashvarga),
+              // 21 - Lal Kitab
+              LalKitabTab(lalKitab: lalKitab),
+              // 22 - Predictions
+              PredictionsTab(predictions: predictions),
+              // 23 - Reports
+              ReportsTab(doshas: doshas, numerology: numerology),
+            ],
           ),
         ),
         if (_showLottie)
@@ -473,151 +474,155 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
     );
   }
 
-  Widget _buildDirectionsSection(List<List<String>> planetsInRashis, int lagnaIdx) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFFFE0B2), width: 1.2),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: true,
-          leading: const Icon(Icons.explore_rounded, color: Colors.amber),
-          title: const Text(
-            '12 Directions & Astro-Vastu Analysis',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.black),
-          ),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Mapping of 12 Houses to Vastu directions and placement of planets:',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF555555), fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 16),
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 12,
-                    separatorBuilder: (context, index) => const Divider(height: 24, color: AppColors.divider),
-                    itemBuilder: (context, idx) {
-                      final config = _directionConfigs[idx];
-                      final planetsInDir = planetsInRashis[idx];
-                      final directionColor = config['color'] as Color;
-                      final int houseIdx = (idx - lagnaIdx + 12) % 12;
-                      final int houseNum = houseIdx + 1;
-                      final String houseSuffix = houseNum == 1 ? 'st' : houseNum == 2 ? 'nd' : houseNum == 3 ? 'rd' : 'th';
+  // Widget _buildDirectionsSection(List<List<String>> planetsInRashis, int lagnaIdx) {
+  //   return Card(
+  //     elevation: 0,
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.circular(12),
+  //       side: const BorderSide(color: Color(0xFFFFE0B2), width: 1.2),
+  //     ),
+  //     child: Theme(
+  //       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+  //       child: ExpansionTile(
+  //         initiallyExpanded: true,
+  //         leading: const Icon(Icons.explore_rounded, color: Colors.amber),
+  //         title: const Text(
+  //           '12 Directions & Astro-Vastu Analysis',
+  //           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.black),
+  //         ),
+  //         children: [
+  //           Padding(
+  //             padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 const Text(
+  //                   'Mapping of 12 Houses to Vastu directions and placement of planets:',
+  //                   style: TextStyle(fontSize: 12, color: Color(0xFF555555), fontWeight: FontWeight.w500),
+  //                 ),
+  //                 const SizedBox(height: 16),
+  //                 ListView.separated(
+  //                   shrinkWrap: true,
+  //                   physics: const NeverScrollableScrollPhysics(),
+  //                   itemCount: 12,
+  //                   separatorBuilder: (context, index) => const Divider(height: 24, color: AppColors.divider),
+  //                   itemBuilder: (context, idx) {
+  //                     final config = _directionConfigs[idx];
+  //                     final planetsInDir = planetsInRashis[idx];
+  //                     final directionColor = config['color'] as Color;
+  //                     final int houseIdx = (idx - lagnaIdx + 12) % 12;
+  //                     final int houseNum = houseIdx + 1;
+  //                     final String houseSuffix = houseNum == 1 ? 'st' : houseNum == 2 ? 'nd' : houseNum == 3 ? 'rd' : 'th';
 
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: directionColor.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(config['icon'] as IconData, color: directionColor, size: 24),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      config['direction'] as String,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w900,
-                                        color: directionColor.darken(20),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber.shade100,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '$houseNum$houseSuffix House (${config['rashi']})',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.amber.shade900,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Significance: ${config['significance']}',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Vastu Guideline: ${config['guideline']}',
-                                  style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'Planets Present: ',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black),
-                                    ),
-                                    if (planetsInDir.isEmpty)
-                                      const Text(
-                                        'None (Clean & Stable Energy)',
-                                        style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
-                                      )
-                                    else
-                                      Wrap(
-                                        spacing: 6,
-                                        children: planetsInDir.map((p) {
-                                          return Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Colors.orange.shade50,
-                                              border: Border.all(color: Colors.orange.shade200),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              p,
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.orange.shade900,
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  //                     return Row(
+  //                       crossAxisAlignment: CrossAxisAlignment.start,
+  //                       children: [
+  //                         Container(
+  //                           padding: const EdgeInsets.all(10),
+  //                           decoration: BoxDecoration(
+  //                             color: directionColor.withOpacity(0.1),
+  //                             shape: BoxShape.circle,
+  //                           ),
+  //                           child: Icon(config['icon'] as IconData, color: directionColor, size: 24),
+  //                         ),
+  //                         const SizedBox(width: 14),
+  //                         Expanded(
+  //                           child: Column(
+  //                             crossAxisAlignment: CrossAxisAlignment.start,
+  //                             children: [
+  //                               Row(
+  //                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //                                 children: [
+  //                                   Expanded(
+  //                                     child: Text(
+  //                                       config['direction'] as String,
+  //                                       style: TextStyle(
+  //                                         fontSize: 15,
+  //                                         fontWeight: FontWeight.w900,
+  //                                         color: directionColor.darken(20),
+  //                                       ),
+  //                                       softWrap: true,
+  //                                     ),
+  //                                   ),
+  //                                   const SizedBox(width: 8),
+  //                                   Container(
+  //                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+  //                                     decoration: BoxDecoration(
+  //                                       color: Colors.amber.shade100,
+  //                                       borderRadius: BorderRadius.circular(12),
+  //                                     ),
+  //                                     child: Text(
+  //                                       '$houseNum$houseSuffix House (${config['rashi']})',
+  //                                       style: TextStyle(
+  //                                         fontSize: 11,
+  //                                         fontWeight: FontWeight.bold,
+  //                                         color: Colors.amber.shade900,
+  //                                       ),
+  //                                     ),
+  //                                   ),
+  //                                 ],
+  //                               ),
+  //                               const SizedBox(height: 6),
+  //                               Text(
+  //                                 'Significance: ${config['significance']}',
+  //                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
+  //                               ),
+  //                               const SizedBox(height: 4),
+  //                               Text(
+  //                                 'Vastu Guideline: ${config['guideline']}',
+  //                                 style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
+  //                               ),
+  //                               const SizedBox(height: 6),
+  //                               Row(
+  //                                 children: [
+  //                                   const Text(
+  //                                     'Planets Present: ',
+  //                                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black),
+  //                                   ),
+  //                                   if (planetsInDir.isEmpty)
+  //                                     const Text(
+  //                                       'None (Clean & Stable Energy)',
+  //                                       style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
+  //                                     )
+  //                                   else
+  //                                     Wrap(
+  //                                       spacing: 6,
+  //                                       children: planetsInDir.map((p) {
+  //                                         return Container(
+  //                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+  //                                           decoration: BoxDecoration(
+  //                                             color: Colors.orange.shade50,
+  //                                             border: Border.all(color: Colors.orange.shade200),
+  //                                             borderRadius: BorderRadius.circular(8),
+  //                                           ),
+  //                                           child: Text(
+  //                                             p,
+  //                                             style: TextStyle(
+  //                                               fontSize: 10,
+  //                                               fontWeight: FontWeight.bold,
+  //                                               color: Colors.orange.shade900,
+  //                                             ),
+  //                                           ),
+  //                                         );
+  //                                       }).toList(),
+  //                                     ),
+  //                                 ],
+  //                               ),
+  //                             ],
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     );
+  //                   },
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildSectionCard({
     required String title,
@@ -656,10 +661,9 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
     final details = _calculateNaamRashiDetails(name);
     if (details.isEmpty) return const SizedBox();
 
-    // Get actual Moon nakshatra/lord from birth chart
-    final moon = planets['Moon'] as Map<String, dynamic>? ?? {};
-    final birthNakshatra = moon['nakshatra'] as String? ?? details['nakshatra'] ?? '';
-    final birthNakshatraLord = moon['nakshatra_lord'] as String? ?? details['nakshatra_lord'] ?? '';
+    // Use Name Rashi's default Nakshatra and Lord
+    final nameNakshatra = details['nakshatra'] ?? '';
+    final nameNakshatraLord = details['nakshatra_lord'] ?? '';
 
     // Rashi color mapping
     Color rashiColor;
@@ -680,53 +684,81 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
       default: rashiColor = const Color(0xFFE07B20);
     }
 
-    // House ordinals and significances
-    const houseOrdinals = {
-      1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th', 6: '6th',
-      7: '7th', 8: '8th', 9: '9th', 10: '10th', 11: '11th', 12: '12th'
-    };
-    const houseSignificances = {
-      1: 'Self, Personality, Health, Aura',
-      2: 'Wealth, Speech, Family, Values',
-      3: 'Courage, Communication, Siblings, Travel',
-      4: 'Happiness, Mother, Home, Vehicles',
-      5: 'Intellect, Children, Love, Creativity',
-      6: 'Daily Work, Health, Service, Competitions',
-      7: 'Marriage, Partnerships, Public Image',
-      8: 'Longevity, Transformation, Secrets, Intuition',
-      9: 'Dharma, Luck, Father, Higher Education',
-      10: 'Career, Recognition, Action, Status',
-      11: 'Income, Gains, Social Circle, Desires',
-      12: 'Losses, Spiritual Connection, Sleep, Foreign Travel'
-    };
-
     // Name Rashi house in chart
     final naamRashiIdx = rashiList.indexOf(rashiName);
-    String naamRashiHouseSign = '-';
-    if (naamRashiIdx != -1) {
-      final h = (naamRashiIdx - lagnaIdx + 12) % 12 + 1;
-      naamRashiHouseSign = '${houseOrdinals[h]} House — ${houseSignificances[h]}';
+
+    // --- New Computations ---
+    final nameRashiHouseNum = naamRashiIdx != -1 ? ((naamRashiIdx - lagnaIdx + 12) % 12 + 1) : 0;
+    
+    int moonHouseFromName = 0;
+    if (planets['Moon'] != null) {
+      String moonRashiStr = planets['Moon']['rashi'] ?? '';
+      int moonRashiIdx = rashiList.indexWhere((r) => r.toLowerCase() == moonRashiStr.toLowerCase());
+      if (moonRashiIdx != -1 && naamRashiIdx != -1) {
+        moonHouseFromName = ((naamRashiIdx - moonRashiIdx + 12) % 12) + 1;
+      }
     }
 
-    // Name Nakshatra house sign — find which Rashi contains birth nakshatra, then map to house
-    String naamNakshatraHouseSign = '-';
-    String nakRashiFound = '';
-    for (final entry in rashiNakshatras.entries) {
-      for (final nak in entry.value) {
-        if (_isMatchingNakshatra(birthNakshatra, nak['name']!)) {
-          nakRashiFound = entry.key;
-          break;
-        }
+    Set<int> rashiSignified = {};
+    if (details['lord'] != null && details['lord']!.isNotEmpty) {
+      String lord = details['lord']!.split(' ').first;
+      final ownership = {
+        'Sun': [4], 'Moon': [3], 'Mars': [0, 7], 'Mercury': [2, 5],
+        'Jupiter': [8, 11], 'Venus': [1, 6], 'Saturn': [9, 10]
+      };
+      for (int rIdx in (ownership[lord] ?? [])) {
+        rashiSignified.add(((rIdx - lagnaIdx + 12) % 12) + 1);
       }
-      if (nakRashiFound.isNotEmpty) break;
-    }
-    if (nakRashiFound.isNotEmpty) {
-      final nakRashiIdx = rashiList.indexOf(nakRashiFound);
-      if (nakRashiIdx != -1) {
-        final h = (nakRashiIdx - lagnaIdx + 12) % 12 + 1;
-        naamNakshatraHouseSign = '${houseOrdinals[h]} House — ${houseSignificances[h]}';
+      if (planets[lord] != null && planets[lord]['house'] != null) {
+        rashiSignified.add(planets[lord]['house'] as int);
       }
     }
+    
+    Set<int> nakSignified = {};
+    if (nameNakshatraLord.isNotEmpty) {
+      String nLord = nameNakshatraLord;
+      final ownership = {
+        'Sun': [4], 'Moon': [3], 'Mars': [0, 7], 'Mercury': [2, 5],
+        'Jupiter': [8, 11], 'Venus': [1, 6], 'Saturn': [9, 10]
+      };
+      for (int rIdx in (ownership[nLord] ?? [])) {
+        nakSignified.add(((rIdx - lagnaIdx + 12) % 12) + 1);
+      }
+      if (planets[nLord] != null && planets[nLord]['house'] != null) {
+        nakSignified.add(planets[nLord]['house'] as int);
+      }
+    }
+    
+    String rashiStr = "-";
+    if (rashiSignified.isNotEmpty) {
+      var l = rashiSignified.toList()..sort();
+      rashiStr = l.join(', ');
+    }
+
+    String nakStr = "-";
+    if (nakSignified.isNotEmpty) {
+      var l = nakSignified.toList()..sort();
+      nakStr = l.join(', ');
+    }
+    
+    Set<int> totalActiveSet = {};
+    if (nameRashiHouseNum > 0) totalActiveSet.add(nameRashiHouseNum);
+    if (moonHouseFromName > 0) totalActiveSet.add(moonHouseFromName);
+    totalActiveSet.addAll(rashiSignified);
+    totalActiveSet.addAll(nakSignified);
+    
+    List<int> sortedActive = totalActiveSet.toList()..sort();
+
+    final Map<String, String> engToHindi = {
+      'A': 'अ / आ', 'B': 'ब / भ', 'C': 'च / छ', 'D': 'द / ड', 'E': 'ए',
+      'F': 'फ', 'G': 'ग / घ', 'H': 'ह', 'I': 'इ / ई', 'J': 'ज / झ',
+      'K': 'क / ख', 'L': 'ल', 'M': 'म', 'N': 'न', 'O': 'ओ',
+      'P': 'प', 'Q': 'क़', 'R': 'र', 'S': 'स / श', 'T': 'त / ट',
+      'U': 'उ / ऊ', 'V': 'व', 'W': 'व', 'X': 'क्स', 'Y': 'य', 'Z': 'ज़'
+    };
+    String firstLetter = name.trim().isNotEmpty ? name.trim().substring(0, 1).toUpperCase() : '';
+    String hindiLetter = engToHindi[firstLetter] ?? '';
+    String nameDisplay = name + (hindiLetter.isNotEmpty ? ' ($firstLetter / $hindiLetter)' : '');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -740,7 +772,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'Name Astrology (Naam Rashi & Nakshatra)',
+                  'Name Astrology & Active Houses',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -753,31 +785,23 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
           ),
         ),
 
-        // Details Container
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border.withOpacity(0.5)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-          child: Column(
-            children: [
-              _buildDetailRow('Active Name Analyzed', name, valueColor: const Color(0xFFE07B20)),
-              _buildDetailRow('Naam Rashi (Name Sign)', details['rashi'] ?? '', valueColor: rashiColor),
-              _buildDetailRow('Rashi Lord (Sign Ruler)', details['lord'] ?? '', valueColor: rashiColor.darken(15)),
-              _buildDetailRow('Naam Nakshatra (Birth)', birthNakshatra),
-              _buildDetailRow('Nakshatra Lord', birthNakshatraLord),
-              _buildDetailRow('Name Rashi House Sign', naamRashiHouseSign, valueColor: const Color(0xFFE07B20)),
-              _buildDetailRow('Name Nakshatra House Sign', naamNakshatraHouseSign, isLast: true),
-            ],
-          ),
+
+        // Simple List without Card background
+        Column(
+          children: [
+            _buildSimpleRow('Active Name Analyzed', nameDisplay, valueColor: const Color(0xFFE07B20)),
+            _buildSimpleRow('Naam Rashi (Name Sign)', details['rashi'] ?? '', valueColor: rashiColor),
+            _buildSimpleRow('Rashi Lord (Sign Ruler)', details['lord'] ?? '', valueColor: rashiColor.darken(15)),
+            _buildSimpleRow('Naam Nakshatra', nameNakshatra),
+            _buildSimpleRow('Nakshatra Lord', nameNakshatraLord),
+            
+            // New Fields
+            _buildSimpleRow('लग्न से नाम किस भाव में है', '${nameRashiHouseNum > 0 ? nameRashiHouseNum : "-"}वाँ भाव'),
+            _buildSimpleRow('चंद्र से नाम किस भाव में है', '${moonHouseFromName > 0 ? moonHouseFromName : "-"}वाँ भाव'),
+            _buildSimpleRow('नाम राशि से Signified Houses', rashiStr),
+            _buildSimpleRow('नाम नक्षत्र से Signified Houses', nakStr),
+            _buildSimpleRow('Total Active Houses', sortedActive.isNotEmpty ? '${sortedActive.join(', ')} ✔️' : '-', valueColor: Colors.green.shade700, isLast: true),
+          ],
         ),
         const SizedBox(height: 12),
 
@@ -813,9 +837,9 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Your birth chart moon sign governs your inner self, while your active name "$name" represents your social vibration. Your name vibrates with ${details['rashi']} energy. The Naam Nakshatra ($birthNakshatra, lord: $birthNakshatraLord) shapes your destiny and aura in profound ways.',
+                'Your birth chart moon sign governs your inner self, while your active name "$name" represents your social vibration. Your name vibrates with ${details['rashi']} energy. The active houses influence your destiny and aura in profound ways.',
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   color: Color(0xFF5D4037),
                   height: 1.45,
                   fontWeight: FontWeight.w600,
@@ -828,40 +852,44 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {Color? valueColor, bool isLast = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        border: isLast ? null : Border(bottom: BorderSide(color: Colors.grey.shade100)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black,
-                fontWeight: FontWeight.w700,
+  Widget _buildSimpleRow(String label, String value, {Color? valueColor, bool isLast = false}) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 6,
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF666666),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: valueColor ?? Colors.black,
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 5,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: valueColor ?? Colors.black87,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
               ),
-              textAlign: TextAlign.end,
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+        if (!isLast)
+          Divider(height: 1, thickness: 0.5, color: Colors.orange.shade200),
+      ],
     );
   }
 
@@ -869,142 +897,54 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
     if (name.isEmpty) return {};
     String firstLetter = name.trim().substring(0, 1).toUpperCase();
     
-    switch (firstLetter) {
-      case 'A':
-      case 'L':
-      case 'E':
-      case 'I':
-        return {
-          'rashi': 'Mesh (Aries)',
-          'lord': 'Mars (Mangal)',
-          'nakshatra': 'Aswini',
-          'nakshatra_lord': 'Ketu',
-          'element': 'Fire (Agni)',
-          'house_significance': '1st House (Self, Physique, Aura)',
-          'direction': 'East (E)',
-        };
-      case 'B':
-      case 'V':
-      case 'U':
-      case 'O':
-        return {
-          'rashi': 'Vrishabh (Taurus)',
-          'lord': 'Venus (Shukra)',
-          'nakshatra': 'Rohini',
-          'nakshatra_lord': 'Moon',
-          'element': 'Earth (Prithvi)',
-          'house_significance': '2nd House (Wealth, Speech, Family)',
-          'direction': 'South (S)',
-        };
-      case 'K':
-      case 'G':
-      case 'C':
-      case 'H':
-        return {
-          'rashi': 'Mithun (Gemini)',
-          'lord': 'Mercury (Budh)',
-          'nakshatra': 'Mrigashira',
-          'nakshatra_lord': 'Mars',
-          'element': 'Air (Vayu)',
-          'house_significance': '3rd House (Valour, Communication, Siblings)',
-          'direction': 'West (W)',
-        };
-      case 'D':
-        return {
-          'rashi': 'Kark (Cancer)',
-          'lord': 'Moon (Chandra)',
-          'nakshatra': 'Pushya',
-          'nakshatra_lord': 'Saturn',
-          'element': 'Water (Jal)',
-          'house_significance': '4th House (Happiness, Mother, Vehicles)',
-          'direction': 'North (N)',
-        };
-      case 'M':
-      case 'T':
-        return {
-          'rashi': 'Singh (Leo)',
-          'lord': 'Sun (Surya)',
-          'nakshatra': 'Magha',
-          'nakshatra_lord': 'Ketu',
-          'element': 'Fire (Agni)',
-          'house_significance': '5th House (Intellect, Creativity, Love)',
-          'direction': 'East (E)',
-        };
-      case 'P':
-      case 'S':
-        return {
-          'rashi': 'Kanya (Virgo)',
-          'lord': 'Mercury (Budh)',
-          'nakshatra': 'Hasta',
-          'nakshatra_lord': 'Moon',
-          'element': 'Earth (Prithvi)',
-          'house_significance': '6th House (Daily work, Healing, Service)',
-          'direction': 'South (S)',
-        };
-      case 'R':
-        return {
-          'rashi': 'Tula (Libra)',
-          'lord': 'Venus (Shukra)',
-          'nakshatra': 'Swati',
-          'nakshatra_lord': 'Rahu',
-          'element': 'Air (Vayu)',
-          'house_significance': '7th House (Partnerships, Marriage, Public)',
-          'direction': 'West (W)',
-        };
-      case 'N':
-      case 'Y':
-        return {
-          'rashi': 'Vrischik (Scorpio)',
-          'lord': 'Mars (Mangal)',
-          'nakshatra': 'Anuradha',
-          'nakshatra_lord': 'Saturn',
-          'element': 'Water (Jal)',
-          'house_significance': '8th House (Intuition, Transformation, Secret knowledge)',
-          'direction': 'North (N)',
-        };
-      case 'F':
-      case 'W':
-        return {
-          'rashi': 'Dhanu (Sagittarius)',
-          'lord': 'Jupiter (Guru)',
-          'nakshatra': 'Moola',
-          'nakshatra_lord': 'Ketu',
-          'element': 'Fire (Agni)',
-          'house_significance': '9th House (Dharma, Luck, Higher learning)',
-          'direction': 'East (E)',
-        };
-      case 'J':
-        return {
-          'rashi': 'Makar (Capricorn)',
-          'lord': 'Saturn (Shani)',
-          'nakshatra': 'Shravana',
-          'nakshatra_lord': 'Moon',
-          'element': 'Earth (Prithvi)',
-          'house_significance': '10th House (Career, Recognition, Action)',
-          'direction': 'South (S)',
-        };
-      case 'Z':
-      case 'X':
-        return {
-          'rashi': 'Kumbh (Aquarius)',
-          'lord': 'Saturn (Shani)',
-          'nakshatra': 'Shatabhisha',
-          'nakshatra_lord': 'Rahu',
-          'element': 'Air (Vayu)',
-          'house_significance': '11th House (Social network, Gains, Ambitions)',
-          'direction': 'West (W)',
-        };
-      default:
-        return {
-          'rashi': 'Meen (Pisces)',
-          'lord': 'Jupiter (Guru)',
-          'nakshatra': 'Revati',
-          'nakshatra_lord': 'Mercury',
-          'element': 'Water (Jal)',
-          'house_significance': '12th House (Spiritual connection, Losses, Sleep)',
-          'direction': 'North (N)',
-        };
+    final Map<String, Map<String, String>> letterMapping = {
+      'A': {'rashi': 'Mesh (Aries)', 'lord': 'Mars (Mangal)', 'nakshatra': 'Krittika', 'nakshatra_lord': 'Sun'},
+      'L': {'rashi': 'Mesh (Aries)', 'lord': 'Mars (Mangal)', 'nakshatra': 'Ashwini', 'nakshatra_lord': 'Ketu'},
+      'E': {'rashi': 'Mesh (Aries)', 'lord': 'Mars (Mangal)', 'nakshatra': 'Krittika', 'nakshatra_lord': 'Sun'},
+      'I': {'rashi': 'Mesh (Aries)', 'lord': 'Mars (Mangal)', 'nakshatra': 'Krittika', 'nakshatra_lord': 'Sun'},
+      
+      'B': {'rashi': 'Vrishabh (Taurus)', 'lord': 'Venus (Shukra)', 'nakshatra': 'Rohini', 'nakshatra_lord': 'Moon'},
+      'V': {'rashi': 'Vrishabh (Taurus)', 'lord': 'Venus (Shukra)', 'nakshatra': 'Rohini', 'nakshatra_lord': 'Moon'},
+      'U': {'rashi': 'Vrishabh (Taurus)', 'lord': 'Venus (Shukra)', 'nakshatra': 'Krittika', 'nakshatra_lord': 'Sun'},
+      'O': {'rashi': 'Vrishabh (Taurus)', 'lord': 'Venus (Shukra)', 'nakshatra': 'Rohini', 'nakshatra_lord': 'Moon'},
+      
+      'K': {'rashi': 'Mithun (Gemini)', 'lord': 'Mercury (Budh)', 'nakshatra': 'Ardra', 'nakshatra_lord': 'Rahu'},
+      'G': {'rashi': 'Mithun (Gemini)', 'lord': 'Mercury (Budh)', 'nakshatra': 'Ardra', 'nakshatra_lord': 'Rahu'},
+      'C': {'rashi': 'Mithun (Gemini)', 'lord': 'Mercury (Budh)', 'nakshatra': 'Punarvasu', 'nakshatra_lord': 'Jupiter'},
+      'H': {'rashi': 'Mithun (Gemini)', 'lord': 'Mercury (Budh)', 'nakshatra': 'Punarvasu', 'nakshatra_lord': 'Jupiter'},
+      
+      'D': {'rashi': 'Kark (Cancer)', 'lord': 'Moon (Chandra)', 'nakshatra': 'Ashlesha', 'nakshatra_lord': 'Mercury'},
+      
+      'M': {'rashi': 'Singh (Leo)', 'lord': 'Sun (Surya)', 'nakshatra': 'Magha', 'nakshatra_lord': 'Ketu'},
+      'T': {'rashi': 'Singh (Leo)', 'lord': 'Sun (Surya)', 'nakshatra': 'Purvaphalguni', 'nakshatra_lord': 'Venus'},
+      
+      'P': {'rashi': 'Kanya (Virgo)', 'lord': 'Mercury (Budh)', 'nakshatra': 'Uttaraphalguni', 'nakshatra_lord': 'Sun'},
+      'S': {'rashi': 'Kanya (Virgo)', 'lord': 'Mercury (Budh)', 'nakshatra': 'Hasta', 'nakshatra_lord': 'Moon'},
+      
+      'R': {'rashi': 'Tula (Libra)', 'lord': 'Venus (Shukra)', 'nakshatra': 'Swati', 'nakshatra_lord': 'Rahu'},
+      
+      'N': {'rashi': 'Vrischik (Scorpio)', 'lord': 'Mars (Mangal)', 'nakshatra': 'Anuradha', 'nakshatra_lord': 'Saturn'},
+      'Y': {'rashi': 'Vrischik (Scorpio)', 'lord': 'Mars (Mangal)', 'nakshatra': 'Jyeshtha', 'nakshatra_lord': 'Mercury'},
+      
+      'F': {'rashi': 'Dhanu (Sagittarius)', 'lord': 'Jupiter (Guru)', 'nakshatra': 'Purvashadha', 'nakshatra_lord': 'Venus'},
+      'W': {'rashi': 'Dhanu (Sagittarius)', 'lord': 'Jupiter (Guru)', 'nakshatra': 'Purvashadha', 'nakshatra_lord': 'Venus'},
+      
+      'J': {'rashi': 'Makar (Capricorn)', 'lord': 'Saturn (Shani)', 'nakshatra': 'Uttarashadha', 'nakshatra_lord': 'Sun'},
+      
+      'Z': {'rashi': 'Kumbh (Aquarius)', 'lord': 'Saturn (Shani)', 'nakshatra': 'Shatabhisha', 'nakshatra_lord': 'Rahu'},
+      'X': {'rashi': 'Kumbh (Aquarius)', 'lord': 'Saturn (Shani)', 'nakshatra': 'Shatabhisha', 'nakshatra_lord': 'Rahu'},
+    };
+
+    if (letterMapping.containsKey(firstLetter)) {
+      return letterMapping[firstLetter]!;
     }
+
+    return {
+      'rashi': 'Meen (Pisces)',
+      'lord': 'Jupiter (Guru)',
+      'nakshatra': 'Revati',
+      'nakshatra_lord': 'Mercury',
+    };
   }
 
   static const rashiHindi = {
@@ -1086,14 +1026,27 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
     String normalizedEng = engNak.replaceAll(RegExp(r'[^a-zA-Z]'), '').toLowerCase();
     String normalizedHindi = hindiNak.replaceAll(RegExp(r'[0-9\s\-\u2014]'), '').replaceAll('चरण', '');
     
-    if (normalizedEng == 'pphalguni' && normalizedHindi.contains('पूर्वाफाल्गुनी')) return true;
-    if (normalizedEng == 'uphalguni' && normalizedHindi.contains('उत्तराफाल्गुनी')) return true;
-    if (normalizedEng == 'pashadha' && normalizedHindi.contains('पूर्वाषाढ़ा')) return true;
-    if (normalizedEng == 'uashadha' && normalizedHindi.contains('उत्तराषाढ़ा')) return true;
-    if (normalizedEng == 'pbhadra' && normalizedHindi.contains('पूर्वाभाद्रपद')) return true;
-    if (normalizedEng == 'ubhadra' && normalizedHindi.contains('उत्तराभाद्रपद')) return true;
-    if (normalizedEng == 'moola' && normalizedHindi.contains('मूल')) return true;
-    if (normalizedEng == 'swati' && normalizedHindi.contains('स्वाती')) return true;
+    if (normalizedEng.contains('purvaphalguni') || normalizedEng.contains('pphalguni')) {
+      if (normalizedHindi.contains('पूर्वाफाल्गुनी')) return true;
+    }
+    if (normalizedEng.contains('uttaraphalguni') || normalizedEng.contains('uphalguni')) {
+      if (normalizedHindi.contains('उत्तराफाल्गुनी')) return true;
+    }
+    if (normalizedEng.contains('purvashadha') || normalizedEng.contains('pashadha')) {
+      if (normalizedHindi.contains('पूर्वाषाढ़ा')) return true;
+    }
+    if (normalizedEng.contains('uttarashadha') || normalizedEng.contains('uashadha')) {
+      if (normalizedHindi.contains('उत्तराषाढ़ा')) return true;
+    }
+    if (normalizedEng.contains('purvabhadrapada') || normalizedEng.contains('pbhadra')) {
+      if (normalizedHindi.contains('पूर्वाभाद्रपद')) return true;
+    }
+    if (normalizedEng.contains('uttarabhadrapada') || normalizedEng.contains('ubhadra')) {
+      if (normalizedHindi.contains('उत्तराभाद्रपद')) return true;
+    }
+    if (normalizedEng.contains('moola') && normalizedHindi.contains('मूल')) return true;
+    if (normalizedEng.contains('swati') && normalizedHindi.contains('स्वाती')) return true;
+    if (normalizedEng.contains('vishakha') && normalizedHindi.contains('विशाखा')) return true;
 
     final Map<String, String> translation = {
       'ashwini': 'अश्विनी', 'bharani': 'भरणी', 'krittika': 'कृत्तिका',
@@ -1101,7 +1054,8 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
       'punarvasu': 'पुनर्वसु', 'pushya': 'पुष्य', 'ashlesha': 'आश्लेषा',
       'magha': 'मघा', 'hasta': 'हस्त', 'chitra': 'चित्रा',
       'anuradha': 'अनुराधा', 'jyeshtha': 'ज्येष्ठा', 'shravana': 'श्रवण',
-      'dhanishtha': 'धनिष्ठा', 'shatabhisha': 'शतभिषा', 'revati': 'रेवती'
+      'dhanishtha': 'धनिष्ठा', 'shatabhisha': 'शतभिषा', 'revati': 'रेवती',
+      'swati': 'स्वाती', 'moola': 'मूल', 'vishakha': 'विशाखा',
     };
 
     if (translation.containsKey(normalizedEng)) {
@@ -1285,14 +1239,9 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> {
     final rashiName = details['rashi']?.split(' ').first ?? 'Mesh';
     final nameRashiHindi = rashiHindi[rashiName] ?? rashiName;
     final nameRashiLordHindi = rashiLordsHindi[rashiName] ?? '';
-    // Use Moon's actual nakshatra from birth chart if available
-    final moon = planets?['Moon'] as Map<String, dynamic>? ?? {};
-    final nameNakshatra = (moon['nakshatra'] as String?)?.isNotEmpty == true
-        ? moon['nakshatra'] as String
-        : details['nakshatra'] ?? '';
-    final nameNakshatraLord = (moon['nakshatra_lord'] as String?)?.isNotEmpty == true
-        ? moon['nakshatra_lord'] as String
-        : details['nakshatra_lord'] ?? '';
+    // Use Name Rashi's default Nakshatra and Lord
+    final nameNakshatra = details['nakshatra'] ?? '';
+    final nameNakshatraLord = details['nakshatra_lord'] ?? '';
     
     final naamRashiIdx = rashiList.indexOf(rashiName);
     int houseNum = 1;

@@ -25,6 +25,7 @@ class SavedChartModel(BaseModel):
     lon: float
     gender: Optional[str] = 'Male'
     place: Optional[str] = ''
+    mode: Optional[str] = 'Basic'
 
 class SavedChartUpdateModel(BaseModel):
     name: Optional[str] = None
@@ -34,6 +35,7 @@ class SavedChartUpdateModel(BaseModel):
     lon: Optional[float] = None
     gender: Optional[str] = None
     place: Optional[str] = None
+    mode: Optional[str] = None
 
 @router.post("/charts")
 async def save_chart(req: SavedChartModel):
@@ -54,11 +56,11 @@ async def save_chart(req: SavedChartModel):
         return {"success": False, "error": str(e)}
 
 @router.get("/charts")
-async def get_charts(phone: str = Query(...), query: str = "", page: int = 1, limit: int = 20):
+async def get_charts(phone: str = Query(...), query: str = "", mode: str = "Basic", page: int = 1, limit: int = 20):
     try:
         skip = (page - 1) * limit
         if bookmarks_col is not None:
-            db_query = {"phone": phone}
+            db_query = {"phone": phone, "mode": mode}
             if query:
                 db_query["name"] = {"$regex": query, "$options": "i"}
             cursor = bookmarks_col.find(db_query).skip(skip).limit(limit)
@@ -70,7 +72,7 @@ async def get_charts(phone: str = Query(...), query: str = "", page: int = 1, li
                 charts.append(doc)
             return {"success": True, "data": charts}
         else:
-            charts = [c for c in _in_memory_charts if c.get("phone") == phone]
+            charts = [c for c in _in_memory_charts if c.get("phone") == phone and c.get("mode", "Basic") == mode]
             if query:
                 charts = [c for c in charts if query.lower() in c.get("name", "").lower()]
             charts = charts[skip : skip + limit]

@@ -286,13 +286,27 @@ def get_house_significators(kp_planets, kp_ascendant):
     planet_significations = {}
     for p in planet_order:
         signified_houses = []
+        planet_houses = []
+        nl_houses = []
         for h in range(1, 13):
-            if p in significators[str(h)]['significators']:
+            sig_dict = significators[str(h)]
+            if p in sig_dict['significators']:
                 signified_houses.append(h)
+            
+            # self houses (grade B = occupant, grade D = lord)
+            if p in sig_dict['grade_b'] or p in sig_dict['grade_d']:
+                planet_houses.append(h)
+                
+            # nl houses (grade A = NL occupant, grade C = NL lord)
+            if p in sig_dict['grade_a'] or p in sig_dict['grade_c']:
+                nl_houses.append(h)
+
         planet_significations[p] = {
             'planet': p,
             'abbrev': planet_abbrev[p],
             'houses': signified_houses,
+            'planet_houses': planet_houses,
+            'nl_houses': nl_houses,
             'houses_str': ' '.join(str(h) for h in signified_houses)
         }
         

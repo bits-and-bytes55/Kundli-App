@@ -63,56 +63,32 @@ class PlanetSignificationTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(14),
         children: [
-          // Banner
-          Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.accentLight,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-            ),
-            child: const Text(
-              'KP Planet Signification — Houses signified by each planet based on stellar and planetary occupancy rules',
-              style: TextStyle(fontSize: 11, color: AppColors.textMedium, height: 1.5),
-            ),
+          // Table 1: Combined Significations (Both Planet & NL)
+          _buildTableSection(
+            title: 'Combined KP Planet Signification',
+            subtitle: 'Houses signified by each planet (Planet + Nakshatra Lord combined)',
+            houseKey: 'houses',
+            tableType: 'combined',
           ),
-
-          // Table Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-            ),
-            child: Row(children: const [
-              Expanded(flex: 3, child: Text('Planet', style: _hStyle)),
-              Expanded(flex: 2, child: Text('NL', style: _hStyle)),
-              Expanded(flex: 7, child: Text('Houses Signified', style: _hStyle)),
-            ]),
+          
+          const SizedBox(height: 24),
+          
+          // Table 2: Planet Only Significations
+          _buildTableSection(
+            title: 'Planet Houses (Occupant & Lord)',
+            subtitle: 'Houses signified ONLY by the Planet itself',
+            houseKey: 'planet_houses',
+            tableType: 'planet_only',
           ),
-
-          // Table Body
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
-              border: Border.all(color: AppColors.primary.withOpacity(0.35)),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.06),
-                  blurRadius: 10, offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: List.generate(_planetOrder.length, (idx) {
-                final pName = _planetOrder[idx];
-                // Check case-insensitive key lookup to prevent missing data
-                final pData = (planetSignificators[pName] ?? planetSignificators[pName.toLowerCase()]) as Map<String, dynamic>?;
-                return _planetRow(idx, pName, pData);
-              }),
-            ),
+          
+          const SizedBox(height: 24),
+          
+          // Table 3: NL Only Significations
+          _buildTableSection(
+            title: 'Nakshatra Lord (NL) Houses',
+            subtitle: 'Houses signified ONLY by the Planet\'s Nakshatra Lord',
+            houseKey: 'nl_houses',
+            tableType: 'nl_only',
           ),
 
           const SizedBox(height: 20),
@@ -121,7 +97,82 @@ class PlanetSignificationTab extends StatelessWidget {
     );
   }
 
-  Widget _planetRow(int index, String planet, Map<String, dynamic>? data) {
+  Widget _buildTableSection({
+    required String title,
+    required String subtitle,
+    required String houseKey,
+    required String tableType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Banner
+        Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.accentLight,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 11, color: AppColors.textMedium, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+
+        // Table Header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: const BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+          ),
+          child: Row(children: [
+            if (tableType == 'combined' || tableType == 'planet_only')
+              const Expanded(flex: 3, child: Text('Planet', style: _hStyle)),
+            if (tableType == 'combined' || tableType == 'nl_only')
+              const Expanded(flex: 2, child: Text('NL', style: _hStyle)),
+            const Expanded(flex: 7, child: Text('Houses Signified', style: _hStyle)),
+          ]),
+        ),
+
+        // Table Body
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(10)),
+            border: Border.all(color: AppColors.primary.withOpacity(0.35)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.06),
+                blurRadius: 10, offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: List.generate(_planetOrder.length, (idx) {
+              final pName = _planetOrder[idx];
+              final pData = (planetSignificators[pName] ?? planetSignificators[pName.toLowerCase()]) as Map<String, dynamic>?;
+              return _planetRow(idx, pName, pData, houseKey, tableType);
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _planetRow(int index, String planet, Map<String, dynamic>? data, String houseKey, String tableType) {
     final bg = index.isOdd ? Colors.white : const Color(0xFFFFFBF5);
     final abbrev = _abbrev[planet] ?? planet.substring(0, 2);
     final fullName = _planetNames[planet] ?? planet;
@@ -131,8 +182,8 @@ class PlanetSignificationTab extends StatelessWidget {
     final String nlRaw = kpPlanetData?['nakshatra_lord']?.toString() ?? '-';
     final String nlAbb = _lordAbb(nlRaw);
 
-    // Retrieve houses list from response
-    final houses = (data?['houses'] as List<dynamic>? ?? []).map((e) => (e as num).toInt()).toList();
+    // Retrieve houses list from response using the specific houseKey
+    final houses = (data?[houseKey] as List<dynamic>? ?? []).map((e) => (e as num).toInt()).toList();
     houses.sort();
 
     return Container(
@@ -143,41 +194,51 @@ class PlanetSignificationTab extends StatelessWidget {
       ),
       child: Row(children: [
         // Planet column
-        Expanded(
-          flex: 3,
-          child: Row(
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    abbrev,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                  ),
-                  Text(
-                    fullName,
-                    style: const TextStyle(fontSize: 10, color: AppColors.textLight),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // NL column
-        Expanded(
-          flex: 2,
-          child: Text(
-            nlAbb,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1565C0),
+        if (tableType == 'combined' || tableType == 'planet_only')
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                Text(icon, style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      abbrev,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                    ),
+                    Text(
+                      fullName,
+                      style: const TextStyle(fontSize: 10, color: AppColors.textLight),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ),
+
+        // NL column
+        if (tableType == 'combined' || tableType == 'nl_only')
+          Expanded(
+            flex: 2,
+            child: Row(
+              children: [
+                if (tableType == 'nl_only')
+                  const Icon(Icons.star_border_rounded, size: 14, color: Color(0xFF1565C0)),
+                if (tableType == 'nl_only')
+                  const SizedBox(width: 6),
+                Text(
+                  nlAbb,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1565C0),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         // Houses Signified column (Modern chip layout)
         Expanded(

@@ -9,8 +9,8 @@ class ApiService extends GetxService {
     super.onInit();
     dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
       headers: {
         'Content-Type': 'application/json',
       }
@@ -204,11 +204,12 @@ class ApiService extends GetxService {
     }
   }
 
-  Future<List<Map<String, dynamic>>?> getSavedCharts(String phone, {String query = '', int page = 1, int limit = 20}) async {
+  Future<List<Map<String, dynamic>>?> getSavedCharts(String phone, {String query = '', String mode = 'Basic', int page = 1, int limit = 20}) async {
     try {
       final response = await dio.get('/charts', queryParameters: {
         'phone': phone,
         'query': query,
+        'mode': mode,
         'page': page,
         'limit': limit,
       });
@@ -232,6 +233,7 @@ class ApiService extends GetxService {
     required double lon,
     String? gender,
     String? place,
+    String? mode,
   }) async {
     try {
       final response = await dio.post('/charts', data: {
@@ -243,6 +245,7 @@ class ApiService extends GetxService {
         'lon': lon,
         'gender': gender ?? 'Male',
         'place': place ?? '',
+        'mode': mode ?? 'Basic',
       });
       if (response.statusCode == 200 && response.data['success'] == true) {
         return response.data['data'];
