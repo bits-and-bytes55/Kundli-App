@@ -22,8 +22,79 @@ class _BookmarksTabState extends State<BookmarksTab> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  List<Map<String, dynamic>> _allCharts = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllCharts(isRefresh: true);
+  }
+
+  Future<void> _loadAllCharts({bool isRefresh = true}) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    final String phone = prefs.getString('logged_phone') ?? '9999999999';
+
+    try {
+      final apiService = Get.find<ApiService>();
+      // Use limit 20, fetch once for both tabs to avoid overwhelming the server
+      final apiList = await apiService.getSavedCharts(phone, query: _searchQuery, page: 1, limit: 20);
+      if (apiList != null) {
+        setState(() {
+          _allCharts = apiList;
+          _isLoading = false;
+        });
+        if (_searchQuery.isEmpty) {
+          await prefs.setString('saved_charts_all', jsonEncode(apiList));
+        }
+        return;
+      }
+    } catch (e) {
+      print("API getSavedCharts failed: $e");
+    }
+
+    if (_searchQuery.isEmpty) {
+      final raw = prefs.getString('saved_charts_all');
+      if (raw != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(raw);
+          setState(() {
+            _allCharts = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+          });
+        } catch (e) {
+          print("Failed to decode saved charts: $e");
+        }
+      }
+    }
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _onChartDeleted(String id) {
+    setState(() {
+      _allCharts.removeWhere((c) => (c['id']?.toString() ?? c['_id']?.toString()) == id);
+    });
+  }
+
+  void _onChartUpdated(Map<String, dynamic> updatedChart) {
+    setState(() {
+      int idx = _allCharts.indexWhere((c) => (c['id']?.toString() ?? c['_id']?.toString()) == (updatedChart['id']?.toString() ?? updatedChart['_id']?.toString()));
+      if (idx != -1) {
+        _allCharts[idx] = updatedChart;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final basicCharts = _allCharts.where((c) => (c['mode'] ?? 'Basic') == 'Basic').toList();
+    final premiumCharts = _allCharts.where((c) => (c['mode'] ?? 'Basic') == 'Premium').toList();
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -31,6 +102,12 @@ class _BookmarksTabState extends State<BookmarksTab> {
         appBar: AppBar(
           title: const Text('Saved Charts (कुंडली संग्रह)'),
           elevation: 0.5,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+              onPressed: () => _loadAllCharts(isRefresh: true),
+            ),
+          ],
           bottom: const TabBar(
             labelColor: AppColors.primary,
             unselectedLabelColor: Colors.black54,
@@ -57,6 +134,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
+                            _loadAllCharts(isRefresh: true);
                           })
                       : null,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -65,14 +143,29 @@ class _BookmarksTabState extends State<BookmarksTab> {
                 ),
                 onChanged: (value) {
                   setState(() => _searchQuery = value);
+                  _loadAllCharts(isRefresh: true);
                 },
               ),
             ),
             Expanded(
               child: TabBarView(
                 children: [
-                  SavedChartsList(mode: 'Basic', searchQuery: _searchQuery),
-                  SavedChartsList(mode: 'Premium', searchQuery: _searchQuery),
+                  SavedChartsList(
+                    mode: 'Basic', 
+                    searchQuery: _searchQuery, 
+                    charts: basicCharts, 
+                    isLoading: _isLoading,
+                    onDelete: _onChartDeleted,
+                    onUpdate: _onChartUpdated,
+                  ),
+                  SavedChartsList(
+                    mode: 'Premium', 
+                    searchQuery: _searchQuery, 
+                    charts: premiumCharts, 
+                    isLoading: _isLoading,
+                    onDelete: _onChartDeleted,
+                    onUpdate: _onChartUpdated,
+                  ),
                 ],
               ),
             ),
@@ -80,7 +173,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
         ),
         floatingActionButton: FloatingActionButton(
           backgroundColor: AppColors.primary,
-          onPressed: () => Get.to(() => BirthFormScreen()),
+          onPressed: () => Get.to(() => BirthFormScreen())?.then((_) => _loadAllCharts(isRefresh: true)),
           child: const Icon(Icons.add_rounded, color: Colors.white),
         ),
       ),
@@ -91,8 +184,20 @@ class _BookmarksTabState extends State<BookmarksTab> {
 class SavedChartsList extends StatefulWidget {
   final String mode;
   final String searchQuery;
+  final List<Map<String, dynamic>> charts;
+  final bool isLoading;
+  final Function(String) onDelete;
+  final Function(Map<String, dynamic>) onUpdate;
 
-  const SavedChartsList({super.key, required this.mode, required this.searchQuery});
+  const SavedChartsList({
+    super.key, 
+    required this.mode, 
+    required this.searchQuery, 
+    required this.charts, 
+    required this.isLoading,
+    required this.onDelete,
+    required this.onUpdate,
+  });
 
   @override
   State<SavedChartsList> createState() => _SavedChartsListState();
@@ -100,111 +205,17 @@ class SavedChartsList extends StatefulWidget {
 
 class _SavedChartsListState extends State<SavedChartsList> {
   final KundliController _kundliController = Get.put(KundliController());
-  List<Map<String, dynamic>> _savedCharts = [];
-  bool _isLoading = true;
-  bool _isFetchingMore = false;
-  bool _hasMore = true;
-  int _page = 1;
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCharts(isRefresh: true);
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-        if (!_isFetchingMore && _hasMore && !_isLoading) {
-          _loadCharts(isRefresh: false);
-        }
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(SavedChartsList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.searchQuery != widget.searchQuery) {
-      _loadCharts(isRefresh: true);
-    }
-  }
-
-  Future<void> _loadCharts({bool isRefresh = true}) async {
-    if (isRefresh) {
-      setState(() {
-        _isLoading = true;
-        _page = 1;
-        _hasMore = true;
-      });
-    } else {
-      setState(() => _isFetchingMore = true);
-    }
-    final prefs = await SharedPreferences.getInstance();
-    final String phone = prefs.getString('logged_phone') ?? '9999999999';
-
-    try {
-      final apiService = Get.find<ApiService>();
-      final apiListRaw = await apiService.getSavedCharts(phone, query: widget.searchQuery, mode: widget.mode, page: _page, limit: 100);
-      if (apiListRaw != null) {
-        // Local filtering to support production backend not having mode yet
-        final apiList = apiListRaw.where((chart) => (chart['mode'] ?? 'Basic') == widget.mode).toList();
-        setState(() {
-          if (isRefresh) {
-            _savedCharts = apiList;
-          } else {
-            _savedCharts.addAll(apiList);
-          }
-          if (apiList.length < 20) {
-            _hasMore = false;
-          } else {
-            _page++;
-          }
-        });
-        if (isRefresh && widget.searchQuery.isEmpty) {
-          await prefs.setString('saved_charts_${widget.mode}', jsonEncode(apiList));
-        }
-        setState(() {
-          _isLoading = false;
-          _isFetchingMore = false;
-        });
-        return;
-      }
-    } catch (e) {
-      print("API getSavedCharts failed: $e");
-    }
-
-    if (isRefresh && widget.searchQuery.isEmpty) {
-      final raw = prefs.getString('saved_charts_${widget.mode}');
-      if (raw != null) {
-        try {
-          final List<dynamic> decoded = jsonDecode(raw);
-          setState(() {
-            _savedCharts = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
-          });
-        } catch (e) {
-          print("Failed to decode saved charts: $e");
-        }
-      }
-    }
-    setState(() {
-      _isLoading = false;
-      _isFetchingMore = false;
-    });
-  }
+  bool _isProcessing = false;
 
   Future<void> _deleteChart(int index) async {
-    final prefs = await SharedPreferences.getInstance();
-    final chart = _savedCharts[index];
+    final chart = widget.charts[index];
     final String? chartId = chart['id']?.toString() ?? chart['_id']?.toString();
-
-    setState(() {
-      _savedCharts.removeAt(index);
-    });
-    await prefs.setString('saved_charts_${widget.mode}', jsonEncode(_savedCharts));
 
     if (chartId != null) {
       try {
         final apiService = Get.find<ApiService>();
         await apiService.deleteChart(chartId);
+        widget.onDelete(chartId);
       } catch (e) {
         print("API delete failed: $e");
       }
@@ -294,7 +305,7 @@ class _SavedChartsListState extends State<SavedChartsList> {
           ElevatedButton(
             onPressed: () async {
               Get.back();
-              setState(() => _isLoading = true);
+              setState(() => _isProcessing = true);
               try {
                 double lat = (chart['lat'] as num? ?? 28.6139).toDouble();
                 double lon = (chart['lon'] as num? ?? 77.2090).toDouble();
@@ -330,8 +341,7 @@ class _SavedChartsListState extends State<SavedChartsList> {
                   }
                 }
 
-                final prefs = await SharedPreferences.getInstance();
-                _savedCharts[index] = {
+                Map<String, dynamic> updatedChart = {
                   'id': chartId,
                   'name': nameCtrl.text,
                   'date': dateCtrl.text,
@@ -340,14 +350,15 @@ class _SavedChartsListState extends State<SavedChartsList> {
                   'lat': lat,
                   'lon': lon,
                   'gender': selectedGender.value,
+                  'mode': chart['mode'] ?? 'Basic',
                 };
-                await prefs.setString('saved_charts_${widget.mode}', jsonEncode(_savedCharts));
+                
+                widget.onUpdate(updatedChart);
 
-                await _loadCharts(isRefresh: true);
               } catch (e) {
                 Get.snackbar('Error', 'Failed to save: $e');
               } finally {
-                setState(() => _isLoading = false);
+                setState(() => _isProcessing = false);
               }
             },
             child: const Text('Save'),
@@ -358,7 +369,7 @@ class _SavedChartsListState extends State<SavedChartsList> {
   }
 
   void _openChart(Map<String, dynamic> chart) async {
-    setState(() => _isLoading = true);
+    setState(() => _isProcessing = true);
     try {
       await _kundliController.fetchKundli(
         chart['name'],
@@ -367,7 +378,7 @@ class _SavedChartsListState extends State<SavedChartsList> {
         (chart['lat'] as num).toDouble(),
         (chart['lon'] as num).toDouble(),
       );
-      setState(() => _isLoading = false);
+      setState(() => _isProcessing = false);
       if (_kundliController.kundliData.value != null) {
         if (widget.mode == 'Premium') {
           Get.to(() => const PremiumKundliScreen());
@@ -378,14 +389,14 @@ class _SavedChartsListState extends State<SavedChartsList> {
         Get.snackbar('Error', 'Failed to calculate Kundli calculations.');
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      setState(() => _isProcessing = false);
       Get.snackbar('Error', e.toString());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (widget.isLoading || _isProcessing) {
       return ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: 6,
@@ -393,26 +404,18 @@ class _SavedChartsListState extends State<SavedChartsList> {
       );
     }
 
-    if (_savedCharts.isEmpty) {
+    if (widget.charts.isEmpty) {
       return _buildEmptyState();
     }
 
-    return RefreshIndicator(
-      onRefresh: () => _loadCharts(isRefresh: true),
-      color: AppColors.primary,
-      child: ListView.builder(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: _savedCharts.length + (_isFetchingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == _savedCharts.length) {
-            return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: AppColors.primary)));
-          }
-          final item = _savedCharts[index];
-          return _buildChartCard(item, index);
-        },
-      ),
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: widget.charts.length,
+      itemBuilder: (context, index) {
+        final item = widget.charts[index];
+        return _buildChartCard(item, index);
+      },
     );
   }
 

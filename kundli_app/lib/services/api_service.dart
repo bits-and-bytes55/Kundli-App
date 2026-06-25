@@ -9,8 +9,8 @@ class ApiService extends GetxService {
     super.onInit();
     dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 5),
       headers: {
         'Content-Type': 'application/json',
       }
@@ -209,7 +209,6 @@ class ApiService extends GetxService {
       final response = await dio.get('/charts', queryParameters: {
         'phone': phone,
         'query': query,
-        'mode': mode,
         'page': page,
         'limit': limit,
       });

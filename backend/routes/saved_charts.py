@@ -60,7 +60,11 @@ async def get_charts(phone: str = Query(...), query: str = "", mode: str = "Basi
     try:
         skip = (page - 1) * limit
         if bookmarks_col is not None:
-            db_query = {"phone": phone, "mode": mode}
+            db_query = {"phone": phone}
+            if mode == "Basic":
+                db_query["$or"] = [{"mode": "Basic"}, {"mode": {"$exists": False}}]
+            else:
+                db_query["mode"] = mode
             if query:
                 db_query["name"] = {"$regex": query, "$options": "i"}
             cursor = bookmarks_col.find(db_query).skip(skip).limit(limit)
