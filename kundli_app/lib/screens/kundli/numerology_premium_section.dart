@@ -177,7 +177,7 @@ class NumerologyPremiumSection extends StatelessWidget {
                 child: Text(
                   value,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: valueColor ?? Colors.black87,
                   ),

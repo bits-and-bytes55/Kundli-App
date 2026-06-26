@@ -325,7 +325,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                             onTap: () async {
                               TimeOfDay? pickedTime = await showTimePicker(
                                 context: context,
-                                initialTime: const TimeOfDay(hour: 14, minute: 30),
+                                initialTime: const TimeOfDay(hour: 10, minute: 30),
                                 builder: (context, child) {
                                   return Theme(
                                     data: Theme.of(context).copyWith(
@@ -519,7 +519,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                                     onTap: () async {
                                       TimeOfDay? pickedTime = await showTimePicker(
                                         context: context,
-                                        initialTime: TimeOfDay.now(),
+                                        initialTime: const TimeOfDay(hour: 10, minute: 30),
                                         builder: (context, child) => Theme(
                                           data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.primary)),
                                           child: child!,
@@ -772,8 +772,35 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
           'lat': lat,
           'lon': lon,
           'gender': gender,
+          'mode': mode,
         });
         await prefs.setString('saved_charts', jsonEncode(list));
+      }
+      
+      // Also update saved_charts_all which bookmarks_tab uses
+      final allRaw = prefs.getString('saved_charts_all');
+      List<dynamic> allList = [];
+      if (allRaw != null) {
+        try {
+          allList = jsonDecode(allRaw);
+        } catch(e){}
+      }
+      final allExists = allList.any((item) =>
+          item['name'] == name &&
+          item['date'] == date &&
+          item['time'] == time);
+      if (!allExists) {
+        allList.insert(0, {
+          'name': name,
+          'date': date,
+          'time': time,
+          'place': place,
+          'lat': lat,
+          'lon': lon,
+          'gender': gender,
+          'mode': mode,
+        });
+        await prefs.setString('saved_charts_all', jsonEncode(allList));
       }
     } catch (e) {
       print("Error saving to history: $e");

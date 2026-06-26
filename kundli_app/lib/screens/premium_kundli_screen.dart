@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import '../controllers/kundli_controller.dart';
 import '../theme/app_theme.dart';
+import '../utils/namakshar_mapping.dart';
 import '../theme/custom_shadows.dart';
 import 'kundli/chart_tab.dart';
 import 'kundli/planets_tab.dart';
@@ -756,9 +757,33 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
       'P': 'प', 'Q': 'क़', 'R': 'र', 'S': 'स / श', 'T': 'त / ट',
       'U': 'उ / ऊ', 'V': 'व', 'W': 'व', 'X': 'क्स', 'Y': 'य', 'Z': 'ज़'
     };
-    String firstLetter = name.trim().isNotEmpty ? name.trim().substring(0, 1).toUpperCase() : '';
-    String hindiLetter = engToHindi[firstLetter] ?? '';
-    String nameDisplay = name + (hindiLetter.isNotEmpty ? ' ($firstLetter / $hindiLetter)' : '');
+    
+    String activeEng = '';
+    String hindiLetter = '';
+    String upperName = name.trim().toUpperCase();
+    
+    for (int len = 4; len >= 1; len--) {
+      if (upperName.length >= len) {
+        String prefix = upperName.substring(0, len);
+        if (NamaksharMapping.padaMap.containsKey(prefix)) {
+          activeEng = prefix;
+          hindiLetter = NamaksharMapping.padaMap[prefix]!['hindi']!;
+          break;
+        }
+      }
+    }
+
+    if (activeEng.isEmpty) {
+      String firstLetter = upperName.isNotEmpty ? upperName.substring(0, 1) : '';
+      activeEng = firstLetter;
+      hindiLetter = engToHindi[firstLetter] ?? '';
+    }
+    
+    String nameDisplay = name;
+    if (activeEng.isNotEmpty) {
+      String formattedEng = activeEng[0] + (activeEng.length > 1 ? activeEng.substring(1).toLowerCase() : '');
+      nameDisplay += ' ($formattedEng' + (hindiLetter.isNotEmpty ? ' / $hindiLetter' : '') + ')';
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -877,7 +902,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                 child: Text(
                   value,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: valueColor ?? Colors.black87,
                   ),
@@ -894,8 +919,19 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
   }
 
   Map<String, String> _calculateNaamRashiDetails(String name) {
-    if (name.isEmpty) return {};
-    String firstLetter = name.trim().substring(0, 1).toUpperCase();
+    if (name.trim().isEmpty) return {};
+    String upperName = name.trim().toUpperCase();
+    
+    for (int len = 4; len >= 1; len--) {
+      if (upperName.length >= len) {
+        String prefix = upperName.substring(0, len);
+        if (NamaksharMapping.padaMap.containsKey(prefix)) {
+          return NamaksharMapping.padaMap[prefix]!;
+        }
+      }
+    }
+    
+    String firstLetter = upperName.substring(0, 1);
     
     final Map<String, Map<String, String>> letterMapping = {
       'A': {'rashi': 'Mesh (Aries)', 'lord': 'Mars (Mangal)', 'nakshatra': 'Krittika', 'nakshatra_lord': 'Sun'},
@@ -1251,7 +1287,40 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
 
     final nakList = rashiNakshatras[rashiName] ?? [];
     
-    String nameFirstLetter = name.trim().substring(0, 1).toUpperCase();
+    String nameFirstLetter = '';
+    String hindiLetter = '';
+    String upperName = name.trim().toUpperCase();
+    
+    for (int len = 4; len >= 1; len--) {
+      if (upperName.length >= len) {
+        String prefix = upperName.substring(0, len);
+        if (NamaksharMapping.padaMap.containsKey(prefix)) {
+          nameFirstLetter = prefix;
+          hindiLetter = NamaksharMapping.padaMap[prefix]!['hindi']!;
+          break;
+        }
+      }
+    }
+
+    if (nameFirstLetter.isEmpty) {
+      nameFirstLetter = upperName.isNotEmpty ? upperName.substring(0, 1) : '';
+      final Map<String, String> engToHindi = {
+        'A': 'अ / आ', 'B': 'ब / भ', 'C': 'च / छ', 'D': 'द / ड', 'E': 'ए',
+        'F': 'फ', 'G': 'ग / घ', 'H': 'ह', 'I': 'इ / ई', 'J': 'ज / झ',
+        'K': 'क / ख', 'L': 'ल', 'M': 'म', 'N': 'न', 'O': 'ओ',
+        'P': 'प', 'Q': 'क़', 'R': 'र', 'S': 'स / श', 'T': 'त / ट',
+        'U': 'उ / ऊ', 'V': 'व', 'W': 'व', 'X': 'क्स', 'Y': 'य', 'Z': 'ज़'
+      };
+      hindiLetter = engToHindi[nameFirstLetter] ?? '';
+    }
+
+    String displayLetter = nameFirstLetter;
+    if (nameFirstLetter.isNotEmpty) {
+       displayLetter = nameFirstLetter[0] + (nameFirstLetter.length > 1 ? nameFirstLetter.substring(1).toLowerCase() : '');
+       if (hindiLetter.isNotEmpty) {
+         displayLetter += ' / $hindiLetter';
+       }
+    }
     int activeNakIdx = -1;
     for (int idx = 0; idx < nakList.length; idx++) {
       if (_isMatchingNakshatra(nameNakshatra, nakList[idx]['name']!)) {
@@ -1309,7 +1378,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                 _detRow('राशि', '$nameRashiHindi ($nameRashiLordHindi)'),
                 _detRow('नक्षत्र', nameNakshatra),
                 _detRow('नक्षत्र स्वामी', nameNakshatraLord),
-                _detRow('नामाक्षर', nameFirstLetter),
+                _detRow('नामाक्षर', displayLetter),
               ],
             ),
           ),

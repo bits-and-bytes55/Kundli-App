@@ -58,7 +58,7 @@ class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProvid
   // Helper to open Time Picker
   Future<void> _selectTime(BuildContext context) async {
     final now = DateTime.now();
-    TimeOfDay initial = const TimeOfDay(hour: 12, minute: 0);
+    TimeOfDay initial = const TimeOfDay(hour: 10, minute: 0);
     if (panchangController.selectedTime.value.contains(':')) {
       final parts = panchangController.selectedTime.value.split(':');
       initial = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));

@@ -80,16 +80,6 @@ class PlanetSignificationTab extends StatelessWidget {
             houseKey: 'planet_houses',
             tableType: 'planet_only',
           ),
-          
-          const SizedBox(height: 24),
-          
-          // Table 3: NL Only Significations
-          _buildTableSection(
-            title: 'Nakshatra Lord (NL) Houses',
-            subtitle: 'Houses signified ONLY by the Planet\'s Nakshatra Lord',
-            houseKey: 'nl_houses',
-            tableType: 'nl_only',
-          ),
 
           const SizedBox(height: 20),
         ],

@@ -314,27 +314,34 @@ class _ChartTabState extends State<ChartTab> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('$houseRashiNum',
-                  style: TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.bold,
-                    color: rashiColors[(houseRashiNum - 1) % 12])),
-                if (widget.showDirections) ...[
-                  const SizedBox(width: 2),
-                  Text(
-                    '(${const [
-                      'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
-                      'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
-                    ][(houseRashiNum - 1) % 12]})',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.orange.shade800,
-                    ),
-                  ),
-                ],
+                Text(rashiSymbols[(houseRashiNum - 1) % 12],
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: rashiColors[(houseRashiNum - 1) % 12])),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('$houseRashiNum',
+                      style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.bold,
+                        color: rashiColors[(houseRashiNum - 1) % 12])),
+                    if (widget.showDirections) ...[
+                      const SizedBox(width: 2),
+                      Text(
+                        '(${const [
+                          'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
+                          'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
+                        ][(houseRashiNum - 1) % 12]})',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.orange.shade800,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
             if (isLagnaHouse)
@@ -403,25 +410,32 @@ class _ChartTabState extends State<ChartTab> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 2),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(houseLabel,
-                  style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.bold)),
-                if (widget.showDirections) ...[
-                  const SizedBox(width: 2),
-                  Text(
-                    '(${const [
-                      'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
-                      'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
-                    ][rashiI % 12]})',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.orange.shade800,
-                    ),
-                  ),
-                ],
+                Text(rashiSymbols[rashiI],
+                  style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(houseLabel,
+                      style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+                    if (widget.showDirections) ...[
+                      const SizedBox(width: 2),
+                      Text(
+                        '(${const [
+                          'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
+                          'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
+                        ][rashiI % 12]})',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.orange.shade800,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
             if (isLagna)

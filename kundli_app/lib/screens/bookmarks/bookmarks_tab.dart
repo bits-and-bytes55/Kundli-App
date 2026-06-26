@@ -39,17 +39,45 @@ class _BookmarksTabState extends State<BookmarksTab> {
     final prefs = await SharedPreferences.getInstance();
     final String phone = prefs.getString('logged_phone') ?? '9999999999';
 
+    List<Map<String, dynamic>> localList = [];
+    if (_searchQuery.isEmpty) {
+      final raw = prefs.getString('saved_charts_all');
+      if (raw != null) {
+        try {
+          final List<dynamic> decoded = jsonDecode(raw);
+          localList = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+        } catch (e) {
+          print("Failed to decode saved charts: $e");
+        }
+      }
+    }
+
     try {
       final apiService = Get.find<ApiService>();
-      // Use limit 20, fetch once for both tabs to avoid overwhelming the server
       final apiList = await apiService.getSavedCharts(phone, query: _searchQuery, page: 1, limit: 20);
+      
       if (apiList != null) {
+        // Merge API list into local list, preferring API for duplicates
+        for (var apiChart in apiList) {
+          final existsIdx = localList.indexWhere((c) => 
+            c['name'] == apiChart['name'] && 
+            c['date'] == apiChart['date'] && 
+            c['time'] == apiChart['time']
+          );
+          if (existsIdx != -1) {
+            localList[existsIdx] = apiChart;
+          } else {
+            localList.add(apiChart);
+          }
+        }
+
         setState(() {
-          _allCharts = apiList;
+          _allCharts = localList;
           _isLoading = false;
         });
+        
         if (_searchQuery.isEmpty) {
-          await prefs.setString('saved_charts_all', jsonEncode(apiList));
+          await prefs.setString('saved_charts_all', jsonEncode(localList));
         }
         return;
       }
@@ -58,17 +86,9 @@ class _BookmarksTabState extends State<BookmarksTab> {
     }
 
     if (_searchQuery.isEmpty) {
-      final raw = prefs.getString('saved_charts_all');
-      if (raw != null) {
-        try {
-          final List<dynamic> decoded = jsonDecode(raw);
-          setState(() {
-            _allCharts = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
-          });
-        } catch (e) {
-          print("Failed to decode saved charts: $e");
-        }
-      }
+      setState(() {
+        _allCharts = localList;
+      });
     }
     setState(() {
       _isLoading = false;
