@@ -697,6 +697,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                           lat,
                           lon,
                           gender: selectedGender.value,
+                          place: placeController.text,
                         );
                         if (kundliController.kundliData.value != null) {
                           final prefs = await SharedPreferences.getInstance();
@@ -712,7 +713,31 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                             selectedMode.value,
                           );
                           if (selectedMode.value == "Premium") {
-                            Get.to(() => const PremiumKundliScreen(), transition: Transition.fadeIn);
+                            if (includeDeathDetails.value) {
+                              double dLat = 28.6139;
+                              double dLon = 77.2090;
+                              try {
+                                List<Location> locs = await locationFromAddress(deathPlaceController.text);
+                                if (locs.isNotEmpty) {
+                                  dLat = locs.first.latitude;
+                                  dLon = locs.first.longitude;
+                                }
+                              } catch (e) {
+                                print("Geocoding failed for death place: $e");
+                              }
+                              await kundliController.fetchDeathKundli(
+                                nameController.text,
+                                deathDateController.text,
+                                deathTimeController.text.isNotEmpty ? deathTimeController.text : "12:00",
+                                dLat,
+                                dLon,
+                                gender: selectedGender.value,
+                                place: deathPlaceController.text,
+                              );
+                            } else {
+                              kundliController.deathKundliData.value = null;
+                            }
+                            Get.to(() => PremiumKundliScreen(signatureImage: signatureImage.value), transition: Transition.fadeIn);
                           } else {
                             Get.to(() => KundliScreen(initialTabIdx: 1), transition: Transition.fadeIn);
                           }

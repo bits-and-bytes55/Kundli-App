@@ -56,15 +56,16 @@ async def save_chart(req: SavedChartModel):
         return {"success": False, "error": str(e)}
 
 @router.get("/charts")
-async def get_charts(phone: str = Query(...), query: str = "", mode: str = "Basic", page: int = 1, limit: int = 20):
+async def get_charts(phone: str = Query(...), query: str = "", mode: str = "All", page: int = 1, limit: int = 100):
     try:
         skip = (page - 1) * limit
         if bookmarks_col is not None:
             db_query = {"phone": phone}
-            if mode == "Basic":
-                db_query["$or"] = [{"mode": "Basic"}, {"mode": {"$exists": False}}]
-            else:
-                db_query["mode"] = mode
+            if mode != "All":
+                if mode == "Basic":
+                    db_query["$or"] = [{"mode": "Basic"}, {"mode": {"$exists": False}}]
+                else:
+                    db_query["mode"] = mode
             if query:
                 db_query["name"] = {"$regex": query, "$options": "i"}
             cursor = bookmarks_col.find(db_query).skip(skip).limit(limit)
@@ -76,7 +77,9 @@ async def get_charts(phone: str = Query(...), query: str = "", mode: str = "Basi
                 charts.append(doc)
             return {"success": True, "data": charts}
         else:
-            charts = [c for c in _in_memory_charts if c.get("phone") == phone and c.get("mode", "Basic") == mode]
+            charts = [c for c in _in_memory_charts if c.get("phone") == phone]
+            if mode != "All":
+                charts = [c for c in charts if c.get("mode", "Basic") == mode]
             if query:
                 charts = [c for c in charts if query.lower() in c.get("name", "").lower()]
             charts = charts[skip : skip + limit]

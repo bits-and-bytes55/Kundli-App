@@ -60,9 +60,8 @@ class _BookmarksTabState extends State<BookmarksTab> {
         // Merge API list into local list, preferring API for duplicates
         for (var apiChart in apiList) {
           final existsIdx = localList.indexWhere((c) => 
-            c['name'] == apiChart['name'] && 
-            c['date'] == apiChart['date'] && 
-            c['time'] == apiChart['time']
+            (c['id']?.toString() ?? c['_id']?.toString()) == (apiChart['id']?.toString() ?? apiChart['_id']?.toString()) ||
+            (c['name'] == apiChart['name'] && c['date'] == apiChart['date'] && c['time'] == apiChart['time'])
           );
           if (existsIdx != -1) {
             localList[existsIdx] = apiChart;
@@ -71,34 +70,54 @@ class _BookmarksTabState extends State<BookmarksTab> {
           }
         }
 
+        if (_searchQuery.isEmpty) {
+          await prefs.setString('saved_charts_all', jsonEncode(localList));
+        }
+
+        if (_searchQuery.isNotEmpty) {
+           localList = localList.where((c) {
+             final name = (c['name'] ?? '').toString().toLowerCase();
+             return name.contains(_searchQuery.toLowerCase());
+           }).toList();
+        }
+
         setState(() {
           _allCharts = localList;
           _isLoading = false;
         });
         
-        if (_searchQuery.isEmpty) {
-          await prefs.setString('saved_charts_all', jsonEncode(localList));
-        }
         return;
       }
     } catch (e) {
       print("API getSavedCharts failed: $e");
     }
 
-    if (_searchQuery.isEmpty) {
-      setState(() {
-        _allCharts = localList;
-      });
+    if (_searchQuery.isNotEmpty) {
+       localList = localList.where((c) {
+         final name = (c['name'] ?? '').toString().toLowerCase();
+         return name.contains(_searchQuery.toLowerCase());
+       }).toList();
     }
+
     setState(() {
+      _allCharts = localList;
       _isLoading = false;
     });
+  }
+
+  Future<void> _updatePrefs() async {
+    if (_searchQuery.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('saved_charts_all', jsonEncode(_allCharts));
+    }
   }
 
   void _onChartDeleted(String id) {
     setState(() {
       _allCharts.removeWhere((c) => (c['id']?.toString() ?? c['_id']?.toString()) == id);
     });
+    _updatePrefs();
+    _loadAllCharts(isRefresh: true);
   }
 
   void _onChartUpdated(Map<String, dynamic> updatedChart) {
@@ -108,6 +127,8 @@ class _BookmarksTabState extends State<BookmarksTab> {
         _allCharts[idx] = updatedChart;
       }
     });
+    _updatePrefs();
+    _loadAllCharts(isRefresh: true);
   }
 
   @override
@@ -177,6 +198,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
                     isLoading: _isLoading,
                     onDelete: _onChartDeleted,
                     onUpdate: _onChartUpdated,
+                    onRefresh: () => _loadAllCharts(isRefresh: true),
                   ),
                   SavedChartsList(
                     mode: 'Premium', 
@@ -185,6 +207,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
                     isLoading: _isLoading,
                     onDelete: _onChartDeleted,
                     onUpdate: _onChartUpdated,
+                    onRefresh: () => _loadAllCharts(isRefresh: true),
                   ),
                 ],
               ),
@@ -208,6 +231,7 @@ class SavedChartsList extends StatefulWidget {
   final bool isLoading;
   final Function(String) onDelete;
   final Function(Map<String, dynamic>) onUpdate;
+  final Future<void> Function() onRefresh;
 
   const SavedChartsList({
     super.key, 
@@ -217,6 +241,7 @@ class SavedChartsList extends StatefulWidget {
     required this.isLoading,
     required this.onDelete,
     required this.onUpdate,
+    required this.onRefresh,
   });
 
   @override
@@ -232,15 +257,23 @@ class _SavedChartsListState extends State<SavedChartsList> {
     final String? chartId = chart['id']?.toString() ?? chart['_id']?.toString();
 
     if (chartId != null) {
+      setState(() => _isProcessing = true);
       try {
         final apiService = Get.find<ApiService>();
-        await apiService.deleteChart(chartId);
-        widget.onDelete(chartId);
+        final success = await apiService.deleteChart(chartId);
+        if (success) {
+          widget.onDelete(chartId);
+          Get.snackbar('Deleted', 'Profile removed from saved charts.', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green.shade100);
+        } else {
+          Get.snackbar('Error', 'Failed to delete chart in API', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
+        }
       } catch (e) {
         print("API delete failed: $e");
+        Get.snackbar('Error', 'API Error: $e', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
+      } finally {
+        setState(() => _isProcessing = false);
       }
     }
-    Get.snackbar('Deleted', 'Profile removed from saved charts.', snackPosition: SnackPosition.BOTTOM);
   }
 
   void _showEditDialog(Map<String, dynamic> chart, int index) {
@@ -356,24 +389,24 @@ class _SavedChartsListState extends State<SavedChartsList> {
                   );
                   if (success) {
                     Get.snackbar('Success', 'Chart updated successfully!', backgroundColor: Colors.green.shade100);
+                    
+                    Map<String, dynamic> updatedChart = {
+                      'id': chartId,
+                      'name': nameCtrl.text,
+                      'date': dateCtrl.text,
+                      'time': timeCtrl.text,
+                      'place': placeCtrl.text,
+                      'lat': lat,
+                      'lon': lon,
+                      'gender': selectedGender.value,
+                      'mode': chart['mode'] ?? 'Basic',
+                    };
+                    
+                    widget.onUpdate(updatedChart);
                   } else {
-                    Get.snackbar('Error', 'Failed to update chart in API');
+                    Get.snackbar('Error', 'Failed to update chart in API', backgroundColor: Colors.red.shade100);
                   }
                 }
-
-                Map<String, dynamic> updatedChart = {
-                  'id': chartId,
-                  'name': nameCtrl.text,
-                  'date': dateCtrl.text,
-                  'time': timeCtrl.text,
-                  'place': placeCtrl.text,
-                  'lat': lat,
-                  'lon': lon,
-                  'gender': selectedGender.value,
-                  'mode': chart['mode'] ?? 'Basic',
-                };
-                
-                widget.onUpdate(updatedChart);
 
               } catch (e) {
                 Get.snackbar('Error', 'Failed to save: $e');
@@ -428,14 +461,18 @@ class _SavedChartsListState extends State<SavedChartsList> {
       return _buildEmptyState();
     }
 
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: widget.charts.length,
-      itemBuilder: (context, index) {
-        final item = widget.charts[index];
-        return _buildChartCard(item, index);
-      },
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh,
+      color: AppColors.primary,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: widget.charts.length,
+        itemBuilder: (context, index) {
+          final item = widget.charts[index];
+          return _buildChartCard(item, index);
+        },
+      ),
     );
   }
 

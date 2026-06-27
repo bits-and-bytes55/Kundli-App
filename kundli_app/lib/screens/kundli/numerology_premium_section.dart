@@ -4,59 +4,106 @@ import '../../theme/app_theme.dart';
 class NumerologyPremiumSection extends StatelessWidget {
   final Map<String, dynamic> personalDetails;
   final String name;
+  final String dob;
 
   const NumerologyPremiumSection({
     Key? key,
     required this.personalDetails,
     required this.name,
+    required this.dob,
   }) : super(key: key);
 
-  int _reduceToSingleDigit(int number) {
-    if (number == 0) return 0;
-    int res = number % 9;
-    return res == 0 ? 9 : res;
-  }
-
-  int _sumDigits(String text) {
-    int sum = 0;
-    for (int i = 0; i < text.length; i++) {
-      if (int.tryParse(text[i]) != null) {
-        sum += int.parse(text[i]);
-      }
+  int _reduceToSingleDigit(int n) {
+    if (n == 0) return 0;
+    int sum = n;
+    while (sum > 9) {
+      sum = sum.toString().split('').map(int.parse).reduce((a, b) => a + b);
     }
     return sum;
   }
 
+  int _monthFromName(String text) {
+    final l = text.toLowerCase();
+    if (l.contains('jan')) return 1;
+    if (l.contains('feb')) return 2;
+    if (l.contains('mar')) return 3;
+    if (l.contains('apr')) return 4;
+    if (l.contains('may')) return 5;
+    if (l.contains('jun')) return 6;
+    if (l.contains('jul')) return 7;
+    if (l.contains('aug')) return 8;
+    if (l.contains('sep')) return 9;
+    if (l.contains('oct')) return 10;
+    if (l.contains('nov')) return 11;
+    if (l.contains('dec')) return 12;
+    return 1;
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
-    String dobStr = personalDetails['dob']?.toString() ?? '01/01/2000';
-    List<String> parts = dobStr.split(RegExp(r'[/.\-]'));
+    String rawDob = dob.isEmpty ? '01/01/2000' : dob;
     
+    // Robust parsing
     int day = 1;
     int month = 1;
     int year = 2000;
-
-    if (parts.length >= 3) {
-      if (parts[0].length == 4) { // YYYY-MM-DD
-        year = int.tryParse(parts[0]) ?? 2000;
-        month = int.tryParse(parts[1]) ?? 1;
-        day = int.tryParse(parts[2]) ?? 1;
-      } else { // DD-MM-YYYY
-        day = int.tryParse(parts[0]) ?? 1;
-        month = int.tryParse(parts[1]) ?? 1;
-        year = int.tryParse(parts[2]) ?? 2000;
+    
+    try {
+      final RegExp numRegExp = RegExp(r'\d+');
+      final matches = numRegExp.allMatches(rawDob).map((m) => int.parse(m.group(0)!)).toList();
+      
+      if (matches.length >= 3) {
+        if (matches[0] > 1000) {
+          year = matches[0];
+          month = matches[1];
+          day = matches[2];
+        } else {
+          day = matches[0];
+          month = matches[1];
+          year = matches[2];
+        }
+      } else if (matches.length == 2) {
+        if (matches[0] > 1000) {
+          year = matches[0];
+          day = matches[1];
+        } else {
+          day = matches[0];
+          year = matches[1];
+        }
+        month = _monthFromName(rawDob);
       }
+    } catch (e) {
+      // Fallback stays at 1/1/2000
     }
     
     // Mulank
-    final int mulank = _reduceToSingleDigit(_sumDigits(day.toString()));
+    final int mulank = _reduceToSingleDigit(day);
     
     // Bhagyank
-    final int bhagyank = _reduceToSingleDigit(_sumDigits('$day$month$year'));
+    final digits = '$day$month$year'.split('').map(int.parse);
+    final sum = digits.reduce((a, b) => a + b);
+    final int bhagyank = _reduceToSingleDigit(sum);
     
-    // Kua Number (Defaulting Male: 11 - sum)
-    final int yearSum = _reduceToSingleDigit(_sumDigits(year.toString()));
-    int kuaNumber = _reduceToSingleDigit(11 - yearSum); // Assuming male for now if not available
+    // Kua Number
+    String gender = personalDetails['gender']?.toString().toLowerCase() ?? 'male';
+    final int yearSum = year.toString().split('').map(int.parse).reduce((a, b) => a + b);
+    final int yearRoot = _reduceToSingleDigit(yearSum);
+    int result;
+    if (gender == 'male') {
+      result = 11 - yearRoot;
+    } else {
+      result = 4 + yearRoot;
+    }
+    int kuaNumber = _reduceToSingleDigit(result);
+    if (kuaNumber == 5) {
+      if (gender == 'male') {
+        kuaNumber = 2;
+      } else {
+        kuaNumber = 8;
+      }
+    }
 
     
     // Name Numerology (Chaldean)
@@ -73,9 +120,6 @@ class NumerologyPremiumSection extends StatelessWidget {
 
     String cleanName = name.toUpperCase().replaceAll(RegExp(r'[^A-Z\s]'), '');
     List<String> nameParts = cleanName.split(' ').where((s) => s.isNotEmpty).toList();
-    
-    String firstLetter = cleanName.isNotEmpty ? cleanName[0] : '';
-    int firstLetterNum = chaldeanMap[firstLetter] ?? 0;
     
     int firstNameTotal = 0;
     if (nameParts.isNotEmpty) {
@@ -95,7 +139,6 @@ class NumerologyPremiumSection extends StatelessWidget {
     for (int i = 0; i < cleanName.replaceAll(' ', '').length; i++) {
       fullNameTotal += chaldeanMap[cleanName.replaceAll(' ', '')[i]] ?? 0;
     }
-    
     int reducedFullName = _reduceToSingleDigit(fullNameTotal);
 
     final Map<String, String> engToHindi = {
@@ -105,30 +148,49 @@ class NumerologyPremiumSection extends StatelessWidget {
       'P': 'प', 'Q': 'क़', 'R': 'र', 'S': 'स / श', 'T': 'त / ट',
       'U': 'उ / ऊ', 'V': 'व', 'W': 'व', 'X': 'क्स', 'Y': 'य', 'Z': 'ज़'
     };
+    String firstLetter = cleanName.isNotEmpty ? cleanName[0] : '';
+    int firstLetterNum = chaldeanMap[firstLetter] ?? 0;
     String hindiLetter = engToHindi[firstLetter] ?? '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildHeader('Advanced Numerology', Icons.numbers_rounded),
-        const SizedBox(height: 12),
+        _buildGoldHeader('Divine Core Numbers'),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: _buildCoreNumberBox('Mulank', mulank.toString(), const Color(0xFF6B1B32))),
+            const SizedBox(width: 12),
+            Expanded(child: _buildCoreNumberBox('Bhagyank', bhagyank.toString(), const Color(0xFFC4A25C))),
+            const SizedBox(width: 12),
+            Expanded(child: _buildCoreNumberBox('Kua', kuaNumber.toString(), const Color(0xFF3F4274))),
+          ],
+        ),
+        const SizedBox(height: 16),
         Column(
           children: [
-            _buildSimpleRow('Mulank (Root Number)', mulank.toString(), valueColor: Colors.amber.shade900),
-            _buildSimpleRow('Bhagyank (Destiny Number)', bhagyank.toString(), valueColor: Colors.blue.shade800),
-            _buildSimpleRow('Kua Number', kuaNumber.toString(), valueColor: Colors.green.shade800),
-            _buildSimpleRow('First Letter', '$firstLetter / $hindiLetter', valueColor: Colors.deepOrange),
-            _buildSimpleRow('First Letter Number', firstLetterNum.toString()),
             _buildSimpleRow('First Name (${nameParts.isNotEmpty ? nameParts[0] : ''})', '$firstNameTotal = ${_reduceToSingleDigit(firstNameTotal)}'),
             if (nameParts.length > 1)
               _buildSimpleRow('Second Name (${nameParts[1]})', '$secondNameTotal = ${_reduceToSingleDigit(secondNameTotal)}'),
             _buildSimpleRow('Full Name Total', '$fullNameTotal = $reducedFullName', isLast: true, valueColor: Colors.deepPurple),
           ],
         ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: _buildGridBox('Name No.', reducedFullName.toString(), Colors.deepPurple)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildGridBox('Total', fullNameTotal.toString(), Colors.black87)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildGridBox('First Let.', '$firstLetter ($firstLetterNum)', Colors.deepOrange)),
+          ],
+        ),
         const SizedBox(height: 16),
         _buildHeader('Lo Shu Grid', Icons.grid_3x3_rounded),
         const SizedBox(height: 12),
-        _buildLoShuGrid('$day$month$year$mulank$bhagyank$kuaNumber'),
+        _buildLoShuGrid(day, month, year, mulank, bhagyank, kuaNumber),
       ],
     );
   }
@@ -149,6 +211,87 @@ class NumerologyPremiumSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildGoldHeader(String title) {
+    return Text(
+      title.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w900,
+        color: Color(0xFFC4A25C),
+        letterSpacing: 1.0,
+      ),
+    );
+  }
+
+  Widget _buildCoreNumberBox(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDFBF7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEBE3D5), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 10,
+              color: Color(0xFF4A4A4A),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              color: color,
+              height: 1.0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridBox(String label, String value, Color color, {double? width}) {
+    return Container(
+      width: width ?? 100,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Color(0xFF666666),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -193,13 +336,25 @@ class NumerologyPremiumSection extends StatelessWidget {
     );
   }
 
-  Widget _buildLoShuGrid(String digits) {
+  Widget _buildLoShuGrid(int d, int m, int y, int mulank, int bhagyank, int k) {
     Map<int, int> counts = {};
     for (int i = 1; i <= 9; i++) counts[i] = 0;
-    for (int i = 0; i < digits.length; i++) {
-      int? d = int.tryParse(digits[i]);
-      if (d != null && d >= 1 && d <= 9) {
-        counts[d] = counts[d]! + 1;
+    
+    String cleanDob = '$d$m$y';
+    
+    // Add DOB digits
+    for (int i = 0; i < cleanDob.length; i++) {
+      int? val = int.tryParse(cleanDob[i]);
+      if (val != null && val >= 1 && val <= 9) {
+        counts[val] = counts[val]! + 1;
+      }
+    }
+    
+    // Add Core numbers
+    for (int i = 0; i < '$mulank$bhagyank'.length; i++) {
+      int? val = int.tryParse('$mulank$bhagyank'[i]);
+      if (val != null && val >= 1 && val <= 9) {
+        counts[val] = counts[val]! + 1;
       }
     }
 
@@ -207,56 +362,53 @@ class NumerologyPremiumSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: const Color(0xFFC4A25C).withOpacity(0.3)),
       ),
       padding: const EdgeInsets.all(16),
       child: Center(
         child: SizedBox(
-          width: 240,
-          height: 240,
+          width: 160,
+          height: 160,
           child: GridView.count(
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 3,
-            mainAxisSpacing: 4,
-            crossAxisSpacing: 4,
-            children: [
-              _gridCell(4, counts[4]!, Colors.green.shade50, Colors.green.shade700),
-              _gridCell(9, counts[9]!, Colors.red.shade50, Colors.red.shade700),
-              _gridCell(2, counts[2]!, Colors.brown.shade50, Colors.brown.shade700),
+            mainAxisSpacing: 2,
+            crossAxisSpacing: 2,
+            children: [4, 9, 2, 3, 5, 7, 8, 1, 6].map((num) {
+              final count = counts[num] ?? 0;
+              final isPresent = count > 0;
               
-              _gridCell(3, counts[3]!, Colors.green.shade100, Colors.green.shade800),
-              _gridCell(5, counts[5]!, Colors.orange.shade50, Colors.orange.shade800),
-              _gridCell(7, counts[7]!, Colors.grey.shade200, Colors.grey.shade800),
-              
-              _gridCell(8, counts[8]!, Colors.brown.shade100, Colors.brown.shade800),
-              _gridCell(1, counts[1]!, Colors.blue.shade50, Colors.blue.shade700),
-              _gridCell(6, counts[6]!, Colors.grey.shade300, Colors.grey.shade800),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+              String displayStr;
+              if (isPresent) {
+                displayStr = List.filled(count, '$num').join('');
+              } else if (num == k) {
+                displayStr = '$num';
+              } else {
+                displayStr = 'X';
+              }
 
-  Widget _gridCell(int baseNum, int count, Color bgColor, Color highlightColor) {
-    bool isPresent = count > 0;
-    String text = isPresent ? List.filled(count, baseNum.toString()).join('') : baseNum.toString();
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: isPresent ? bgColor : Colors.white,
-        border: Border.all(color: isPresent ? highlightColor.withOpacity(0.5) : Colors.black12, width: isPresent ? 1.5 : 1),
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: isPresent ? [BoxShadow(color: highlightColor.withOpacity(0.1), blurRadius: 4)] : [],
-      ),
-      child: Center(
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: isPresent ? 20 : 16,
-            fontWeight: isPresent ? FontWeight.w900 : FontWeight.w400,
-            color: isPresent ? highlightColor : Colors.black26,
-            letterSpacing: 1.5,
+              final color = isPresent 
+                  ? (num == k ? const Color(0xFFFFF176) : const Color(0xFF6B1B32).withOpacity(0.8)) 
+                  : (num == k ? const Color(0xFFFFF9C4) : Colors.white);
+                  
+              final textColor = isPresent
+                  ? (num == k ? Colors.black87 : Colors.white)
+                  : (num == k ? const Color(0xFFC4A25C) : Colors.black87);
+
+              return Container(
+                color: color,
+                child: Center(
+                  child: Text(
+                    displayStr,
+                    style: TextStyle(
+                      fontSize: isPresent ? (displayStr.length > 2 ? 14 : 18) : 20,
+                      fontWeight: isPresent ? FontWeight.bold : FontWeight.w500,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ),
       ),

@@ -68,10 +68,14 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: RefreshIndicator(
+        onRefresh: _loadProfile,
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Profile Header
             Row(
@@ -141,6 +145,7 @@ class _ProfileTabState extends State<ProfileTab> {
             }),
           ],
         ),
+      ),
       ),
     );
   }

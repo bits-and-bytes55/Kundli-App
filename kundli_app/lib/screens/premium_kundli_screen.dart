@@ -13,6 +13,7 @@ import 'kundli/cusps_tab.dart';
 import 'kundli/planet_signification_tab.dart';
 import 'kundli/house_significators_tab.dart';
 import 'kundli/kp_tab.dart';
+import 'kundli/direction_match_screen.dart';
 import 'kundli/ashtakvarga_tab.dart';
 import 'kundli/shad_bala_tab.dart';
 import 'kundli/gochar_tab.dart';
@@ -32,9 +33,12 @@ import 'kundli/friendship_tab.dart';
 import 'kundli/numerology_premium_section.dart';
 
 
+import 'dart:io';
+
 class PremiumKundliScreen extends StatefulWidget {
   final int initialTabIdx;
-  const PremiumKundliScreen({super.key, this.initialTabIdx = 0});
+  final File? signatureImage;
+  const PremiumKundliScreen({super.key, this.initialTabIdx = 0, this.signatureImage});
 
   @override
   State<PremiumKundliScreen> createState() => _PremiumKundliScreenState();
@@ -48,7 +52,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
   final List<Tab> _tabs = const [
     Tab(text: 'Premium'),
     Tab(text: 'Basic'),
-    Tab(text: 'Chart'),
+    Tab(text: 'Direction Prediction'),
     Tab(text: 'Graha Sthiti'),
     Tab(text: 'Planets'),
     Tab(text: 'Planets-Sub'),
@@ -242,6 +246,12 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     int lagnaIdx = rashiList.indexOf(ascendant['rashi'] ?? '');
     if (lagnaIdx == -1) lagnaIdx = 0;
 
+    final String name = data['name'] ?? '';
+    final nameDetails = _calculateNaamRashiDetails(name);
+    final String rashiFullName = nameDetails['rashi'] ?? '';
+    final String rashiShortName = rashiFullName.isNotEmpty ? rashiFullName.split(' ').first : '';
+    final int naamRashiIdx = rashiList.indexOf(rashiShortName);
+
     return Stack(
       children: [
         Scaffold(
@@ -318,12 +328,19 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                           const SizedBox(height: 12),
                           _buildNameHouseSignCard(data['name'] ?? '', lagnaIdx, planets),
                           const SizedBox(height: 12),
-                          _buildNameAnalysisCard(data['name'] ?? '', lagnaIdx, planets),
+                          _buildNameAnalysisCard(data['name'] ?? '', lagnaIdx, planets, planetSignificators),
+                          const SizedBox(height: 12),
+                          _buildAll12Rashis(data['name'] ?? '', lagnaIdx, planets, planetSignificators),
                           const SizedBox(height: 12),
                           NumerologyPremiumSection(
                             personalDetails: personalDetails,
                             name: data['name'] ?? '',
+                            dob: data['date'] ?? '',
                           ),
+                          const SizedBox(height: 12),
+                          _buildDeathDetailsCard(c),
+                          const SizedBox(height: 12),
+                          _buildSignatureDetailsCard(data['name'] ?? ''),
                           const SizedBox(height: 16),
                         ],
                       ),
@@ -333,8 +350,18 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
               ),
               // 1 - Basic Details
               PersonalDetailsTab(personalDetails: personalDetails),
-              // 2 - Chart
-              ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets, showDirections: true),
+              // 2 - Direction Prediction
+              DirectionMatchScreen(
+                birthPlace: personalDetails['place'] ?? data['place'] ?? '',
+                lagnaHouse: lagnaIdx + 1,
+                moonHouse: planets['Moon']?['rashi_num'] ?? 1,
+                nameRashiHouse: naamRashiIdx != -1 ? naamRashiIdx + 1 : 1,
+                name: name,
+                ascendant: ascendant,
+                planets: planets,
+                kpAscendant: kpAscendant,
+                kpPlanets: kpPlanets,
+              ),
               // 3 - Graha Sthiti
               GrahaSthitiTab(planets: planets, ascendant: ascendant),
               // 4 - Planets
@@ -657,7 +684,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     );
   }
 
-  Widget _buildNameAnalysisCard(String name, int lagnaIdx, Map<String, dynamic> planets) {
+  Widget _buildNameAnalysisCard(String name, int lagnaIdx, Map<String, dynamic> planets, [Map<String, dynamic>? planetSignificators]) {
     if (name.isEmpty) return const SizedBox();
     final details = _calculateNaamRashiDetails(name);
     if (details.isEmpty) return const SizedBox();
@@ -703,30 +730,23 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     Set<int> rashiSignified = {};
     if (details['lord'] != null && details['lord']!.isNotEmpty) {
       String lord = details['lord']!.split(' ').first;
-      final ownership = {
-        'Sun': [4], 'Moon': [3], 'Mars': [0, 7], 'Mercury': [2, 5],
-        'Jupiter': [8, 11], 'Venus': [1, 6], 'Saturn': [9, 10]
-      };
-      for (int rIdx in (ownership[lord] ?? [])) {
-        rashiSignified.add(((rIdx - lagnaIdx + 12) % 12) + 1);
-      }
-      if (planets[lord] != null && planets[lord]['house'] != null) {
-        rashiSignified.add(planets[lord]['house'] as int);
-      }
-    }
-    
-    Set<int> nakSignified = {};
-    if (nameNakshatraLord.isNotEmpty) {
-      String nLord = nameNakshatraLord;
-      final ownership = {
-        'Sun': [4], 'Moon': [3], 'Mars': [0, 7], 'Mercury': [2, 5],
-        'Jupiter': [8, 11], 'Venus': [1, 6], 'Saturn': [9, 10]
-      };
-      for (int rIdx in (ownership[nLord] ?? [])) {
-        nakSignified.add(((rIdx - lagnaIdx + 12) % 12) + 1);
-      }
-      if (planets[nLord] != null && planets[nLord]['house'] != null) {
-        nakSignified.add(planets[nLord]['house'] as int);
+      if (planetSignificators != null && planetSignificators.containsKey(lord)) {
+        var sigData = planetSignificators[lord];
+        if (sigData is Map && sigData.containsKey('planet_houses')) {
+           List<dynamic> sigs = sigData['planet_houses'];
+           rashiSignified.addAll(sigs.map((e) => int.parse(e.toString())));
+        }
+      } else {
+        final ownership = {
+          'Sun': [4], 'Moon': [3], 'Mars': [0, 7], 'Mercury': [2, 5],
+          'Jupiter': [8, 11], 'Venus': [1, 6], 'Saturn': [9, 10]
+        };
+        for (int rIdx in (ownership[lord] ?? [])) {
+          rashiSignified.add(((rIdx - lagnaIdx + 12) % 12) + 1);
+        }
+        if (planets[lord] != null && planets[lord]['house'] != null) {
+          rashiSignified.add(planets[lord]['house'] as int);
+        }
       }
     }
     
@@ -735,20 +755,51 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
       var l = rashiSignified.toList()..sort();
       rashiStr = l.join(', ');
     }
-
-    String nakStr = "-";
-    if (nakSignified.isNotEmpty) {
-      var l = nakSignified.toList()..sort();
-      nakStr = l.join(', ');
+    
+    Map<int, int> houseFreq = {};
+    if (nameRashiHouseNum > 0) houseFreq[nameRashiHouseNum] = (houseFreq[nameRashiHouseNum] ?? 0) + 1;
+    if (moonHouseFromName > 0) houseFreq[moonHouseFromName] = (houseFreq[moonHouseFromName] ?? 0) + 1;
+    for (int h in rashiSignified) {
+      houseFreq[h] = (houseFreq[h] ?? 0) + 1;
     }
     
-    Set<int> totalActiveSet = {};
-    if (nameRashiHouseNum > 0) totalActiveSet.add(nameRashiHouseNum);
-    if (moonHouseFromName > 0) totalActiveSet.add(moonHouseFromName);
-    totalActiveSet.addAll(rashiSignified);
-    totalActiveSet.addAll(nakSignified);
+    List<int> sortedActive = houseFreq.keys.toList()..sort();
     
-    List<int> sortedActive = totalActiveSet.toList()..sort();
+    List<TextSpan> spans = [];
+    if (sortedActive.isEmpty) {
+      spans.add(const TextSpan(text: '-'));
+    } else {
+      for (int i = 0; i < sortedActive.length; i++) {
+        int h = sortedActive[i];
+        int count = houseFreq[h] ?? 1;
+        
+        Color textColor = (h == 8 || h == 12) ? Colors.red.shade700 : Colors.green.shade800;
+
+        spans.add(TextSpan(
+          text: '$h',
+          style: TextStyle(
+            fontWeight: count > 1 ? FontWeight.w900 : FontWeight.w600,
+            fontSize: count > 1 ? 15 : 13,
+            color: textColor,
+          ),
+        ));
+        if (i < sortedActive.length - 1) {
+          spans.add(TextSpan(
+            text: ', ', 
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey.shade600)
+          ));
+        }
+      }
+      spans.add(TextSpan(
+        text: ' ✔️', 
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.green.shade700)
+      ));
+    }
+    
+    Widget totalActiveWidget = RichText(
+      textAlign: TextAlign.right,
+      text: TextSpan(children: spans),
+    );
 
     final Map<String, String> engToHindi = {
       'A': 'अ / आ', 'B': 'ब / भ', 'C': 'च / छ', 'D': 'द / ड', 'E': 'ए',
@@ -815,69 +866,20 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
         Column(
           children: [
             _buildSimpleRow('Active Name Analyzed', nameDisplay, valueColor: const Color(0xFFE07B20)),
-            _buildSimpleRow('Naam Rashi (Name Sign)', details['rashi'] ?? '', valueColor: rashiColor),
-            _buildSimpleRow('Rashi Lord (Sign Ruler)', details['lord'] ?? '', valueColor: rashiColor.darken(15)),
-            _buildSimpleRow('Naam Nakshatra', nameNakshatra),
-            _buildSimpleRow('Nakshatra Lord', nameNakshatraLord),
             
             // New Fields
             _buildSimpleRow('लग्न से नाम किस भाव में है', '${nameRashiHouseNum > 0 ? nameRashiHouseNum : "-"}वाँ भाव'),
             _buildSimpleRow('चंद्र से नाम किस भाव में है', '${moonHouseFromName > 0 ? moonHouseFromName : "-"}वाँ भाव'),
             _buildSimpleRow('नाम राशि से Signified Houses', rashiStr),
-            _buildSimpleRow('नाम नक्षत्र से Signified Houses', nakStr),
-            _buildSimpleRow('Total Active Houses', sortedActive.isNotEmpty ? '${sortedActive.join(', ')} ✔️' : '-', valueColor: Colors.green.shade700, isLast: true),
+            _buildSimpleRow('Total Active Houses', '', customValueWidget: totalActiveWidget, isLast: true),
           ],
         ),
         const SizedBox(height: 12),
-
-        // Premium Note Box
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFF8F2), Color(0xFFFFF2E6)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFFE0B2), width: 1.0),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.stars_rounded, color: Colors.amber.shade800, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    'AURA & DESTINY NOTE',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.amber.shade900,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Your birth chart moon sign governs your inner self, while your active name "$name" represents your social vibration. Your name vibrates with ${details['rashi']} energy. The active houses influence your destiny and aura in profound ways.',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF5D4037),
-                  height: 1.45,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
 
-  Widget _buildSimpleRow(String label, String value, {Color? valueColor, bool isLast = false}) {
+  Widget _buildSimpleRow(String label, String value, {Color? valueColor, bool isLast = false, Widget? customValueWidget}) {
     return Column(
       children: [
         Padding(
@@ -899,7 +901,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
               const SizedBox(width: 8),
               Expanded(
                 flex: 5,
-                child: Text(
+                child: customValueWidget ?? Text(
                   value,
                   style: TextStyle(
                     fontSize: 13,
@@ -1446,6 +1448,354 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
         ],
       ),
     );
+  }
+  Widget _buildDeathDetailsCard(KundliController c) {
+    final deathData = c.deathKundliData.value;
+    if (deathData == null) return const SizedBox();
+
+    final planets = deathData['planets'] as Map<String, dynamic>? ?? {};
+    final ascendant = deathData['ascendant'] as Map<String, dynamic>? ?? {};
+    final moonRashi = planets['Moon']?['rashi'] ?? '';
+    final moonNak = planets['Moon']?['nakshatra'] ?? '';
+    final moonNakLord = planets['Moon']?['nakshatra_lord'] ?? '';
+    final lagnaRashi = ascendant['rashi'] ?? '';
+
+    return _buildSectionCard(
+      title: 'Death Details & Analysis',
+      icon: Icons.auto_awesome_rounded,
+      isExpanded: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildSimpleRow('Date of Death', deathData['date'] ?? ''),
+          _buildSimpleRow('Time of Death', deathData['time'] ?? ''),
+          _buildSimpleRow('Place of Death', deathData['place'] ?? ''),
+          _buildSimpleRow('Death Lagna (Ascendant)', lagnaRashi, valueColor: Colors.deepPurple),
+          _buildSimpleRow('Death Moon Sign (Rashi)', moonRashi, valueColor: Colors.blue.shade800),
+          _buildSimpleRow('Death Nakshatra', moonNak, valueColor: Colors.amber.shade900),
+          _buildSimpleRow('Nakshatra Lord', moonNakLord, isLast: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignatureDetailsCard(String name) {
+    if (widget.signatureImage == null) return const SizedBox();
+
+    final Map<String, int> chaldeanMap = {
+      'A':1,'I':1,'J':1,'Q':1,'Y':1,
+      'B':2,'K':2,'R':2,
+      'C':3,'G':3,'L':3,'S':3,
+      'D':4,'M':4,'T':4,
+      'E':5,'H':5,'N':5,'X':5,
+      'U':6,'V':6,'W':6,
+      'O':7,'Z':7,
+      'F':8,'P':8
+    };
+
+    int total = 0;
+    String cleaned = name.trim().toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
+    for (int i = 0; i < cleaned.length; i++) {
+      if (chaldeanMap.containsKey(cleaned[i])) {
+        total += chaldeanMap[cleaned[i]]!;
+      }
+    }
+    int reduceToSingleDigit(int n) {
+      if (n == 0) return 0;
+      int res = n % 9;
+      return res == 0 ? 9 : res;
+    }
+    int singleDigit = reduceToSingleDigit(total);
+
+    return _buildSectionCard(
+      title: 'Signature Analysis',
+      icon: Icons.draw_rounded,
+      isExpanded: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Image.file(widget.signatureImage!, height: 100, fit: BoxFit.contain),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSimpleRow('Signature Name', name),
+          _buildSimpleRow('Signature Total', '$total = $singleDigit', valueColor: Colors.green.shade800),
+          const SizedBox(height: 8),
+          const Text(
+            'A signature vibrating to this number aligns with its corresponding planetary energy.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF666666)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAll12Rashis(String userName, int lagnaIdx, Map<String, dynamic> planets, Map<String, dynamic> planetSignificators) {
+    if (userName.isEmpty) return const SizedBox();
+    
+    // Find the user's name nakshatra to highlight it
+    final details = _calculateNaamRashiDetails(userName);
+    final userNakshatra = details['nakshatra'] ?? '';
+
+    List<Widget> rashiWidgets = [];
+    
+    rashiWidgets.add(
+      const Padding(
+        padding: EdgeInsets.only(top: 12, bottom: 12),
+        child: Text(
+          'All 12 Rashis & Active Houses Analysis',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+          textAlign: TextAlign.center,
+        ),
+      )
+    );
+
+    for (String rashi in rashiList) {
+      rashiWidgets.add(_buildSingleRashiAnalysis(rashi, userNakshatra, lagnaIdx, planets, planetSignificators));
+      rashiWidgets.add(const SizedBox(height: 16));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rashiWidgets,
+    );
+  }
+
+  Widget _buildSingleRashiAnalysis(String rashiName, String userNakshatra, int lagnaIdx, Map<String, dynamic> planets, Map<String, dynamic> planetSignificators) {
+    final rashiHindiName = rashiHindi[rashiName] ?? rashiName;
+    final rashiLord = rashiLordsHindi[rashiName] ?? '';
+    final rashiLordEng = _getRashiLordEng(rashiName); 
+    
+    final rashiIdx = rashiList.indexOf(rashiName);
+    final houseNum = (rashiIdx - lagnaIdx + 12) % 12 + 1;
+    
+    final nakList = rashiNakshatras[rashiName] ?? [];
+    int activeNakIdx = -1;
+    if (userNakshatra.isNotEmpty) {
+      for (int idx = 0; idx < nakList.length; idx++) {
+        if (_isMatchingNakshatra(userNakshatra, nakList[idx]['name']!)) {
+          activeNakIdx = idx;
+          break;
+        }
+      }
+    }
+    
+    final Color orange = AppColors.primary;
+    
+    Widget card = Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: orange.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [orange.withOpacity(0.85), const Color(0xFFFFCC80)],
+              ),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '$rashiHindiName ($rashiLord)',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                Text(
+                  'घर $houseNum',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            color: orange.withOpacity(0.02),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$rashiHindiName राशि के सभी नक्षत्र और नामाक्षर:',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                ),
+                const SizedBox(height: 10),
+                ...nakList.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final item = entry.value;
+                  final isCurrent = idx == activeNakIdx;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isCurrent ? orange.withOpacity(0.08) : Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isCurrent ? orange : Colors.grey.shade200,
+                        width: isCurrent ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isCurrent ? Icons.stars_rounded : Icons.radio_button_off_rounded,
+                          color: isCurrent ? orange : Colors.grey,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${item['name']} (${item['letters']}) — ${item['lord']}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                              color: isCurrent ? orange : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        if (isCurrent)
+                          Text(
+                            'सक्रिय',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: orange),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    
+    int moonHouseFromName = 0;
+    if (planets['Moon'] != null) {
+      String moonRashiStr = planets['Moon']['rashi'] ?? '';
+      int moonRashiIdx = rashiList.indexWhere((r) => r.toLowerCase() == moonRashiStr.toLowerCase());
+      if (moonRashiIdx != -1) {
+        moonHouseFromName = ((rashiIdx - moonRashiIdx + 12) % 12) + 1;
+      }
+    }
+    
+    Set<int> rashiSignified = {};
+    if (rashiLordEng.isNotEmpty) {
+      if (planetSignificators != null && planetSignificators.containsKey(rashiLordEng)) {
+        var sigData = planetSignificators[rashiLordEng];
+        if (sigData is Map && sigData.containsKey('planet_houses')) {
+           List<dynamic> sigs = sigData['planet_houses'];
+           rashiSignified.addAll(sigs.map((e) => int.parse(e.toString())));
+        }
+      } else {
+        final ownership = {
+          'Sun': [4], 'Moon': [3], 'Mars': [0, 7], 'Mercury': [2, 5],
+          'Jupiter': [8, 11], 'Venus': [1, 6], 'Saturn': [9, 10]
+        };
+        for (int rIdx in (ownership[rashiLordEng] ?? [])) {
+          rashiSignified.add(((rIdx - lagnaIdx + 12) % 12) + 1);
+        }
+        if (planets[rashiLordEng] != null && planets[rashiLordEng]['house'] != null) {
+          rashiSignified.add(planets[rashiLordEng]['house'] as int);
+        }
+      }
+    }
+    
+    String rashiStr = "-";
+    if (rashiSignified.isNotEmpty) {
+      var l = rashiSignified.toList()..sort();
+      rashiStr = l.join(', ');
+    }
+    
+    Map<int, int> houseFreq = {};
+    if (houseNum > 0) houseFreq[houseNum] = (houseFreq[houseNum] ?? 0) + 1;
+    if (moonHouseFromName > 0) houseFreq[moonHouseFromName] = (houseFreq[moonHouseFromName] ?? 0) + 1;
+    for (int h in rashiSignified) {
+      houseFreq[h] = (houseFreq[h] ?? 0) + 1;
+    }
+    
+    List<int> sortedActive = houseFreq.keys.toList()..sort();
+    List<TextSpan> spans = [];
+    if (sortedActive.isEmpty) {
+      spans.add(const TextSpan(text: '-'));
+    } else {
+      for (int i = 0; i < sortedActive.length; i++) {
+        int h = sortedActive[i];
+        int count = houseFreq[h] ?? 1;
+        Color textColor = (h == 8 || h == 12) ? Colors.red.shade700 : Colors.green.shade800;
+        spans.add(TextSpan(
+          text: '$h',
+          style: TextStyle(
+            fontWeight: count > 1 ? FontWeight.w900 : FontWeight.w600,
+            fontSize: count > 1 ? 15 : 13,
+            color: textColor,
+          ),
+        ));
+        if (i < sortedActive.length - 1) {
+          spans.add(TextSpan(
+            text: ', ', 
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey.shade600)
+          ));
+        }
+      }
+      spans.add(TextSpan(
+        text: ' ✔️', 
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.green.shade700)
+      ));
+    }
+    
+    Widget totalActiveWidget = RichText(
+      textAlign: TextAlign.right,
+      text: TextSpan(children: spans),
+    );
+    
+    Widget dropdown = _buildSectionCard(
+      title: '$rashiHindiName Active Houses & Significations',
+      icon: Icons.analytics_rounded,
+      isExpanded: false,
+      child: Column(
+        children: [
+          _buildSimpleRow('लग्न से राशि किस भाव में है', '${houseNum > 0 ? houseNum : "-"}वाँ भाव'),
+          _buildSimpleRow('चंद्र से राशि किस भाव में है', '${moonHouseFromName > 0 ? moonHouseFromName : "-"}वाँ भाव'),
+          _buildSimpleRow('राशि से Signified Houses', rashiStr),
+          _buildSimpleRow('Total Active Houses', '', customValueWidget: totalActiveWidget, isLast: true),
+        ],
+      ),
+    );
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        card,
+        const SizedBox(height: 8),
+        dropdown,
+      ],
+    );
+  }
+
+  String _getRashiLordEng(String rashi) {
+    switch (rashi) {
+      case 'Mesh': case 'Vrischik': return 'Mars';
+      case 'Vrishabh': case 'Tula': return 'Venus';
+      case 'Mithun': case 'Kanya': return 'Mercury';
+      case 'Kark': return 'Moon';
+      case 'Singh': return 'Sun';
+      case 'Dhanu': case 'Meen': return 'Jupiter';
+      case 'Makar': case 'Kumbh': return 'Saturn';
+      default: return '';
+    }
   }
 }
 

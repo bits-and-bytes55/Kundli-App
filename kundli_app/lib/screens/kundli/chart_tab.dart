@@ -4,6 +4,9 @@ import '../../theme/app_theme.dart';
 class ChartTab extends StatefulWidget {
   final Map<String, dynamic> ascendant, planets, kpAscendant, kpPlanets;
   final bool showDirections;
+  final int? targetHouseCrossIdx;
+  final bool isTargetDirectionBad;
+  final bool onlyChart;
   const ChartTab({
     super.key,
     required this.ascendant,
@@ -11,6 +14,9 @@ class ChartTab extends StatefulWidget {
     required this.kpAscendant,
     required this.kpPlanets,
     this.showDirections = false,
+    this.targetHouseCrossIdx,
+    this.isTargetDirectionBad = false,
+    this.onlyChart = false,
   });
   @override
   State<ChartTab> createState() => _ChartTabState();
@@ -153,6 +159,7 @@ class _ChartTabState extends State<ChartTab> {
     return Container(
       color: AppColors.scaffoldBg,
       child: SingleChildScrollView(
+        physics: widget.onlyChart ? const NeverScrollableScrollPhysics() : null,
         padding: const EdgeInsets.all(16),
         child: Column(children: [
           // ── Toggle card ──────────────────────────────────────────
@@ -213,33 +220,34 @@ class _ChartTabState extends State<ChartTab> {
 
           const SizedBox(height: 8),
 
-          // ── AstroSage-style legend ───────────────────────────────
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFDE8D8),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE8A87C))),
-            child: Wrap(spacing: 18, runSpacing: 6, children: [
-              _LegItem('* Retrograde',      Colors.red),
-              _LegItem('^ Combust',         Colors.orange),
-              _LegItem('\u25a1 Vargottama', Colors.blue),
-              _LegItem('\u2191 Exalted',    Colors.green),
-              _LegItem('\u2193 Debilitated',Colors.red),
-            ]),
-          ),
-          const SizedBox(height: 10),
+          if (!widget.onlyChart) ...[
+            // ── AstroSage-style legend ───────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDE8D8),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE8A87C))),
+              child: Wrap(spacing: 18, runSpacing: 6, children: [
+                _LegItem('* Retrograde',      Colors.red),
+                _LegItem('^ Combust',         Colors.orange),
+                _LegItem('\u25a1 Vargottama', Colors.blue),
+                _LegItem('\u2191 Exalted',    Colors.green),
+                _LegItem('\u2193 Debilitated',Colors.red),
+              ]),
+            ),
+            const SizedBox(height: 10),
 
-          // ── Info card (Lagna / Degree / Nakshatra / Pada) ─────────
-          _infoCard(ascendant),
-          const SizedBox(height: 12),
+            // ── Info card (Lagna / Degree / Nakshatra / Pada) ─────────
+            _infoCard(ascendant),
+            const SizedBox(height: 12),
 
-
-          // ── Planet degree summary (bottom, 3-per-row) ──────────────
-          _planetDegreeGrid(ascendant, planets),
-          const SizedBox(height: 16),
-          _quickButtons(),
+            // ── Planet degree summary (bottom, 3-per-row) ──────────────
+            _planetDegreeGrid(ascendant, planets),
+            const SizedBox(height: 16),
+            _quickButtons(),
+          ]
         ]),
       ),
     );
@@ -319,7 +327,9 @@ class _ChartTabState extends State<ChartTab> {
               children: [
                 Text(rashiSymbols[(houseRashiNum - 1) % 12],
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: rashiColors[(houseRashiNum - 1) % 12])),
-                Row(
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text('$houseRashiNum',
@@ -342,8 +352,15 @@ class _ChartTabState extends State<ChartTab> {
                     ],
                   ],
                 ),
+              ),
               ],
             ),
+            if (widget.targetHouseCrossIdx != null && houseRashiNum == widget.targetHouseCrossIdx)
+              Icon(
+                widget.isTargetDirectionBad ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                color: widget.isTargetDirectionBad ? Colors.red : Colors.green,
+                size: 20,
+              ),
             if (isLagnaHouse)
               Text('La $lagnaDegStr',
                 style: TextStyle(
@@ -415,29 +432,38 @@ class _ChartTabState extends State<ChartTab> {
               children: [
                 Text(rashiSymbols[rashiI],
                   style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(houseLabel,
-                      style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
-                    if (widget.showDirections) ...[
-                      const SizedBox(width: 2),
-                      Text(
-                        '(${const [
-                          'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
-                          'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
-                        ][rashiI % 12]})',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.orange.shade800,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(houseLabel,
+                        style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+                      if (widget.showDirections) ...[
+                        const SizedBox(width: 2),
+                        Text(
+                          '(${const [
+                            'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
+                            'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
+                          ][rashiI % 12]})',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.orange.shade800,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ],
             ),
+            if (widget.targetHouseCrossIdx != null && (rashiI + 1) == widget.targetHouseCrossIdx)
+              Icon(
+                widget.isTargetDirectionBad ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                color: widget.isTargetDirectionBad ? Colors.red : Colors.green,
+                size: 20,
+              ),
             if (isLagna)
               Text('La $lagnaDegStr',
                 style: TextStyle(
