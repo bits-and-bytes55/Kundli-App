@@ -58,16 +58,20 @@ class _BookmarksTabState extends State<BookmarksTab> {
       
       if (apiList != null) {
         // Merge API list into local list, preferring API for duplicates
+        int defaultTimestamp = DateTime.now().millisecondsSinceEpoch;
         for (var apiChart in apiList) {
           final existsIdx = localList.indexWhere((c) => 
             (c['id']?.toString() ?? c['_id']?.toString()) == (apiChart['id']?.toString() ?? apiChart['_id']?.toString()) ||
             (c['name'] == apiChart['name'] && c['date'] == apiChart['date'] && c['time'] == apiChart['time'])
           );
           if (existsIdx != -1) {
+            apiChart['timestamp'] = localList[existsIdx]['timestamp'] ?? defaultTimestamp;
             localList[existsIdx] = apiChart;
           } else {
+            apiChart['timestamp'] = defaultTimestamp;
             localList.add(apiChart);
           }
+          defaultTimestamp--; // Ensure API list order is preserved if they all get added now
         }
 
         if (_searchQuery.isEmpty) {
@@ -80,6 +84,13 @@ class _BookmarksTabState extends State<BookmarksTab> {
              return name.contains(_searchQuery.toLowerCase());
            }).toList();
         }
+
+        // Sort localList by timestamp descending
+        localList.sort((a, b) {
+          int timeA = a['timestamp'] ?? 0;
+          int timeB = b['timestamp'] ?? 0;
+          return timeB.compareTo(timeA); // Descending
+        });
 
         setState(() {
           _allCharts = localList;
@@ -99,6 +110,13 @@ class _BookmarksTabState extends State<BookmarksTab> {
        }).toList();
     }
 
+    // Sort localList by timestamp descending
+    localList.sort((a, b) {
+      int timeA = a['timestamp'] ?? 0;
+      int timeB = b['timestamp'] ?? 0;
+      return timeB.compareTo(timeA); // Descending
+    });
+
     setState(() {
       _allCharts = localList;
       _isLoading = false;
@@ -112,29 +130,48 @@ class _BookmarksTabState extends State<BookmarksTab> {
     }
   }
 
-  void _onChartDeleted(String id) {
+  Future<void> _onChartDeleted(Map<String, dynamic> chart) async {
+    final chartId = chart['id']?.toString() ?? chart['_id']?.toString();
     setState(() {
-      _allCharts.removeWhere((c) => (c['id']?.toString() ?? c['_id']?.toString()) == id);
+      if (chartId != null) {
+        _allCharts.removeWhere((c) => (c['id']?.toString() ?? c['_id']?.toString()) == chartId);
+      } else {
+        _allCharts.removeWhere((c) => c['name'] == chart['name'] && c['date'] == chart['date'] && c['time'] == chart['time']);
+      }
     });
-    _updatePrefs();
+    await _updatePrefs();
     _loadAllCharts(isRefresh: true);
   }
 
-  void _onChartUpdated(Map<String, dynamic> updatedChart) {
+  Future<void> _onChartUpdated(Map<String, dynamic> oldChart, Map<String, dynamic> updatedChart) async {
     setState(() {
-      int idx = _allCharts.indexWhere((c) => (c['id']?.toString() ?? c['_id']?.toString()) == (updatedChart['id']?.toString() ?? updatedChart['_id']?.toString()));
+      final oldId = oldChart['id']?.toString() ?? oldChart['_id']?.toString();
+      int idx = -1;
+      if (oldId != null) {
+        idx = _allCharts.indexWhere((c) => (c['id']?.toString() ?? c['_id']?.toString()) == oldId);
+      } else {
+        idx = _allCharts.indexWhere((c) => c['name'] == oldChart['name'] && c['date'] == oldChart['date'] && c['time'] == oldChart['time']);
+      }
+      
       if (idx != -1) {
         _allCharts[idx] = updatedChart;
       }
     });
-    _updatePrefs();
+    await _updatePrefs();
     _loadAllCharts(isRefresh: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final basicCharts = _allCharts.where((c) => (c['mode'] ?? 'Basic') == 'Basic').toList();
-    final premiumCharts = _allCharts.where((c) => (c['mode'] ?? 'Basic') == 'Premium').toList();
+    final basicCharts = _allCharts.where((c) {
+      final m = (c['mode']?.toString() ?? 'Basic').toLowerCase().trim();
+      return m == 'basic' || m.isEmpty;
+    }).toList();
+    
+    final premiumCharts = _allCharts.where((c) {
+      final m = (c['mode']?.toString() ?? '').toLowerCase().trim();
+      return m == 'premium';
+    }).toList();
 
     return DefaultTabController(
       length: 2,
@@ -229,8 +266,8 @@ class SavedChartsList extends StatefulWidget {
   final String searchQuery;
   final List<Map<String, dynamic>> charts;
   final bool isLoading;
-  final Function(String) onDelete;
-  final Function(Map<String, dynamic>) onUpdate;
+  final Future<void> Function(Map<String, dynamic>) onDelete;
+  final Future<void> Function(Map<String, dynamic>, Map<String, dynamic>) onUpdate;
   final Future<void> Function() onRefresh;
 
   const SavedChartsList({
@@ -261,164 +298,29 @@ class _SavedChartsListState extends State<SavedChartsList> {
       try {
         final apiService = Get.find<ApiService>();
         final success = await apiService.deleteChart(chartId);
+        widget.onDelete(chart);
         if (success) {
-          widget.onDelete(chartId);
           Get.snackbar('Deleted', 'Profile removed from saved charts.', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green.shade100);
         } else {
-          Get.snackbar('Error', 'Failed to delete chart in API', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
+          Get.snackbar('Deleted', 'Profile removed locally (API sync failed).', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange.shade100);
         }
       } catch (e) {
         print("API delete failed: $e");
-        Get.snackbar('Error', 'API Error: $e', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.shade100);
+        widget.onDelete(chart);
+        Get.snackbar('Deleted', 'Profile removed locally (Offline).', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.orange.shade100);
       } finally {
         setState(() => _isProcessing = false);
       }
+    } else {
+      widget.onDelete(chart);
+      Get.snackbar('Deleted', 'Local profile removed.', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green.shade100);
     }
   }
 
   void _showEditDialog(Map<String, dynamic> chart, int index) {
-    final nameCtrl = TextEditingController(text: chart['name']);
-    final dateCtrl = TextEditingController(text: chart['date']);
-    final timeCtrl = TextEditingController(text: chart['time']);
-    final placeCtrl = TextEditingController(text: chart['place']);
-    final selectedGender = (chart['gender'] ?? 'Male').toString().obs;
-
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Edit Chart Details', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: nameCtrl,
-                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                decoration: const InputDecoration(hintText: 'Name'),
-              ),
-              const SizedBox(height: 12),
-              
-              const Text('Date of Birth (YYYY-MM-DD)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: dateCtrl,
-                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                decoration: const InputDecoration(hintText: 'e.g. 2005-10-01'),
-              ),
-              const SizedBox(height: 12),
-              
-              const Text('Time of Birth (HH:MM)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: timeCtrl,
-                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                decoration: const InputDecoration(hintText: 'e.g. 09:12'),
-              ),
-              const SizedBox(height: 12),
-              
-              const Text('Birth Place', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: placeCtrl,
-                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                decoration: const InputDecoration(hintText: 'e.g. New Delhi'),
-              ),
-              const SizedBox(height: 12),
-              
-              const Text('Gender', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black)),
-              const SizedBox(height: 6),
-              Obx(() => Row(
-                children: [
-                  Radio<String>(
-                    value: 'Male',
-                    groupValue: selectedGender.value,
-                    onChanged: (v) => selectedGender.value = v!,
-                  ),
-                  const Text('Male', style: TextStyle(color: Colors.black)),
-                  const SizedBox(width: 12),
-                  Radio<String>(
-                    value: 'Female',
-                    groupValue: selectedGender.value,
-                    onChanged: (v) => selectedGender.value = v!,
-                  ),
-                  const Text('Female', style: TextStyle(color: Colors.black)),
-                ],
-              )),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Get.back();
-              setState(() => _isProcessing = true);
-              try {
-                double lat = (chart['lat'] as num? ?? 28.6139).toDouble();
-                double lon = (chart['lon'] as num? ?? 77.2090).toDouble();
-                if (placeCtrl.text != chart['place']) {
-                  try {
-                    List<Location> locations = await locationFromAddress(placeCtrl.text);
-                    if (locations.isNotEmpty) {
-                      lat = locations.first.latitude;
-                      lon = locations.first.longitude;
-                    }
-                  } catch (e) {
-                    print("Geocoding failed during edit: $e");
-                  }
-                }
-
-                final String? chartId = chart['id']?.toString() ?? chart['_id']?.toString();
-                if (chartId != null) {
-                  final apiService = Get.find<ApiService>();
-                  final success = await apiService.editChart(
-                    id: chartId,
-                    name: nameCtrl.text,
-                    date: dateCtrl.text,
-                    time: timeCtrl.text,
-                    lat: lat,
-                    lon: lon,
-                    gender: selectedGender.value,
-                    place: placeCtrl.text,
-                  );
-                  if (success) {
-                    Get.snackbar('Success', 'Chart updated successfully!', backgroundColor: Colors.green.shade100);
-                    
-                    Map<String, dynamic> updatedChart = {
-                      'id': chartId,
-                      'name': nameCtrl.text,
-                      'date': dateCtrl.text,
-                      'time': timeCtrl.text,
-                      'place': placeCtrl.text,
-                      'lat': lat,
-                      'lon': lon,
-                      'gender': selectedGender.value,
-                      'mode': chart['mode'] ?? 'Basic',
-                    };
-                    
-                    widget.onUpdate(updatedChart);
-                  } else {
-                    Get.snackbar('Error', 'Failed to update chart in API', backgroundColor: Colors.red.shade100);
-                  }
-                }
-
-              } catch (e) {
-                Get.snackbar('Error', 'Failed to save: $e');
-              } finally {
-                setState(() => _isProcessing = false);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
+    Get.to(() => BirthFormScreen(
+      initialChart: chart,
+    ))?.then((_) => widget.onRefresh());
   }
 
   void _openChart(Map<String, dynamic> chart) async {

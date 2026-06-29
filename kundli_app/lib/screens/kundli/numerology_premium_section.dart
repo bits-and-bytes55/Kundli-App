@@ -5,12 +5,14 @@ class NumerologyPremiumSection extends StatelessWidget {
   final Map<String, dynamic> personalDetails;
   final String name;
   final String dob;
+  final Map<String, dynamic>? deathData;
 
   const NumerologyPremiumSection({
     Key? key,
     required this.personalDetails,
     required this.name,
     required this.dob,
+    this.deathData,
   }) : super(key: key);
 
   int _reduceToSingleDigit(int n) {
@@ -152,45 +154,113 @@ class NumerologyPremiumSection extends StatelessWidget {
     int firstLetterNum = chaldeanMap[firstLetter] ?? 0;
     String hindiLetter = engToHindi[firstLetter] ?? '';
 
+    // Death Numerology
+    int? deathMulank;
+    int? deathBhagyank;
+    int? dDay, dMonth, dYear;
+
+    if (deathData != null && deathData!['date'] != null && deathData!['date'].toString().isNotEmpty) {
+      String rawDeathDob = deathData!['date'].toString();
+      try {
+        final RegExp numRegExp = RegExp(r'\d+');
+        final matches = numRegExp.allMatches(rawDeathDob).map((m) => int.parse(m.group(0)!)).toList();
+        
+        if (matches.length >= 3) {
+          if (matches[0] > 1000) {
+            dYear = matches[0];
+            dMonth = matches[1];
+            dDay = matches[2];
+          } else {
+            dDay = matches[0];
+            dMonth = matches[1];
+            dYear = matches[2];
+          }
+        }
+      } catch (e) {}
+
+      if (dDay != null && dMonth != null && dYear != null) {
+        deathMulank = _reduceToSingleDigit(dDay);
+        final dDigits = '$dDay$dMonth$dYear'.split('').map(int.parse);
+        final dSum = dDigits.reduce((a, b) => a + b);
+        deathBhagyank = _reduceToSingleDigit(dSum);
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildGoldHeader('Divine Core Numbers'),
+        _buildGoldHeader('DIVINE CORE NUMBERS'),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(child: _buildCoreNumberBox('Mulank', mulank.toString(), const Color(0xFF6B1B32))),
+            Expanded(child: _buildCoreNumberBox('Moolank', mulank.toString(), const Color(0xFF6B1B32))),
             const SizedBox(width: 12),
             Expanded(child: _buildCoreNumberBox('Bhagyank', bhagyank.toString(), const Color(0xFFC4A25C))),
             const SizedBox(width: 12),
-            Expanded(child: _buildCoreNumberBox('Kua', kuaNumber.toString(), const Color(0xFF3F4274))),
+            Expanded(child: _buildCoreNumberBox('Kulank', kuaNumber.toString(), const Color(0xFF3F4274))),
           ],
         ),
+        if (deathMulank != null && deathBhagyank != null) ...[
+          const SizedBox(height: 16),
+          _buildGoldHeader('Death Numerology'),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Expanded(child: _buildCoreNumberBox('Death Mulank', deathMulank.toString(), Colors.blueGrey.shade800)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildCoreNumberBox('Death Bhagyank', deathBhagyank.toString(), Colors.grey.shade800)),
+              const SizedBox(width: 12),
+              Expanded(child: const SizedBox()), // Empty slot for alignment
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
         Column(
           children: [
-            _buildSimpleRow('First Name (${nameParts.isNotEmpty ? nameParts[0] : ''})', '$firstNameTotal = ${_reduceToSingleDigit(firstNameTotal)}'),
+            _buildSimpleRow('First Letter', '$firstLetter → $firstLetterNum'),
+            _buildNameRow('First Name Total', firstNameTotal, _reduceToSingleDigit(firstNameTotal)),
             if (nameParts.length > 1)
-              _buildSimpleRow('Second Name (${nameParts[1]})', '$secondNameTotal = ${_reduceToSingleDigit(secondNameTotal)}'),
-            _buildSimpleRow('Full Name Total', '$fullNameTotal = $reducedFullName', isLast: true, valueColor: Colors.deepPurple),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(child: _buildGridBox('Name No.', reducedFullName.toString(), Colors.deepPurple)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildGridBox('Total', fullNameTotal.toString(), Colors.black87)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildGridBox('First Let.', '$firstLetter ($firstLetterNum)', Colors.deepOrange)),
+              _buildSimpleRow('Second Name Total', '$secondNameTotal → ${_reduceToSingleDigit(secondNameTotal)}'),
+            _buildNameRow('Full Name Total', fullNameTotal, reducedFullName, isLast: true),
           ],
         ),
         const SizedBox(height: 16),
         _buildHeader('Lo Shu Grid', Icons.grid_3x3_rounded),
         const SizedBox(height: 12),
-        _buildLoShuGrid(day, month, year, mulank, bhagyank, kuaNumber),
+        if (deathMulank != null && deathBhagyank != null && dDay != null && dMonth != null && dYear != null)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    const Text('Birth Grid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+                    const SizedBox(height: 8),
+                    _buildLoShuGrid(day, month, year, mulank, bhagyank, kuaNumber),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  children: [
+                    const Text('Death Grid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+                    const SizedBox(height: 8),
+                    _buildLoShuGrid(dDay, dMonth, dYear, deathMulank, deathBhagyank, 0),
+                  ],
+                ),
+              ),
+            ],
+          )
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLoShuGrid(day, month, year, mulank, bhagyank, kuaNumber),
+            ],
+          ),
       ],
     );
   }
@@ -250,7 +320,7 @@ class NumerologyPremiumSection extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 26,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
               color: color,
               height: 1.0,
@@ -336,6 +406,44 @@ class NumerologyPremiumSection extends StatelessWidget {
     );
   }
 
+  Widget _buildNameRow(String label, int total, int reduced, {bool isLast = false}) {
+    bool isBad = (reduced == 4 || reduced == 7);
+    String symbol = isBad ? ' ❌' : ' ✔️';
+    Color color = isBad ? Colors.red.shade700 : Colors.green.shade700;
+    
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 6,
+                child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF666666), fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 5,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: '$total → $reduced', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.black87)),
+                      TextSpan(text: symbol, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+                    ],
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!isLast)
+          Divider(height: 1, thickness: 0.5, color: Colors.orange.shade200),
+      ],
+    );
+  }
+
   Widget _buildLoShuGrid(int d, int m, int y, int mulank, int bhagyank, int k) {
     Map<int, int> counts = {};
     for (int i = 1; i <= 9; i++) counts[i] = 0;
@@ -358,6 +466,48 @@ class NumerologyPremiumSection extends StatelessWidget {
       }
     }
 
+    Widget grid = GridView.count(
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 3,
+      mainAxisSpacing: 2,
+      crossAxisSpacing: 2,
+      children: [4, 9, 2, 3, 5, 7, 8, 1, 6].map((num) {
+        final count = counts[num] ?? 0;
+        final isPresent = count > 0;
+        
+        String displayStr;
+        if (isPresent) {
+          displayStr = List.filled(count, '$num').join('');
+        } else if (num == k) {
+          displayStr = '$num';
+        } else {
+          displayStr = '$num';
+        }
+
+        final color = isPresent 
+            ? (num == k ? const Color(0xFFFFF176) : const Color(0xFF6B1B32).withOpacity(0.8)) 
+            : (num == k ? const Color(0xFFFFF9C4) : Colors.white);
+            
+        final textColor = isPresent
+            ? (num == k ? Colors.black87 : Colors.white)
+            : Colors.black87;
+
+        return Container(
+          color: color,
+          child: Center(
+            child: Text(
+              displayStr,
+              style: TextStyle(
+                fontSize: isPresent ? (displayStr.length > 2 ? 14 : 18) : 20,
+                fontWeight: isPresent ? FontWeight.bold : FontWeight.w500,
+                color: textColor,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -366,51 +516,7 @@ class NumerologyPremiumSection extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(16),
       child: Center(
-        child: SizedBox(
-          width: 160,
-          height: 160,
-          child: GridView.count(
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            mainAxisSpacing: 2,
-            crossAxisSpacing: 2,
-            children: [4, 9, 2, 3, 5, 7, 8, 1, 6].map((num) {
-              final count = counts[num] ?? 0;
-              final isPresent = count > 0;
-              
-              String displayStr;
-              if (isPresent) {
-                displayStr = List.filled(count, '$num').join('');
-              } else if (num == k) {
-                displayStr = '$num';
-              } else {
-                displayStr = 'X';
-              }
-
-              final color = isPresent 
-                  ? (num == k ? const Color(0xFFFFF176) : const Color(0xFF6B1B32).withOpacity(0.8)) 
-                  : (num == k ? const Color(0xFFFFF9C4) : Colors.white);
-                  
-              final textColor = isPresent
-                  ? (num == k ? Colors.black87 : Colors.white)
-                  : (num == k ? const Color(0xFFC4A25C) : Colors.black87);
-
-              return Container(
-                color: color,
-                child: Center(
-                  child: Text(
-                    displayStr,
-                    style: TextStyle(
-                      fontSize: isPresent ? (displayStr.length > 2 ? 14 : 18) : 20,
-                      fontWeight: isPresent ? FontWeight.bold : FontWeight.w500,
-                      color: textColor,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
+        child: SizedBox(width: 160, height: 160, child: grid),
       ),
     );
   }

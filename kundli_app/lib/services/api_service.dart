@@ -28,7 +28,7 @@ class ApiService extends GetxService {
         print('================ API RESPONSE ================');
         print('URL: ${response.requestOptions.uri}');
         print('STATUS CODE: ${response.statusCode}');
-        print('RESPONSE DATA: ${response.data}');
+        // Removed print response.data to prevent DevTools OOM crash
         print('==============================================');
         return handler.next(response);
       },
@@ -206,12 +206,19 @@ class ApiService extends GetxService {
 
   Future<List<Map<String, dynamic>>?> getSavedCharts(String phone, {String query = '', String mode = 'Basic', int page = 1, int limit = 20}) async {
     try {
+      print('=== getSavedCharts CALLED ===');
+      print('URL: /charts');
+      print('QueryParams: phone=$phone, query=$query, page=$page, limit=$limit');
+      
       final response = await dio.get('/charts', queryParameters: {
         'phone': phone,
         'query': query,
         'page': page,
         'limit': limit,
       });
+      
+      print('getSavedCharts Status: ${response.statusCode}');
+      
       if (response.statusCode == 200 && response.data['success'] == true) {
         final List<dynamic> list = response.data['data'];
         return list.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -219,6 +226,9 @@ class ApiService extends GetxService {
       return null;
     } catch (e) {
       print('getSavedCharts API Error: $e');
+      if (e is DioException) {
+        print('DioException response: ${e.response?.data}');
+      }
       return null;
     }
   }
@@ -276,20 +286,39 @@ class ApiService extends GetxService {
       if (gender != null) updateData['gender'] = gender;
       if (place != null) updateData['place'] = place;
 
+      print('=== editChart CALLED ===');
+      print('URL: /charts/$id');
+      print('Body: $updateData');
+
       final response = await dio.put('/charts/$id', data: updateData);
+      
+      print('editChart Status: ${response.statusCode}');
+      
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('editChart API Error: $e');
+      if (e is DioException) {
+        print('DioException response: ${e.response?.data}');
+      }
       return false;
     }
   }
 
   Future<bool> deleteChart(String id) async {
     try {
+      print('=== deleteChart CALLED ===');
+      print('URL: /charts/$id');
+
       final response = await dio.delete('/charts/$id');
+      
+      print('deleteChart Status: ${response.statusCode}');
+
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
       print('deleteChart API Error: $e');
+      if (e is DioException) {
+        print('DioException response: ${e.response?.data}');
+      }
       return false;
     }
   }

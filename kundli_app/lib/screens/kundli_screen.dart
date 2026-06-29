@@ -155,7 +155,7 @@ class _KundliScreenState extends State<KundliScreen> with SingleTickerProviderSt
               color: AppColors.primary,
               child: TabBarView(controller: _tabController, children: [
                 // 0 - Basic Details
-                PersonalDetailsTab(personalDetails: personalDetails),
+                PersonalDetailsTab(personalDetails: personalDetails, name: data['name'] ?? ''),
                 // 1 - Chart
                 ChartTab(ascendant: ascendant, planets: planets, kpAscendant: kpAscendant, kpPlanets: kpPlanets),
                 // 2 - Graha Sthiti

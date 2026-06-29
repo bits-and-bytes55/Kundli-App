@@ -33,20 +33,24 @@ class DirectionMatchScreen extends StatefulWidget {
 }
 
 class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
-  final TextEditingController _currentPlaceController = TextEditingController();
-  final TextEditingController _relocatePlaceController = TextEditingController();
+  final TextEditingController _currentPlaceController1 = TextEditingController();
+  final TextEditingController _residencePlaceController = TextEditingController();
+  final TextEditingController _currentPlaceController2 = TextEditingController();
+  
   bool _isLoading = false;
   bool _showResults = false;
-  bool _isRelocateSelected = false;
+  int _activeResultTabIndex = 0; // 0 = Birth -> Current, 1 = Residence -> Current
   
-  Map<String, dynamic>? _currentData;
-  Map<String, dynamic>? _relocateData;
+  Map<String, dynamic>? _birthData;
+  Map<String, dynamic>? _residenceData;
 
   Future<void> _calculateDirection() async {
-    final currentPlace = _currentPlaceController.text.trim();
-    final relocatePlace = _relocatePlaceController.text.trim();
-    if (currentPlace.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter Current Place')));
+    final current1 = _currentPlaceController1.text.trim();
+    final residence = _residencePlaceController.text.trim();
+    final current2 = _currentPlaceController2.text.trim();
+
+    if (current1.isEmpty && (residence.isEmpty || current2.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill at least one form completely')));
       return;
     }
 
@@ -55,20 +59,26 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
     });
 
     try {
-      _currentData = await _getDirectionData(widget.birthPlace, currentPlace);
-      _currentData!['place'] = currentPlace;
-
-      if (relocatePlace.isNotEmpty) {
-        _relocateData = await _getDirectionData(widget.birthPlace, relocatePlace);
-        _relocateData!['place'] = relocatePlace;
+      if (current1.isNotEmpty) {
+        _birthData = await _getDirectionData(widget.birthPlace, current1);
+        _birthData!['place'] = current1;
+        _birthData!['source'] = widget.birthPlace;
       } else {
-        _relocateData = null;
+        _birthData = null;
+      }
+
+      if (residence.isNotEmpty && current2.isNotEmpty) {
+        _residenceData = await _getDirectionData(residence, current2);
+        _residenceData!['place'] = current2;
+        _residenceData!['source'] = residence;
+      } else {
+        _residenceData = null;
       }
 
       setState(() {
         _showResults = true;
         _isLoading = false;
-        _isRelocateSelected = false;
+        _activeResultTabIndex = (_birthData != null) ? 0 : 1;
       });
 
     } catch (e) {
@@ -196,7 +206,7 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
   Widget _buildAllDirectionsTable() {
     final List<Map<String, dynamic>> allDirs = [
       {'name': 'E', 'rashi': 1},
-      {'name': 'NW', 'rashi': 2},
+      {'name': 'WNW/NW', 'rashi': 2},
       {'name': 'NNW', 'rashi': 3},
       {'name': 'NNE', 'rashi': 4},
       {'name': 'ENE', 'rashi': 5},
@@ -206,7 +216,7 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
       {'name': 'NE', 'rashi': 9},
       {'name': 'S/SSE', 'rashi': 10},
       {'name': 'W', 'rashi': 11},
-      {'name': 'SE/ESE', 'rashi': 12},
+      {'name': 'ESE/SE', 'rashi': 12},
     ];
 
     String lagnaStr = _getHindiRashi(widget.lagnaHouse);
@@ -258,9 +268,11 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
                 int mCount = ((rashi - widget.moonHouse + 12) % 12) + 1;
                 int nCount = ((rashi - widget.nameRashiHouse + 12) % 12) + 1;
                 
+                final isBadDirName = dir['name'].toString().contains('WNW') || dir['name'].toString().contains('ESE');
+                
                 return TableRow(
                   children: [
-                    Padding(padding: const EdgeInsets.all(8), child: Text(dir['name'], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+                    Padding(padding: const EdgeInsets.all(8), child: Text(dir['name'], style: TextStyle(fontSize: 13, fontWeight: isBadDirName ? FontWeight.w900 : FontWeight.bold, color: isBadDirName ? Colors.red : Colors.black87))),
                     Padding(padding: const EdgeInsets.all(8), child: Text('$rashi', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
                     Padding(padding: const EdgeInsets.all(8), child: Text(_ordinal(lCount), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: lCount == 8 ? Colors.red : Colors.black87))),
                     Padding(padding: const EdgeInsets.all(8), child: Text(_ordinal(mCount), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: mCount == 8 ? Colors.red : Colors.black87))),
@@ -276,12 +288,14 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
   }
 
   Widget _buildPredictionTab(Map<String, dynamic> data) {
-    final dirName = data['name'];
+    final String dirName = data['name'];
     final dirHouse = data['house'];
     final lCount = data['lagnaCount'];
     final mCount = data['moonCount'];
     final nCount = data['nameCount'];
     final place = data['place'];
+    
+    final bool isBadDirName = dirName.contains('WNW') || dirName.contains('ESE');
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -323,7 +337,11 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
                     Expanded(
                       child: Text(
                         'Direction: $dirName',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18, 
+                          fontWeight: isBadDirName ? FontWeight.w900 : FontWeight.bold,
+                          color: isBadDirName ? Colors.red : Colors.black87
+                        ),
                       ),
                     ),
                   ],
@@ -354,151 +372,121 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!_showResults)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Astro-Vastu Direction Match',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    initialValue: widget.birthPlace,
-                    readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Birth Place',
-                      border: OutlineInputBorder(),
-                      filled: true,
-                      fillColor: Colors.black12,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _currentPlaceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Current Place',
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter current city',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _relocatePlaceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Plan to Relocate (Optional)',
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter target city if relocating',
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _calculateDirection,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('Form 1: From Birth Place', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: widget.birthPlace,
+                        readOnly: true,
+                        decoration: const InputDecoration(labelText: 'Birth Place', border: OutlineInputBorder(), filled: true, fillColor: Colors.black12),
                       ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Check Direction Match', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _currentPlaceController1,
+                        decoration: const InputDecoration(labelText: 'Current Place', border: OutlineInputBorder(), hintText: 'Enter current city'),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('Form 2: From Residence', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _residencePlaceController,
+                        decoration: const InputDecoration(labelText: 'Residence Location', border: OutlineInputBorder(), hintText: 'Enter residence city'),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _currentPlaceController2,
+                        decoration: const InputDecoration(labelText: 'Current Place', border: OutlineInputBorder(), hintText: 'Enter current city'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _calculateDirection,
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                    child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Check Direction Match', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
           
-          if (_showResults && _currentData != null) ...[
+          if (_showResults && (_birthData != null || _residenceData != null)) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 4.0, 16.0, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Astro-Vastu Results',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Astro-Vastu Results', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   TextButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _showResults = false;
-                      });
-                    },
+                    onPressed: () => setState(() => _showResults = false),
                     icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
                     label: const Text('Edit'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                    ),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.primary),
                   ),
                 ],
               ),
             ),
-            if (_relocateData != null)
-              Column(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _isRelocateSelected = false),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: !_isRelocateSelected ? AppColors.primary : Colors.transparent,
-                                borderRadius: BorderRadius.circular(7),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text('Current Location', 
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: !_isRelocateSelected ? Colors.white : Colors.grey.shade700,
-                                ),
-                              ),
-                            ),
-                          ),
+            if (_birthData != null && _residenceData != null)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _activeResultTabIndex = 0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(color: _activeResultTabIndex == 0 ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(16)),
+                          child: Text('From Birth Place', textAlign: TextAlign.center, style: TextStyle(color: _activeResultTabIndex == 0 ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 13)),
                         ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _isRelocateSelected = true),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _isRelocateSelected ? AppColors.primary : Colors.transparent,
-                                borderRadius: BorderRadius.circular(7),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text('Relocation Plan', 
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: _isRelocateSelected ? Colors.white : Colors.grey.shade700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  _buildPredictionTab(_isRelocateSelected ? _relocateData! : _currentData!),
-                ],
-              )
-            else
-              _buildPredictionTab(_currentData!),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _activeResultTabIndex = 1),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(color: _activeResultTabIndex == 1 ? AppColors.primary : Colors.transparent, borderRadius: BorderRadius.circular(16)),
+                          child: Text('From Residence', textAlign: TextAlign.center, style: TextStyle(color: _activeResultTabIndex == 1 ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 13)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            _buildPredictionTab((_activeResultTabIndex == 0 && _birthData != null) ? _birthData! : _residenceData!),
           ]
         ],
       ),

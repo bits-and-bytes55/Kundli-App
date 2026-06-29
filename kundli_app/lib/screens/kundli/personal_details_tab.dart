@@ -3,7 +3,8 @@ import '../../theme/app_theme.dart';
 
 class PersonalDetailsTab extends StatelessWidget {
   final Map<String, dynamic> personalDetails;
-  const PersonalDetailsTab({super.key, required this.personalDetails});
+  final String name;
+  const PersonalDetailsTab({super.key, required this.personalDetails, required this.name});
 
   static const Color _orangeBorder = AppColors.border;
 
@@ -24,7 +25,7 @@ class PersonalDetailsTab extends StatelessWidget {
           // Section 1: Birth Info
           _buildHeader('Birth Details', Icons.cake_rounded),
           _tableCard([
-            _row('Name', personalDetails['place'] != null ? (personalDetails['place'].toString().isNotEmpty ? personalDetails['place'].toString() : 'User') : 'User'),
+            _row('Name', name.isNotEmpty ? name : 'User'),
             _row('Gender', personalDetails['sex'] ?? 'Male'),
             _row('Date of Birth', personalDetails['dob'] ?? '-'),
             _row('Time of Birth', personalDetails['tob'] ?? '-'),

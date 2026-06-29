@@ -338,16 +338,22 @@ class _ChartTabState extends State<ChartTab> {
                         color: rashiColors[(houseRashiNum - 1) % 12])),
                     if (widget.showDirections) ...[
                       const SizedBox(width: 2),
-                      Text(
-                        '(${const [
-                          'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
-                          'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
-                        ][(houseRashiNum - 1) % 12]})',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.orange.shade800,
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final dirStr = const [
+                            'E', 'WNW/NW', 'NNW', 'NNE', 'ENE', 'N',
+                            'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'ESE/SE'
+                          ][(houseRashiNum - 1) % 12];
+                          final isBad = dirStr.contains('WNW') || dirStr.contains('ESE');
+                          return Text(
+                            '($dirStr)',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: isBad ? FontWeight.w900 : FontWeight.bold,
+                              color: isBad ? Colors.red : Colors.orange.shade800,
+                            ),
+                          );
+                        }
                       ),
                     ],
                   ],
@@ -441,16 +447,22 @@ class _ChartTabState extends State<ChartTab> {
                         style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
                       if (widget.showDirections) ...[
                         const SizedBox(width: 2),
-                        Text(
-                          '(${const [
-                            'E', 'NW', 'NNW', 'NNE', 'ENE', 'N',
-                            'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'SE/ESE'
-                          ][rashiI % 12]})',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.orange.shade800,
-                          ),
+                        Builder(
+                          builder: (context) {
+                            final dirStr = const [
+                              'E', 'WNW/NW', 'NNW', 'NNE', 'ENE', 'N',
+                              'WSW', 'SW/SSW', 'NE', 'S/SSE', 'W', 'ESE/SE'
+                            ][rashiI % 12];
+                            final isBad = dirStr.contains('WNW') || dirStr.contains('ESE');
+                            return Text(
+                              '($dirStr)',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: isBad ? FontWeight.w900 : FontWeight.bold,
+                                color: isBad ? Colors.red : Colors.orange.shade800,
+                              ),
+                            );
+                          }
                         ),
                       ],
                     ],

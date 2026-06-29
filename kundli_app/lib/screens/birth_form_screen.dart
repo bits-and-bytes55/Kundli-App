@@ -15,7 +15,13 @@ import '../controllers/auth_controller.dart';
 
 class BirthFormScreen extends StatefulWidget {
   final int initialTabIdx;
-  const BirthFormScreen({super.key, this.initialTabIdx = 1});
+  final Map<String, dynamic>? initialChart;
+  
+  const BirthFormScreen({
+    super.key, 
+    this.initialTabIdx = 1,
+    this.initialChart,
+  });
 
   @override
   State<BirthFormScreen> createState() => _BirthFormScreenState();
@@ -46,14 +52,29 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSavedLocation();
+    _loadInitialData();
   }
 
-  Future<void> _loadSavedLocation() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedLoc = prefs.getString('last_saved_location');
-    if (savedLoc != null && savedLoc.isNotEmpty) {
-      placeController.text = savedLoc;
+  Future<void> _loadInitialData() async {
+    if (widget.initialChart != null) {
+      nameController.text = widget.initialChart!['name'] ?? '';
+      dateController.text = widget.initialChart!['date'] ?? '';
+      timeController.text = widget.initialChart!['time'] ?? '';
+      placeController.text = widget.initialChart!['place'] ?? '';
+      selectedGender.value = widget.initialChart!['gender'] ?? 'Male';
+      
+      final mode = (widget.initialChart!['mode']?.toString() ?? 'Basic').toLowerCase();
+      if (mode == 'premium') {
+        selectedMode.value = 'Premium';
+      } else {
+        selectedMode.value = 'Basic';
+      }
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      final savedLoc = prefs.getString('last_saved_location');
+      if (savedLoc != null && savedLoc.isNotEmpty) {
+        placeController.text = savedLoc;
+      }
     }
   }
 
@@ -748,6 +769,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                     },
                     child: const Text('Generate Kundli'),
                   )),
+              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -779,28 +801,32 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
         print("API save failed: $ae");
       }
 
+      final int timestamp = DateTime.now().millisecondsSinceEpoch;
+      
       final raw = prefs.getString('saved_charts');
       List<dynamic> list = [];
       if (raw != null) {
         list = jsonDecode(raw);
       }
-      final exists = list.any((item) =>
+      final existsIdx = list.indexWhere((item) =>
           item['name'] == name &&
           item['date'] == date &&
           item['time'] == time);
-      if (!exists) {
-        list.add({
-          'name': name,
-          'date': date,
-          'time': time,
-          'place': place,
-          'lat': lat,
-          'lon': lon,
-          'gender': gender,
-          'mode': mode,
-        });
-        await prefs.setString('saved_charts', jsonEncode(list));
+      if (existsIdx != -1) {
+        list.removeAt(existsIdx);
       }
+      list.insert(0, {
+        'name': name,
+        'date': date,
+        'time': time,
+        'place': place,
+        'lat': lat,
+        'lon': lon,
+        'gender': gender,
+        'mode': mode,
+        'timestamp': timestamp,
+      });
+      await prefs.setString('saved_charts', jsonEncode(list));
       
       // Also update saved_charts_all which bookmarks_tab uses
       final allRaw = prefs.getString('saved_charts_all');
@@ -810,23 +836,25 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
           allList = jsonDecode(allRaw);
         } catch(e){}
       }
-      final allExists = allList.any((item) =>
+      final allExistsIdx = allList.indexWhere((item) =>
           item['name'] == name &&
           item['date'] == date &&
           item['time'] == time);
-      if (!allExists) {
-        allList.insert(0, {
-          'name': name,
-          'date': date,
-          'time': time,
-          'place': place,
-          'lat': lat,
-          'lon': lon,
-          'gender': gender,
-          'mode': mode,
-        });
-        await prefs.setString('saved_charts_all', jsonEncode(allList));
+      if (allExistsIdx != -1) {
+        allList.removeAt(allExistsIdx);
       }
+      allList.insert(0, {
+        'name': name,
+        'date': date,
+        'time': time,
+        'place': place,
+        'lat': lat,
+        'lon': lon,
+        'gender': gender,
+        'mode': mode,
+        'timestamp': timestamp,
+      });
+      await prefs.setString('saved_charts_all', jsonEncode(allList));
     } catch (e) {
       print("Error saving to history: $e");
     }
