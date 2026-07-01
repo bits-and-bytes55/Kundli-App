@@ -178,7 +178,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBg,
         appBar: AppBar(
-          title: const Text('Saved Charts (कुंडली संग्रह)'),
+          title: Text('bookmarks_title'.tr),
           elevation: 0.5,
           actions: [
             IconButton(
@@ -186,14 +186,14 @@ class _BookmarksTabState extends State<BookmarksTab> {
               onPressed: () => _loadAllCharts(isRefresh: true),
             ),
           ],
-          bottom: const TabBar(
+          bottom: TabBar(
             labelColor: AppColors.primary,
             unselectedLabelColor: Colors.black54,
             indicatorColor: AppColors.primary,
             indicatorWeight: 3,
             tabs: [
-              Tab(text: 'Basic Kundli'),
-              Tab(text: 'Premium Kundli'),
+              Tab(text: 'basic_kundli'.tr),
+              Tab(text: 'premium_kundli'.tr),
             ],
           ),
         ),
@@ -204,7 +204,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search by name...',
+                  hintText: 'search_saved'.tr,
                   prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
@@ -419,14 +419,14 @@ class _SavedChartsListState extends State<SavedChartsList> {
             Icon(Icons.bookmark_outline_rounded, size: 72, color: AppColors.primary.withOpacity(0.3)),
             const SizedBox(height: 16),
             Text(
-              widget.searchQuery.isNotEmpty ? 'No Matching Charts' : 'No Saved ${widget.mode} Profiles',
+              widget.searchQuery.isNotEmpty ? 'no_matching_charts'.tr : 'no_saved_profiles'.tr.replaceAll('{mode}', widget.mode),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textDark),
             ),
             const SizedBox(height: 8),
             Text(
               widget.searchQuery.isNotEmpty 
-                  ? 'Try searching with a different name.' 
-                  : 'Charts you generate in ${widget.mode} mode will be saved here for instant access.',
+                  ? 'try_searching'.tr
+                  : 'charts_saved_here'.tr.replaceAll('{mode}', widget.mode),
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.textLight, fontSize: 13),
             ),
@@ -434,7 +434,7 @@ class _SavedChartsListState extends State<SavedChartsList> {
             if (widget.searchQuery.isEmpty)
               ElevatedButton.icon(
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('Create New Chart'),
+                label: Text('create_new_chart'.tr),
                 onPressed: () => Get.to(() => BirthFormScreen()),
               ),
           ],
@@ -515,6 +515,266 @@ class _SavedChartsListState extends State<SavedChartsList> {
           ],
         ),
         onTap: () => _openChart(item),
+      ),
+    );
+  }
+}
+
+class DirectionSavedList extends StatefulWidget {
+  final String searchQuery;
+
+  const DirectionSavedList({
+    super.key, 
+    required this.searchQuery, 
+  });
+
+  @override
+  State<DirectionSavedList> createState() => _DirectionSavedListState();
+}
+
+class _DirectionSavedListState extends State<DirectionSavedList> {
+  final KundliController _kundliController = Get.put(KundliController());
+  bool _isLoading = true;
+  bool _isProcessing = false;
+  List<Map<String, dynamic>> _directions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDirections();
+  }
+  
+  @override
+  void didUpdateWidget(DirectionSavedList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.searchQuery != widget.searchQuery) {
+      _loadDirections();
+    }
+  }
+
+  Future<void> _loadDirections() async {
+    setState(() => _isLoading = true);
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('saved_directions');
+    List<Map<String, dynamic>> loaded = [];
+    if (raw != null) {
+      try {
+        final List<dynamic> decoded = jsonDecode(raw);
+        loaded = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      } catch (e) {
+        print("Error parsing saved directions: $e");
+      }
+    }
+    
+    if (widget.searchQuery.isNotEmpty) {
+      loaded = loaded.where((c) {
+        final name = (c['name'] ?? '').toString().toLowerCase();
+        return name.contains(widget.searchQuery.toLowerCase());
+      }).toList();
+    }
+
+    loaded.sort((a, b) {
+      int timeA = a['timestamp'] ?? 0;
+      int timeB = b['timestamp'] ?? 0;
+      return timeB.compareTo(timeA);
+    });
+
+    setState(() {
+      _directions = loaded;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _deleteDirection(int index) async {
+    final item = _directions[index];
+    setState(() => _isProcessing = true);
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('saved_directions');
+    if (raw != null) {
+      List<dynamic> all = jsonDecode(raw);
+      all.removeWhere((e) => e['id'] == item['id']);
+      await prefs.setString('saved_directions', jsonEncode(all));
+    }
+    await _loadDirections();
+    setState(() => _isProcessing = false);
+    Get.snackbar('Deleted', 'Direction prediction removed.', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green.shade100);
+  }
+
+  void _openDirection(Map<String, dynamic> chart) async {
+    setState(() => _isProcessing = true);
+    try {
+      await _kundliController.fetchKundli(
+        chart['name'],
+        chart['date'],
+        chart['time'],
+        (chart['lat'] as num).toDouble(),
+        (chart['lon'] as num).toDouble(),
+      );
+      setState(() => _isProcessing = false);
+      if (_kundliController.kundliData.value != null) {
+        final Map<String, String> savedParams = {
+          'birthPlace': chart['birthPlace'] ?? '',
+          'currentPlace1': chart['currentPlace1'] ?? '',
+          'residencePlace': chart['residencePlace'] ?? '',
+          'currentPlace2': chart['currentPlace2'] ?? '',
+        };
+        Get.to(() => PremiumKundliScreen(initialTabIdx: 3, savedDirectionParams: savedParams));
+      } else {
+        Get.snackbar('Error', 'Failed to calculate Kundli computations.');
+      }
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      Get.snackbar('Error', e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading || _isProcessing) {
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: 6,
+        itemBuilder: (context, index) => _buildSkeletonCard(),
+      );
+    }
+
+    if (_directions.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.explore_off_rounded, size: 72, color: AppColors.primary.withOpacity(0.3)),
+              const SizedBox(height: 16),
+              Text(
+                widget.searchQuery.isNotEmpty ? 'No Matching Predictions' : 'No Saved Directions',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Predictions saved from the Direction Match screen will appear here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textLight, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadDirections,
+      color: AppColors.primary,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: _directions.length,
+        itemBuilder: (context, index) {
+          final item = _directions[index];
+          return _buildChartCard(item, index);
+        },
+      ),
+    );
+  }
+
+  Widget _buildSkeletonCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withOpacity(0.3)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Row(
+        children: [
+          Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(height: 14, width: 150, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4))),
+                const SizedBox(height: 8),
+                Container(height: 10, width: 100, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4))),
+              ],
+            ),
+          )
+        ],
+      )
+    );
+  }
+
+  Widget _buildChartCard(Map<String, dynamic> item, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border.withOpacity(0.3)),
+        boxShadow: CustomShadows.cardShadow,
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: AppColors.primary.withOpacity(0.12),
+          child: const Icon(Icons.explore_rounded, color: AppColors.primary),
+        ),
+        title: Text(
+          item['name'] ?? 'Unknown',
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textDark),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${item['date']} • ${item['time']}',
+                style: const TextStyle(fontSize: 12, color: AppColors.textMedium, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Birth: ${item['birthPlace'].toString().isEmpty ? '-' : item['birthPlace']}',
+                style: const TextStyle(fontSize: 11, color: AppColors.textLight),
+              ),
+            ],
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400),
+              onPressed: () {
+                Get.dialog(
+                  AlertDialog(
+                    backgroundColor: Colors.white,
+                    title: const Text('Delete Prediction', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    content: const Text('Are you sure you want to delete this saved prediction?', style: TextStyle(color: Colors.black87)),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Get.back(),
+                        child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
+                        onPressed: () {
+                          Get.back();
+                          _deleteDirection(index);
+                        },
+                        child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        onTap: () => _openDirection(item),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/language_selection_screen.dart';
 
 class AuthController extends GetxController {
   final RxBool isLoading = false.obs;
@@ -133,7 +134,13 @@ class AuthController extends GetxController {
           await prefs.remove('temp_otp_token');
 
           isLoading.value = false;
-          Get.offAll(() => const DashboardScreen(), transition: Transition.fadeIn);
+          
+          final hasSelectedLanguage = prefs.getBool('language_selected') ?? false;
+          if (hasSelectedLanguage) {
+            Get.offAll(() => const DashboardScreen(), transition: Transition.fadeIn);
+          } else {
+            Get.offAll(() => const LanguageSelectionScreen(), transition: Transition.fadeIn);
+          }
           return true;
         } else {
           Get.snackbar(

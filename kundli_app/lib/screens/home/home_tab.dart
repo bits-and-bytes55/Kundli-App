@@ -23,9 +23,9 @@ class HomeTab extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.white.withOpacity(0.9),
           elevation: 0,
-          title: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('नमस्ते 🙏', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-            Text('Kundli Jyotish', style: TextStyle(fontSize: 13, color: Color(0xFF7F8C8D), fontWeight: FontWeight.w500)),
+          title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('namaste'.tr, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text('kundli_jyotish'.tr, style: const TextStyle(fontSize: 13, color: Color(0xFF7F8C8D), fontWeight: FontWeight.w500)),
           ]),
           actions: [IconButton(icon: const Icon(Icons.notifications_none_rounded), onPressed: () {})],
         ),
@@ -72,7 +72,7 @@ class HomeTab extends StatelessWidget {
                   Row(children: [
                     const Icon(Icons.wb_sunny_rounded, color: AppColors.primary, size: 20),
                     const SizedBox(width: 6),
-                    Text("Today's Panchang", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
+                    Text('todays_panchang'.tr, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
                     const Spacer(),
                     if (isLoading)
                       const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
@@ -80,29 +80,29 @@ class HomeTab extends StatelessWidget {
                       Text(_todayStr(), style: const TextStyle(fontSize: 11, color: Color(0xFF7F8C8D))),
                   ]),
                   const SizedBox(height: 12),
-                  _pRow('Tithi', tithi), 
-                  _pRow('Nakshatra', nakshatra), 
-                  _pRow('Yoga', yoga), 
-                  _pRow('Karana', karana),
+                  _pRow('tithi'.tr, tithi), 
+                  _pRow('nakshatra'.tr, nakshatra), 
+                  _pRow('yoga'.tr, yoga), 
+                  _pRow('karana'.tr, karana),
                   const SizedBox(height: 12),
                   SizedBox(width: double.infinity, child: ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.all(10)),
                     onPressed: () => Get.to(() => const PanchangScreen()),
-                    child: const Text('View Full Panchang'))),
+                    child: Text('view_full_panchang'.tr))),
                 ]),
               );
             }),
             const SizedBox(height: 20),
-            const Text('Quick Services', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
+            Text('quick_services'.tr, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
             const SizedBox(height: 12),
             GridView.count(
               shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.3,
               children: [
-                _svc(Icons.auto_awesome_rounded, 'Kundli', AppColors.primary, () => Get.to(() => BirthFormScreen(initialTabIdx: 0))),
-                _svc(Icons.favorite_rounded, 'Milan', const Color(0xFFE91E63), () => Get.to(() => const MilanScreen())),
-                _svc(Icons.calendar_month_rounded, 'Panchang', const Color(0xFFFF5722), () => Get.to(() => const PanchangScreen())),
-                _svc(Icons.stars_rounded, 'Horoscope', AppColors.primary, () => Get.to(() => const HoroscopeScreen())),
+                _svc(Icons.auto_awesome_rounded, 'kundli'.tr, AppColors.primary, () => Get.to(() => BirthFormScreen(initialTabIdx: 0))),
+                _svc(Icons.favorite_rounded, 'milan'.tr, const Color(0xFFE91E63), () => Get.to(() => const MilanScreen())),
+                _svc(Icons.calendar_month_rounded, 'panchang'.tr, const Color(0xFFFF5722), () => Get.to(() => const PanchangScreen())),
+                _svc(Icons.stars_rounded, 'horoscope'.tr, AppColors.primary, () => Get.to(() => const HoroscopeScreen())),
               ],
             ),
             const SizedBox(height: 20),
@@ -116,8 +116,8 @@ class HomeTab extends StatelessWidget {
               child: Row(children: [
                 const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
                 const SizedBox(width: 10),
-                const Expanded(child: Text('Powered by Swiss Ephemeris • Lahiri Ayanamsa • Vimshottari Dasha',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF7F8C8D)))),
+                Expanded(child: Text('powered_by_info'.tr,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF7F8C8D)))),
               ]),
             ),
             const SizedBox(height: 16),

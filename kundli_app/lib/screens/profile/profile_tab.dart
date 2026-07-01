@@ -5,6 +5,7 @@ import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
 import 'edit_profile_screen.dart';
 import '../bookmarks/bookmarks_tab.dart';
+import '../language_selection_screen.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -114,7 +115,7 @@ class _ProfileTabState extends State<ProfileTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Profile Completeness', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2C3E50))),
+                      Text('profile_completeness'.tr, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2C3E50))),
                       Text('${(_completeness * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary)),
                     ],
                   ),
@@ -132,14 +133,18 @@ class _ProfileTabState extends State<ProfileTab> {
             const SizedBox(height: 30),
             
             // Menu Items
-            _menuItem(Icons.person_outline_rounded, 'Edit Profile', onTap: _navigateToEditProfile),
+            _menuItem(Icons.person_outline_rounded, 'edit_profile'.tr, onTap: _navigateToEditProfile),
             _divider(),
-            _menuItem(Icons.bookmark_border_rounded, 'Saved Charts', onTap: () {
+            _menuItem(Icons.bookmark_border_rounded, 'saved_charts'.tr, onTap: () {
               // Direct navigation to Bookmarks Tab
               Get.to(() => const BookmarksTab());
             }),
             _divider(),
-            _menuItem(Icons.logout_rounded, 'Logout', isLogout: true, onTap: () {
+            _menuItem(Icons.language_rounded, 'language'.tr, onTap: () {
+              Get.to(() => const LanguageSelectionScreen(isFromProfile: true));
+            }),
+            _divider(),
+            _menuItem(Icons.logout_rounded, 'logout'.tr, isLogout: true, onTap: () {
               final authController = Get.find<AuthController>();
               authController.logout();
             }),

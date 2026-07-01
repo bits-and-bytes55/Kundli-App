@@ -40,11 +40,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           unselectedItemColor: const Color(0xFF7F8C8D),
           selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.bookmark_border_rounded), label: 'Bookmarks'),
-            BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Services'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
+          items: [
+            BottomNavigationBarItem(icon: const Icon(Icons.home_rounded), label: 'nav_home'.tr),
+            BottomNavigationBarItem(icon: const Icon(Icons.bookmark_border_rounded), label: 'nav_bookmarks'.tr),
+            BottomNavigationBarItem(icon: const Icon(Icons.grid_view_rounded), label: 'nav_services'.tr),
+            BottomNavigationBarItem(icon: const Icon(Icons.person_outline_rounded), label: 'nav_profile'.tr),
           ],
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -7,6 +8,7 @@ class ChartTab extends StatefulWidget {
   final int? targetHouseCrossIdx;
   final bool isTargetDirectionBad;
   final bool onlyChart;
+  final List<dynamic>? ashtakvarga;
   const ChartTab({
     super.key,
     required this.ascendant,
@@ -17,6 +19,7 @@ class ChartTab extends StatefulWidget {
     this.targetHouseCrossIdx,
     this.isTargetDirectionBad = false,
     this.onlyChart = false,
+    this.ashtakvarga,
   });
   @override
   State<ChartTab> createState() => _ChartTabState();
@@ -230,8 +233,8 @@ class _ChartTabState extends State<ChartTab> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFFE8A87C))),
               child: Wrap(spacing: 18, runSpacing: 6, children: [
-                _LegItem('* Retrograde',      Colors.red),
-                _LegItem('^ Combust',         Colors.orange),
+                _LegItem('star_retrograde'.tr,      Colors.red),
+                _LegItem('caret_combust'.tr,         Colors.orange),
                 _LegItem('\u25a1 Vargottama', Colors.blue),
                 _LegItem('\u2191 Exalted',    Colors.green),
                 _LegItem('\u2193 Debilitated',Colors.red),
@@ -295,6 +298,22 @@ class _ChartTabState extends State<ChartTab> {
 
     final widgets = <Widget>[];
 
+    int maxAshtakvarga = 0;
+    Set<int> maxAshtakvargaRashis = {};
+    if (widget.ashtakvarga != null && widget.ashtakvarga!.isNotEmpty) {
+      for (final row in widget.ashtakvarga!) {
+        final tot = row['Tot'] ?? 0;
+        if (tot > maxAshtakvarga) maxAshtakvarga = tot;
+      }
+      for (final row in widget.ashtakvarga!) {
+        final tot = row['Tot'] ?? 0;
+        if (tot == maxAshtakvarga) {
+          final int rn = row['RN'] ?? 0;
+          if (rn > 0) maxAshtakvargaRashis.add(rn);
+        }
+      }
+    }
+
     // Get KP cusps if needed
     final kpCusps = _showKP ? _getKpCusps() : <double>[];
 
@@ -325,8 +344,7 @@ class _ChartTabState extends State<ChartTab> {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(rashiSymbols[(houseRashiNum - 1) % 12],
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: rashiColors[(houseRashiNum - 1) % 12])),
+              // Removed Rashi symbol Text widget here
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Row(
@@ -336,6 +354,13 @@ class _ChartTabState extends State<ChartTab> {
                       style: TextStyle(
                         fontSize: 12, fontWeight: FontWeight.bold,
                         color: rashiColors[(houseRashiNum - 1) % 12])),
+                    if (maxAshtakvargaRashis.contains(houseRashiNum))
+                      Container(
+                        margin: const EdgeInsets.only(left: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(4)),
+                        child: Text('$maxAshtakvarga', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
                     if (widget.showDirections) ...[
                       const SizedBox(width: 2),
                       Builder(
@@ -392,6 +417,22 @@ class _ChartTabState extends State<ChartTab> {
       String lagnaDegStr,
       double cellW) {
 
+    int maxAshtakvarga = 0;
+    Set<int> maxAshtakvargaRashis = {};
+    if (widget.ashtakvarga != null && widget.ashtakvarga!.isNotEmpty) {
+      for (final row in widget.ashtakvarga!) {
+        final tot = row['Tot'] ?? 0;
+        if (tot > maxAshtakvarga) maxAshtakvarga = tot;
+      }
+      for (final row in widget.ashtakvarga!) {
+        final tot = row['Tot'] ?? 0;
+        if (tot == maxAshtakvarga) {
+          final int rn = row['RN'] ?? 0;
+          if (rn > 0) maxAshtakvargaRashis.add(rn);
+        }
+      }
+    }
+
     final kpCusps = _showKP ? _getKpCusps() : <double>[];
     final widgets = <Widget>[];
 
@@ -436,8 +477,7 @@ class _ChartTabState extends State<ChartTab> {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(rashiSymbols[rashiI],
-                  style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+                // Removed Rashi symbol Text widget here
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Row(
@@ -445,6 +485,13 @@ class _ChartTabState extends State<ChartTab> {
                     children: [
                       Text(houseLabel,
                         style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+                      if (maxAshtakvargaRashis.contains(rashiI + 1))
+                        Container(
+                          margin: const EdgeInsets.only(left: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(4)),
+                          child: Text('$maxAshtakvarga', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
                       if (widget.showDirections) ...[
                         const SizedBox(width: 2),
                         Builder(
@@ -615,7 +662,7 @@ class _ChartTabState extends State<ChartTab> {
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
           _infoItem('Lagna',     asc['rashi']     ?? '-'),
           Container(width: 1, height: 36, color: AppColors.accentLight),
-          _infoItem('Degree',   '${(asc['degree'] as num? ?? 0).toStringAsFixed(1)}°'),
+          _infoItem('degree_col'.tr,   '${(asc['degree'] as num? ?? 0).toStringAsFixed(1)}°'),
           Container(width: 1, height: 36, color: AppColors.accentLight),
           _infoItem('Nakshatra', asc['nakshatra'] ?? '-'),
           Container(width: 1, height: 36, color: AppColors.accentLight),

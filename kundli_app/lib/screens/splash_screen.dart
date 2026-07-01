@@ -4,6 +4,8 @@ import 'auth/login_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import '../controllers/auth_controller.dart';
 import '../theme/app_theme.dart';
+import 'language_selection_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,8 +30,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     Future.delayed(const Duration(seconds: 3), () async {
       final authController = Get.put(AuthController());
       final isLoggedIn = await authController.checkLoginStatus();
+      
+      final prefs = await SharedPreferences.getInstance();
+      final hasSelectedLanguage = prefs.getBool('language_selected') ?? false;
+
       if (isLoggedIn) {
-        Get.offAll(() => const DashboardScreen(), transition: Transition.fadeIn);
+        if (hasSelectedLanguage) {
+          Get.offAll(() => const DashboardScreen(), transition: Transition.fadeIn);
+        } else {
+          Get.offAll(() => const LanguageSelectionScreen(), transition: Transition.fadeIn);
+        }
       } else {
         Get.offAll(() => const LoginScreen(), transition: Transition.fadeIn);
       }

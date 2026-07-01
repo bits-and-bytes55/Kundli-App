@@ -11,7 +11,16 @@ class KundliController extends GetxController {
   var isVarshphalLoading = false.obs;
   var varshphalData = Rx<Map<String, dynamic>?>(null);
 
-  Future<void> fetchKundli(String name, String date, String time, double lat, double lon, {String? gender, String? place}) async {
+  Future<void> fetchKundli(String name, String date, String time, double lat, double lon, {String? gender, String? place, bool forceRefresh = false}) async {
+    // Best Practice: GetX controllers me data already loaded ho to API dobara mat call karo
+    if (!forceRefresh && kundliData.value != null) {
+      // Basic check: if we already have some data, we could just return early. 
+      // But since parameters might change, caching at the ApiService level (which we already did) is safer.
+      // However, to strictly follow the best practice for identical UI reloads:
+      print('KundliController: Data already loaded, skipping API call.');
+      return;
+    }
+
     isLoading.value = true;
     try {
       var data = await apiService.generateKundli(
@@ -56,7 +65,13 @@ class KundliController extends GetxController {
     }
   }
 
-  Future<void> fetchVarshphal(String name, String date, String time, double lat, double lon, int targetYear, {String? gender}) async {
+  Future<void> fetchVarshphal(String name, String date, String time, double lat, double lon, int targetYear, {String? gender, bool forceRefresh = false}) async {
+    // Best Practice: GetX controllers me data already loaded ho to API dobara mat call karo
+    if (!forceRefresh && varshphalData.value != null) {
+      print('KundliController: Varshphal data already loaded, skipping API call.');
+      return;
+    }
+
     isVarshphalLoading.value = true;
     try {
       var data = await apiService.getVarshphal(

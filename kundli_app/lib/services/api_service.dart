@@ -4,6 +4,10 @@ import 'package:dio/dio.dart';
 class ApiService extends GetxService {
   late Dio dio;
   final String baseUrl = 'https://kundli.bitsandbytesitsolution.com/api';
+
+  // Cache to store API responses temporarily and prevent IP block due to spam
+  final Map<String, dynamic> _apiCache = {};
+
   @override
   void onInit() {
     super.onInit();
@@ -56,6 +60,13 @@ class ApiService extends GetxService {
     double? partnerLat,
     double? partnerLon,
   }) async {
+    final String lang = Get.locale?.languageCode ?? 'en';
+    final String cacheKey = 'kundli_generate_${name}_${date}_${time}_${lat}_${lon}_${gender}_$lang';
+    if (_apiCache.containsKey(cacheKey)) {
+      print('=== RETURNED FROM CACHE: generateKundli ===');
+      return _apiCache[cacheKey];
+    }
+
     try {
       final Map<String, dynamic> reqData = {
         'name': name,
@@ -64,6 +75,7 @@ class ApiService extends GetxService {
         'lat': lat,
         'lon': lon,
         'gender': gender ?? 'Male',
+        'lang': Get.locale?.languageCode ?? 'en',
       };
       if (partnerName != null) reqData['partner_name'] = partnerName;
       if (partnerDate != null) reqData['partner_date'] = partnerDate;
@@ -73,6 +85,7 @@ class ApiService extends GetxService {
 
       final response = await dio.post('/kundli/generate', data: reqData);
       if (response.statusCode == 200 && response.data['success'] == true) {
+        _apiCache[cacheKey] = response.data['data']; // Save to cache
         return response.data['data'];
       }
       return null;
@@ -89,12 +102,12 @@ class ApiService extends GetxService {
     required double girlLat, required double girlLon,
   }) async {
     try {
-      final response = await dio.post('/kundli/milan', data: {
-        'boy_name': boyName, 'boy_date': boyDate, 'boy_time': boyTime,
-        'boy_lat': boyLat, 'boy_lon': boyLon,
-        'girl_name': girlName, 'girl_date': girlDate, 'girl_time': girlTime,
-        'girl_lat': girlLat, 'girl_lon': girlLon,
-      });
+      final Map<String, dynamic> reqData = {
+        'boy_name': boyName, 'boy_date': boyDate, 'boy_time': boyTime, 'boy_lat': boyLat, 'boy_lon': boyLon,
+        'girl_name': girlName, 'girl_date': girlDate, 'girl_time': girlTime, 'girl_lat': girlLat, 'girl_lon': girlLon,
+        'lang': Get.locale?.languageCode ?? 'en',
+      };
+      final response = await dio.post('/kundli/milan', data: reqData);
       if (response.statusCode == 200 && response.data['success'] == true) {
         return response.data['data'];
       }
@@ -128,6 +141,7 @@ class ApiService extends GetxService {
     try {
       final response = await dio.post('/kundli/graha-sthiti', data: {
         'name': name, 'date': date, 'time': time, 'lat': lat, 'lon': lon,
+        'lang': Get.locale?.languageCode ?? 'en',
       });
       if (response.statusCode == 200 && response.data['success'] == true) {
         return response.data['data'];
@@ -150,13 +164,8 @@ class ApiService extends GetxService {
   }) async {
     try {
       final response = await dio.post('/kundli/varshphal', data: {
-        'name': name,
-        'date': date,
-        'time': time,
-        'lat': lat,
-        'lon': lon,
-        'gender': gender ?? 'Male',
-        'target_year': targetYear,
+        'name': name, 'date': date, 'time': time, 'lat': lat, 'lon': lon, 'target_year': targetYear, 'gender': gender ?? 'Male',
+        'lang': Get.locale?.languageCode ?? 'en',
       });
       if (response.statusCode == 200 && response.data['success'] == true) {
         return response.data['data'];
@@ -174,14 +183,20 @@ class ApiService extends GetxService {
     required double lat,
     required double lon,
   }) async {
+    final String lang = Get.locale?.languageCode ?? 'en';
+    final String cacheKey = 'panchang_${date}_${time}_${lat}_${lon}_$lang';
+    if (_apiCache.containsKey(cacheKey)) {
+      print('=== RETURNED FROM CACHE: getPanchang ===');
+      return _apiCache[cacheKey];
+    }
+
     try {
       final response = await dio.post('/panchang', data: {
-        'date': date,
-        'time': time,
-        'lat': lat,
-        'lon': lon,
+        'date': date, 'time': time, 'lat': lat, 'lon': lon,
+        'lang': Get.locale?.languageCode ?? 'en',
       });
       if (response.statusCode == 200 && response.data['success'] == true) {
+        _apiCache[cacheKey] = response.data['data']; // Save to cache
         return response.data['data'];
       }
       return null;

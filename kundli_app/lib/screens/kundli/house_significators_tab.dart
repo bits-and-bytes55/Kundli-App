@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -230,7 +231,7 @@ class HouseSignificatorsTab extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Column(children: [
-            _detRow('Sign', data['sign']?.toString() ?? '-', Icons.place),
+            _detRow('sign_col'.tr, data['sign']?.toString() ?? '-', Icons.place),
             _detRow('Sign Lord (SL)', sl, Icons.star_rounded),
             _detRow('Nakshatra Lord (NL)', nl, Icons.brightness_2_rounded),
             _detRow('Sub Lord (SB)', sb, Icons.blur_circular_rounded),

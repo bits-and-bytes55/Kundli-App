@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -73,7 +74,7 @@ class KpTab extends StatelessWidget {
             child: Column(
               children: [
                 // Header row
-                _tableHeaderRow(const ['Planet', 'Sign', 'Star Lord', 'Sub Lord', 'House']),
+                _tableHeaderRow(['planet'.tr, 'sign_col'.tr, 'Star Lord', 'Sub Lord', 'house'.tr]),
                 // Data rows
                 ...planetOrder.where((p) => kpPlanets.containsKey(p)).toList().asMap().entries.map((entry) {
                   final idx = entry.key;
@@ -111,7 +112,7 @@ class KpTab extends StatelessWidget {
             child: Column(
               children: [
                 // Header row
-                _tableHeaderRow(const ['Cusp', 'Sign', 'Degree', 'Star Lord', 'Sub Lord']),
+                _tableHeaderRow(['Cusp', 'sign_col'.tr, 'degree_col'.tr, 'Star Lord', 'Sub Lord']),
                 // Data rows
                 ...cuspDetails.asMap().entries.map((entry) {
                   final idx = entry.key;
@@ -185,7 +186,7 @@ class KpTab extends StatelessWidget {
       ),
       child: Row(
         children: titles.map((title) {
-          final flexVal = (title == 'Planet' || title == 'Cusp') ? 5 : 4;
+          final flexVal = (title == 'planet'.tr || title == 'Cusp') ? 5 : 4;
           return Expanded(
             flex: flexVal,
             child: Text(

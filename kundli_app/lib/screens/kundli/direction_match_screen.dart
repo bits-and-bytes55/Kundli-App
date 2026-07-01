@@ -1,3 +1,8 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart';
+import '../../controllers/kundli_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:math' as math;
@@ -14,6 +19,7 @@ class DirectionMatchScreen extends StatefulWidget {
   final Map<String, dynamic> planets;
   final Map<String, dynamic> kpAscendant;
   final Map<String, dynamic> kpPlanets;
+  final Map<String, String>? savedParams;
 
   const DirectionMatchScreen({
     Key? key,
@@ -26,6 +32,7 @@ class DirectionMatchScreen extends StatefulWidget {
     required this.planets,
     required this.kpAscendant,
     required this.kpPlanets,
+    this.savedParams,
   }) : super(key: key);
 
   @override
@@ -33,6 +40,7 @@ class DirectionMatchScreen extends StatefulWidget {
 }
 
 class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
+  final TextEditingController _birthPlaceController = TextEditingController();
   final TextEditingController _currentPlaceController1 = TextEditingController();
   final TextEditingController _residencePlaceController = TextEditingController();
   final TextEditingController _currentPlaceController2 = TextEditingController();
@@ -43,6 +51,149 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
   
   Map<String, dynamic>? _birthData;
   Map<String, dynamic>? _residenceData;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.savedParams != null) {
+      _birthPlaceController.text = widget.savedParams!['birthPlace'] ?? '';
+      _currentPlaceController1.text = widget.savedParams!['currentPlace1'] ?? '';
+      _residencePlaceController.text = widget.savedParams!['residencePlace'] ?? '';
+    }
+  }
+  
+  String _lastPlaceQuery = '';
+
+  Future<Iterable<String>> _getPlaces(String query) async {
+    if (query.isEmpty || query.length < 2) return const [];
+    
+    // Debounce to prevent Nominatim 429 Too Many Requests
+    _lastPlaceQuery = query;
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (_lastPlaceQuery != query) return const [];
+    
+    // Switch to Nominatim API (OpenStreetMap) exactly like the Vastu Compass app
+    // to avoid Google API Billing restrictions.
+    final encodedQuery = Uri.encodeComponent(query);
+    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=5&addressdetails=1');
+    
+    try {
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'kundli_app_suggestion'},
+      );
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((p) => p['display_name'] as String).toList();
+      } else if (response.statusCode == 429) {
+        return const [];
+      }
+    } catch (e) {
+      print('Error fetching places: $e');
+    }
+    return const [];
+  }
+
+  Widget _buildPlaceAutocomplete(TextEditingController controller, String label, String hint) {
+    return Autocomplete<String>(
+      optionsBuilder: (TextEditingValue textEditingValue) async {
+        if (textEditingValue.text == '') {
+          return const Iterable<String>.empty();
+        }
+        return await _getPlaces(textEditingValue.text);
+      },
+      onSelected: (String selection) {
+        controller.text = selection;
+      },
+      fieldViewBuilder: (context, fieldController, focusNode, onEditingComplete) {
+        if (fieldController.text != controller.text) {
+          fieldController.text = controller.text;
+        }
+        fieldController.addListener(() {
+          controller.text = fieldController.text;
+        });
+        return TextField(
+          controller: fieldController,
+          focusNode: focusNode,
+          onEditingComplete: onEditingComplete,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            border: const OutlineInputBorder(),
+          ),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4.0,
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width - 64,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(0),
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final String option = options.elementAt(index);
+                  return ListTile(
+                    title: Text(option),
+                    onTap: () {
+                      onSelected(option);
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _savePrediction() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      List<dynamic> savedDirections = [];
+      final raw = prefs.getString('saved_directions');
+      if (raw != null) {
+        savedDirections = jsonDecode(raw);
+      }
+      
+      final c = Get.find<KundliController>();
+      final data = c.kundliData.value;
+      
+      final newSave = {
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'name': widget.name,
+        'date': data?['date'] ?? '',
+        'time': data?['time'] ?? '',
+        'lat': data?['lat'] ?? 0.0,
+        'lon': data?['lon'] ?? 0.0,
+        'birthPlace': _birthPlaceController.text.trim(),
+        'currentPlace1': _currentPlaceController1.text.trim(),
+        'residencePlace': _residencePlaceController.text.trim(),
+        'currentPlace2': _currentPlaceController2.text.trim(),
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      
+      // Update if already exists with same name/date/time
+      int existingIdx = savedDirections.indexWhere((e) => e['name'] == newSave['name'] && e['date'] == newSave['date'] && e['time'] == newSave['time']);
+      if (existingIdx != -1) {
+        newSave['id'] = savedDirections[existingIdx]['id'];
+        savedDirections[existingIdx] = newSave;
+      } else {
+        savedDirections.add(newSave);
+      }
+      
+      await prefs.setString('saved_directions', jsonEncode(savedDirections));
+      Get.snackbar('Success', 'Direction Prediction saved to bookmarks!', backgroundColor: Colors.green.shade100);
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to save: $e', backgroundColor: Colors.red.shade100);
+    }
+  }
 
   Future<void> _calculateDirection() async {
     final current1 = _currentPlaceController1.text.trim();
@@ -60,9 +211,9 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
 
     try {
       if (current1.isNotEmpty) {
-        _birthData = await _getDirectionData(widget.birthPlace, current1);
+        _birthData = await _getDirectionData(_birthPlaceController.text.trim(), current1);
         _birthData!['place'] = current1;
-        _birthData!['source'] = widget.birthPlace;
+        _birthData!['source'] = _birthPlaceController.text.trim();
       } else {
         _birthData = null;
       }
@@ -282,6 +433,27 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
               }).toList(),
             ],
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Note: WNW (West-North-West) and ESE (East-South-East) directions are considered generally unfavorable (not good) regardless of house placement.',
+                    style: TextStyle(color: Colors.red.shade900, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -350,6 +522,29 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
                 _buildResultRow('लग्न (Ascendant)', lCount),
                 _buildResultRow('चंद्र (Moon Sign)', mCount),
                 _buildResultRow('नाम राशि (${widget.name})', nCount),
+                if (isBadDirName) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade800),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Note: $dirName is considered a generally bad direction. It is not good.',
+                            style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ]
               ],
             ),
           ),
@@ -366,8 +561,10 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(!_showResults ? 16 : 0),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(!_showResults ? 16 : 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -387,16 +584,9 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
                     children: [
                       const Text('Form 1: From Birth Place', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
                       const SizedBox(height: 16),
-                      TextFormField(
-                        initialValue: widget.birthPlace,
-                        readOnly: true,
-                        decoration: const InputDecoration(labelText: 'Birth Place', border: OutlineInputBorder(), filled: true, fillColor: Colors.black12),
-                      ),
+                      _buildPlaceAutocomplete(_birthPlaceController, 'Birth Place', 'Enter birth city'),
                       const SizedBox(height: 16),
-                      TextField(
-                        controller: _currentPlaceController1,
-                        decoration: const InputDecoration(labelText: 'Current Place', border: OutlineInputBorder(), hintText: 'Enter current city'),
-                      ),
+                      _buildPlaceAutocomplete(_currentPlaceController1, 'Current Place', 'Enter current city'),
                     ],
                   ),
                 ),
@@ -413,15 +603,9 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
                     children: [
                       const Text('Form 2: From Residence', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
                       const SizedBox(height: 16),
-                      TextField(
-                        controller: _residencePlaceController,
-                        decoration: const InputDecoration(labelText: 'Residence Location', border: OutlineInputBorder(), hintText: 'Enter residence city'),
-                      ),
+                      _buildPlaceAutocomplete(_residencePlaceController, 'Residence Location', 'Enter residence city'),
                       const SizedBox(height: 16),
-                      TextField(
-                        controller: _currentPlaceController2,
-                        decoration: const InputDecoration(labelText: 'Current Place', border: OutlineInputBorder(), hintText: 'Enter current city'),
-                      ),
+                      _buildPlaceAutocomplete(_currentPlaceController2, 'Current Place', 'Enter current city'),
                     ],
                   ),
                 ),
@@ -444,11 +628,22 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Astro-Vastu Results', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  TextButton.icon(
-                    onPressed: () => setState(() => _showResults = false),
-                    icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
-                    label: const Text('Edit'),
-                    style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _savePrediction,
+                        icon: const Icon(Icons.bookmark_add_rounded, size: 18),
+                        label: const Text('Save'),
+                        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => setState(() => _showResults = false),
+                        icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
+                        label: const Text('Edit'),
+                        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -490,6 +685,7 @@ class _DirectionMatchScreenState extends State<DirectionMatchScreen> {
           ]
         ],
       ),
+    ),
     );
   }
 }

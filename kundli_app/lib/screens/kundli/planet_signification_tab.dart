@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -130,9 +131,9 @@ class PlanetSignificationTab extends StatelessWidget {
           ),
           child: Row(children: [
             if (tableType == 'combined' || tableType == 'planet_only')
-              const Expanded(flex: 3, child: Text('Planet', style: _hStyle)),
+              Expanded(flex: 3, child: Text('planet'.tr, style: _hStyle)),
             if (tableType == 'combined' || tableType == 'nl_only')
-              const Expanded(flex: 2, child: Text('NL', style: _hStyle)),
+              Expanded(flex: 2, child: Text('nl'.tr, style: _hStyle)),
             const Expanded(flex: 7, child: Text('Houses Signified', style: _hStyle)),
           ]),
         ),

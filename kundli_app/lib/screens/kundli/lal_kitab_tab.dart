@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/custom_shadows.dart';
 import '../../theme/app_theme.dart';
@@ -48,7 +49,7 @@ class LalKitabTab extends StatelessWidget {
           const Spacer(),
           Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(6)),
-            child: Text('House $house', style: const TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold, fontSize: 12))),
+            child: Text('${'house'.tr} $house', style: const TextStyle(color: Color(0xFF2C3E50), fontWeight: FontWeight.bold, fontSize: 12))),
         ]),
         if (effects.isNotEmpty) ...[
           const SizedBox(height: 10),

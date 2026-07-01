@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
 import '../controllers/panchang_controller.dart';
 import '../theme/app_theme.dart';
 import '../theme/custom_shadows.dart';
@@ -15,6 +18,7 @@ class PanchangScreen extends StatefulWidget {
 class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProviderStateMixin {
   final panchangController = Get.put(PanchangController());
   late TabController _choghadiyaTabController;
+  String _lastPlaceQuery = '';
 
   @override
   void initState() {
@@ -34,7 +38,7 @@ class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProvid
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(1900),
+      firstDate: DateTime(1800),
       lastDate: DateTime(2100),
       builder: (context, child) {
         return Theme(
@@ -53,6 +57,147 @@ class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProvid
       String formatted = "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       panchangController.updateDate(formatted);
     }
+  }
+
+  Future<Iterable<String>> _getPlaces(String query) async {
+    if (query.isEmpty || query.length < 2) return const [];
+    
+    _lastPlaceQuery = query;
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (_lastPlaceQuery != query) return const []; 
+    
+    final encodedQuery = Uri.encodeComponent(query);
+    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=5&addressdetails=1');
+    try {
+      final response = await http.get(url, headers: {'User-Agent': 'kundli_app_suggestion'});
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((p) => p['display_name'] as String).toList();
+      }
+    } catch (e) {
+      print('Error fetching places: $e');
+    }
+    return const [];
+  }
+
+  void _changeLocation() {
+    final TextEditingController searchController = TextEditingController();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.only(
+          top: 24, left: 20, right: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Change Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.textMedium),
+                  onPressed: () => Get.back(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Autocomplete<String>(
+              optionsBuilder: (TextEditingValue textEditingValue) async {
+                if (textEditingValue.text == '') {
+                  return const Iterable<String>.empty();
+                }
+                return await _getPlaces(textEditingValue.text);
+              },
+              onSelected: (String selection) async {
+                Get.back(); // Close modal
+                
+                // Fetch coordinates using Geocoding
+                try {
+                  List<Location> locations = await locationFromAddress(selection);
+                  if (locations.isNotEmpty) {
+                    double lat = locations.first.latitude;
+                    double lon = locations.first.longitude;
+                    
+                    // Update controller
+                    panchangController.placeName.value = selection.split(',').first;
+                    panchangController.latitude.value = lat;
+                    panchangController.longitude.value = lon;
+                    
+                    // Refetch panchang
+                    panchangController.fetchPanchang();
+                  }
+                } catch (e) {
+                  Get.snackbar('Error', 'Could not find coordinates for this location.');
+                }
+              },
+              fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  onEditingComplete: onEditingComplete,
+                  decoration: InputDecoration(
+                    hintText: 'Search city or place...',
+                    prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+                  ),
+                );
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(8),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: 250, maxWidth: MediaQuery.of(context).size.width - 40),
+                      child: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        itemCount: options.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final String option = options.elementAt(index);
+                          return InkWell(
+                            onTap: () => onSelected(option),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Text(option, style: const TextStyle(fontSize: 14)),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _changeDateByDays(int days) {
+    DateTime current = DateTime.tryParse(panchangController.selectedDate.value) ?? DateTime.now();
+    DateTime newDate = current.add(Duration(days: days));
+    String formatted = "${newDate.year}-${newDate.month.toString().padLeft(2, '0')}-${newDate.day.toString().padLeft(2, '0')}";
+    panchangController.updateDate(formatted);
+  }
+
+  void _setToday() {
+    DateTime now = DateTime.now();
+    String formatted = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    panchangController.updateDate(formatted);
   }
 
   // Helper to open Time Picker
@@ -204,7 +349,7 @@ class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProvid
   // 1. DATE & TIME SELECTOR HEADER
   Widget _buildDatePickerHeader(BuildContext context) {
     DateTime parsedDate = DateTime.tryParse(panchangController.selectedDate.value) ?? DateTime.now();
-    String formattedDateLabel = DateFormat('EEEE, d MMMM yyyy').format(parsedDate);
+    String formattedDateLabel = DateFormat('dd - MMM - yyyy').format(parsedDate);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -216,60 +361,91 @@ class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProvid
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 22),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  panchangController.placeName.value,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textDark),
+          GestureDetector(
+            onTap: _changeLocation,
+            child: Row(
+              children: [
+                const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 22),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    panchangController.placeName.value,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textDark),
+                  ),
                 ),
-              ),
-              Text(
-                'Coordinates: ${panchangController.latitude.value.toStringAsFixed(3)}, ${panchangController.longitude.value.toStringAsFixed(3)}',
-                style: const TextStyle(fontSize: 11, color: AppColors.textLight),
-              ),
-            ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  ),
+                  child: const Text('CHANGE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                ),
+              ],
+            ),
           ),
           const Divider(height: 24, thickness: 0.8),
+          
+          // Date Selector Row with Arrows and Today
           Row(
             children: [
               Expanded(
-                child: GestureDetector(
-                  onTap: () => _selectDate(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentLight,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.calendar_month_rounded, color: AppColors.primary, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Date', style: TextStyle(fontSize: 10, color: AppColors.textLight, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 2),
-                              Text(
-                                formattedDateLabel,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.shade400, width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      InkWell(
+                        onTap: () => _changeDateByDays(-1),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                          child: Icon(Icons.arrow_back_ios_rounded, color: Colors.black87, size: 16),
                         ),
-                      ],
-                    ),
+                      ),
+                      GestureDetector(
+                        onTap: () => _selectDate(context),
+                        child: Text(
+                          formattedDateLabel,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _changeDateByDays(1),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                          child: Icon(Icons.arrow_forward_ios_rounded, color: Colors.black87, size: 16),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(width: 12),
+              GestureDetector(
+                onTap: _setToday,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.shade400, width: 1.5),
+                  ),
+                  child: const Text('Today', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          
+          // Time Selector Row
+          Row(
+            children: [
               Expanded(
                 child: GestureDetector(
                   onTap: () => _selectTime(context),
@@ -281,21 +457,13 @@ class _PanchangScreenState extends State<PanchangScreen> with SingleTickerProvid
                       border: Border.all(color: AppColors.primary.withOpacity(0.2)),
                     ),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.access_time_rounded, color: AppColors.primary, size: 20),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Calculation Time', style: TextStyle(fontSize: 10, color: AppColors.textLight, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 2),
-                              Text(
-                                panchangController.selectedTime.value,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                              ),
-                            ],
-                          ),
+                        Text(
+                          'Time: ${panchangController.selectedTime.value}',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
                         ),
                       ],
                     ),

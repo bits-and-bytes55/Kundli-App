@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -304,7 +305,7 @@ class _ShadBalaTabState extends State<ShadBalaTab> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'House $house',
+                              '${'house'.tr} $house',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,

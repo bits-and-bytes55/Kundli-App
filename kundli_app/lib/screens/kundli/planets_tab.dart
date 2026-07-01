@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -70,12 +71,12 @@ class PlanetsTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.primary.withOpacity(0.4)),
             ),
-            child: Wrap(spacing: 16, runSpacing: 4, children: const [
-              _LegChip('* Retrograde'),
-              _LegChip('^ Combust'),
-              _LegChip('□ Vargottama'),
-              _LegChip('↑ Exalted'),
-              _LegChip('↓ Debilitated'),
+            child: Wrap(spacing: 16, runSpacing: 4, children: [
+              _LegChip('star_retrograde'.tr),
+              _LegChip('caret_combust'.tr),
+              _LegChip('sq_vargottama'.tr),
+              _LegChip('up_exalted'.tr),
+              _LegChip('down_debilitated'.tr),
             ]),
           ),
 
@@ -97,10 +98,6 @@ class PlanetsTab extends StatelessWidget {
               ..._buildRows(),
             ]),
           ),
-
-          const SizedBox(height: 16),
-          // Detail cards
-          ..._buildDetailCards(),
           const SizedBox(height: 20),
         ],
       ),
@@ -114,12 +111,12 @@ class PlanetsTab extends StatelessWidget {
         color: AppColors.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
       ),
-      child: Row(children: const [
-        Expanded(flex: 4, child: Text('Pla',    style: _hStyle)),
-        Expanded(flex: 4, child: Text('Sign',   style: _hStyle)),
-        Expanded(flex: 6, child: Text('Degree', style: _hStyle)),
-        Expanded(flex: 4, child: Text('Naks',   style: _hStyle)),
-        Expanded(flex: 3, child: Text('Rel',    style: _hStyle, textAlign: TextAlign.center)),
+      child: Row(children: [
+        Expanded(flex: 4, child: Text('pla'.tr,    style: _hStyle)),
+        Expanded(flex: 4, child: Text('sign_col'.tr,   style: _hStyle)),
+        Expanded(flex: 6, child: Text('degree_col'.tr, style: _hStyle)),
+        Expanded(flex: 4, child: Text('naks'.tr,   style: _hStyle)),
+        Expanded(flex: 3, child: Text('rel'.tr,    style: _hStyle, textAlign: TextAlign.center)),
       ]),
     );
   }
@@ -201,93 +198,7 @@ class PlanetsTab extends StatelessWidget {
     return rows;
   }
 
-  List<Widget> _buildDetailCards() {
-    final cards = <Widget>[];
-    for (final pname in _planetOrder) {
-      if (pname == 'Lagna') continue;
-      final p = planets[pname] as Map<String, dynamic>?;
-      if (p == null) continue;
-      cards.add(_detailCard(pname, p));
-    }
-    return cards;
-  }
 
-  Widget _detailCard(String name, Map<String, dynamic> p) {
-    bool retro  = p['is_retrograde'] == true;
-    if (name == 'Rahu' || name == 'Ketu') retro = true;
-    final exalt  = p['is_exalted'] == true;
-    final debil  = p['is_debilitated'] == true;
-    final comb   = p['is_combust'] == true;
-    final pLon = (p['longitude'] as num? ?? 0.0).toDouble();
-    int d1Sign = (pLon / 30.0).floor() % 12;
-    int d9Sign = (pLon / (360.0 / 108.0)).floor() % 12;
-    final varg = (d1Sign == d9Sign);
-    final house  = (p['house'] as num? ?? 0).toInt();
-
-    Color accentColor = AppColors.primary;
-    if (exalt) accentColor = const Color(0xFF2E7D32);
-    if (debil) accentColor = const Color(0xFFC62828);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.06),
-            blurRadius: 8, offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(children: [
-        // Card header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          decoration: BoxDecoration(
-            color: accentColor.withOpacity(0.1),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
-            border: Border(bottom: BorderSide(color: accentColor.withOpacity(0.2))),
-          ),
-          child: Row(children: [
-            Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: accentColor)),
-            const SizedBox(width: 8),
-            if (retro) _badge('Retrograde *', Colors.orange.shade800),
-            if (comb)  _badge('Combust ^',   Colors.red.shade700),
-            if (varg)  _badge('Vargottama □', Colors.blue.shade700),
-            if (exalt) _badge('Exalted ↑',   Colors.green.shade700),
-            if (debil) _badge('Debilitated ↓', Colors.red.shade700),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'House $house',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: accentColor),
-              ),
-            ),
-          ]),
-        ),
-
-        // Details
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Column(children: [
-            _detRow('Sign (Rashi)', '${p['rashi'] ?? '-'}'),
-            _detRow('Sign Lord',   '${p['rashi_lord'] ?? '-'}'),
-            _detRow('Degree',      _formatDMS(p['degree'])),
-            _detRow('Nakshatra',   '${p['nakshatra'] ?? '-'} Pada ${p['pada'] ?? '-'}'),
-            _detRow('Nakshatra Lord', '${p['nakshatra_lord'] ?? '-'}'),
-            _detRow('Syllable',    '${p['namakshar'] ?? '-'}'),
-          ]),
-        ),
-      ]),
-    );
-  }
 
   Widget _badge(String text, Color color) {
     return Container(

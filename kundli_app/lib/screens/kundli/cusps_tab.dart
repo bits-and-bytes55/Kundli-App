@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -70,8 +71,8 @@ class CuspsTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.accentLight),
             ),
-            child: const Text(
-              'Note:\nSL - Sign Lord\nNL - Nakshatra Lord\nSB - Sub Lord\nSS - Sub-Sub Lord\n\nCusps are calculated using KP (Krishnamurti Paddhati) system with Placidus house division.',
+            child: Text(
+              'kp_cusp_note'.tr,
               style: TextStyle(
                 fontSize: 11,
                 color: AppColors.textMedium,
@@ -92,13 +93,13 @@ class CuspsTab extends StatelessWidget {
         color: AppColors.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
       ),
-      child: Row(children: const [
-        Expanded(flex: 3, child: Text('Hos',    style: _hStyle)),
-        Expanded(flex: 7, child: Text('Degree', style: _hStyle)),
-        Expanded(flex: 3, child: Text('SL',     style: _hStyle)),
-        Expanded(flex: 3, child: Text('NL',     style: _hStyle)),
-        Expanded(flex: 3, child: Text('SB',     style: _hStyle)),
-        Expanded(flex: 3, child: Text('SS',     style: _hStyle)),
+      child: Row(children: [
+        Expanded(flex: 3, child: Text('hos'.tr,    style: _hStyle)),
+        Expanded(flex: 7, child: Text('degree_col'.tr, style: _hStyle)),
+        Expanded(flex: 3, child: Text('sl'.tr,     style: _hStyle)),
+        Expanded(flex: 3, child: Text('nl'.tr,     style: _hStyle)),
+        Expanded(flex: 3, child: Text('sb'.tr,     style: _hStyle)),
+        Expanded(flex: 3, child: Text('ss'.tr,     style: _hStyle)),
       ]),
     );
   }

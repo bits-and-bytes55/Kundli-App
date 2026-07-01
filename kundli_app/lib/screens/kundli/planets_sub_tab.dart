@@ -1,3 +1,4 @@
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
@@ -62,11 +63,11 @@ class PlanetsSubTab extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.primary.withOpacity(0.3)),
             ),
-            child: Wrap(spacing: 14, runSpacing: 4, children: const [
-              _InfoChip('SL', 'Sign Lord'),
-              _InfoChip('NL', 'Nakshatra Lord'),
-              _InfoChip('SB', 'Sub Lord'),
-              _InfoChip('SS', 'Sub-Sub Lord'),
+            child: Wrap(spacing: 14, runSpacing: 4, children: [
+              _InfoChip('sl'.tr, 'sign_lord'.tr),
+              _InfoChip('nl'.tr, 'Nakshatra Lord'),
+              _InfoChip('sb'.tr, 'Sub Lord'),
+              _InfoChip('ss'.tr, 'Sub-Sub Lord'),
             ]),
           ),
 
@@ -121,13 +122,13 @@ class PlanetsSubTab extends StatelessWidget {
         color: AppColors.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
       ),
-      child: Row(children: const [
-        Expanded(flex: 5, child: Text('Pla',    style: _hStyle)),
-        Expanded(flex: 7, child: Text('Degree', style: _hStyle)),
-        Expanded(flex: 3, child: Text('SL',     style: _hStyle)),
-        Expanded(flex: 3, child: Text('NL',     style: _hStyle)),
-        Expanded(flex: 3, child: Text('SB',     style: _hStyle)),
-        Expanded(flex: 3, child: Text('SS',     style: _hStyle)),
+      child: Row(children: [
+        Expanded(flex: 5, child: Text('pla'.tr,    style: _hStyle)),
+        Expanded(flex: 7, child: Text('degree_col'.tr, style: _hStyle)),
+        Expanded(flex: 3, child: Text('sl'.tr,     style: _hStyle)),
+        Expanded(flex: 3, child: Text('nl'.tr,     style: _hStyle)),
+        Expanded(flex: 3, child: Text('sb'.tr,     style: _hStyle)),
+        Expanded(flex: 3, child: Text('ss'.tr,     style: _hStyle)),
       ]),
     );
   }

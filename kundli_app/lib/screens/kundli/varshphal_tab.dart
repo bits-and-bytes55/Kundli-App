@@ -471,13 +471,13 @@ class _VarshphalTabState extends State<VarshphalTab> {
               3: FlexColumnWidth(2),
             },
             children: [
-              const TableRow(
+              TableRow(
                 decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.divider))),
                 children: [
-                  Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Planet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey))),
+                  Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('planet'.tr, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey))),
                   Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Rashi (Sign)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey))),
-                  Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('Degree', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey))),
-                  Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('House', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey))),
+                  Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('degree_col'.tr, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey))),
+                  Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('house'.tr, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey))),
                 ],
               ),
               ...planetList.map((p) {

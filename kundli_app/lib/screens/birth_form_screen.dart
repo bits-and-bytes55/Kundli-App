@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'kundli_screen.dart';
 import 'premium_kundli_screen.dart';
 import '../controllers/kundli_controller.dart';
@@ -33,7 +35,9 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
   final dateController = TextEditingController();
   final timeController = TextEditingController();
   final placeController = TextEditingController();
+  TextEditingController? _autoCompleteFieldController;
   final passcodeController = TextEditingController();
+  String _lastPlaceQuery = '';
   
   // Premium Fields
   final deathDateController = TextEditingController();
@@ -45,6 +49,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
 
   final selectedGender = "Male".obs;
   final selectedMode = "Basic".obs;
+  final isPremiumAllowed = false.obs;
 
   final kundliController = Get.put(KundliController());
   final authController = Get.put(AuthController());
@@ -56,6 +61,15 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loggedPhone = prefs.getString('logged_phone') ?? authController.phoneNumber.value;
+    final allowedNumbers = ['9105159129', '9105115915', '9625917515', '8171614403'];
+    isPremiumAllowed.value = allowedNumbers.contains(loggedPhone);
+
+    if (!isPremiumAllowed.value) {
+      selectedMode.value = "Basic";
+    }
+
     if (widget.initialChart != null) {
       nameController.text = widget.initialChart!['name'] ?? '';
       dateController.text = widget.initialChart!['date'] ?? '';
@@ -64,18 +78,78 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
       selectedGender.value = widget.initialChart!['gender'] ?? 'Male';
       
       final mode = (widget.initialChart!['mode']?.toString() ?? 'Basic').toLowerCase();
-      if (mode == 'premium') {
+      if (mode == 'premium' && isPremiumAllowed.value) {
         selectedMode.value = 'Premium';
       } else {
         selectedMode.value = 'Basic';
       }
     } else {
-      final prefs = await SharedPreferences.getInstance();
-      final savedLoc = prefs.getString('last_saved_location');
-      if (savedLoc != null && savedLoc.isNotEmpty) {
-        placeController.text = savedLoc;
-      }
+      nameController.text = "ved prakash";
+      final now = DateTime.now();
+      dateController.text = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      timeController.text = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+      _fetchCurrentLocation();
     }
+  }
+
+  Future<void> _fetchCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    if (permission == LocationPermission.deniedForever) return;
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.low);
+      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        String locName = "";
+        if (place.locality != null && place.locality!.isNotEmpty) {
+          locName = place.locality!;
+        } else if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
+          locName = place.subAdministrativeArea!;
+        }
+        if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+          locName += locName.isNotEmpty ? ", ${place.administrativeArea}" : place.administrativeArea!;
+        }
+        setState(() {
+          placeController.text = locName;
+          _autoCompleteFieldController?.text = locName;
+        });
+      }
+    } catch (e) {
+      print("Error fetching location: $e");
+    }
+  }
+
+  Future<Iterable<String>> _getPlaces(String query) async {
+    if (query.isEmpty || query.length < 2) return const [];
+    
+    // Debounce to prevent Nominatim 429 Too Many Requests
+    _lastPlaceQuery = query;
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (_lastPlaceQuery != query) return const []; 
+    
+    final encodedQuery = Uri.encodeComponent(query);
+    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=5&addressdetails=1');
+    try {
+      final response = await http.get(url, headers: {'User-Agent': 'kundli_app_suggestion'});
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((p) => p['display_name'] as String).toList();
+      }
+    } catch (e) {
+      print('Error fetching places: $e');
+    }
+    return const [];
   }
 
   @override
@@ -139,7 +213,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Generate Kundli', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
+          title: Text('generate_kundli'.tr, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
@@ -154,128 +228,133 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Enter Birth Details',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black),
+              Text(
+                'enter_birth_details'.tr,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Please provide accurate details for precise astrological calculations.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF555555), fontWeight: FontWeight.w500),
+              Text(
+                'provide_accurate_details'.tr,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF555555), fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 16),
               
               // Basic vs Premium Selector
-              const Text('Select Kundli Type', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
-              const SizedBox(height: 8),
-              Obx(() => Row(
+              Obx(() => isPremiumAllowed.value ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => selectedMode.value = "Basic",
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: selectedMode.value == "Basic" ? AppColors.primary.withOpacity(0.1) : Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selectedMode.value == "Basic" ? AppColors.primary : AppColors.border.withOpacity(0.5),
-                            width: selectedMode.value == "Basic" ? 1.5 : 1,
+                  Text('select_kundli_type'.tr, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => selectedMode.value = "Basic",
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: selectedMode.value == "Basic" ? AppColors.primary.withOpacity(0.1) : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: selectedMode.value == "Basic" ? AppColors.primary : AppColors.border.withOpacity(0.5),
+                                width: selectedMode.value == "Basic" ? 1.5 : 1,
+                              ),
+                              boxShadow: CustomShadows.cardShadow,
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.star_border_rounded,
+                                  color: selectedMode.value == "Basic" ? AppColors.primary : Colors.grey,
+                                  size: 22,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'basic_kundli'.tr,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: selectedMode.value == "Basic" ? AppColors.primary : Colors.black,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'standard_birth_chart'.tr,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: selectedMode.value == "Basic" ? AppColors.primary.withOpacity(0.8) : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          boxShadow: CustomShadows.cardShadow,
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.star_border_rounded,
-                              color: selectedMode.value == "Basic" ? AppColors.primary : Colors.grey,
-                              size: 22,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Basic Kundli',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: selectedMode.value == "Basic" ? AppColors.primary : Colors.black,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Standard birth chart',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: selectedMode.value == "Basic" ? AppColors.primary.withOpacity(0.8) : Colors.grey,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => selectedMode.value = "Premium",
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: selectedMode.value == "Premium" ? Colors.amber.withOpacity(0.1) : Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selectedMode.value == "Premium" ? Colors.amber.shade700 : AppColors.border.withOpacity(0.5),
-                            width: selectedMode.value == "Premium" ? 1.5 : 1,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => selectedMode.value = "Premium",
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: selectedMode.value == "Premium" ? Colors.amber.withOpacity(0.1) : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: selectedMode.value == "Premium" ? Colors.amber.shade700 : AppColors.border.withOpacity(0.5),
+                                width: selectedMode.value == "Premium" ? 1.5 : 1,
+                              ),
+                              boxShadow: CustomShadows.cardShadow,
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.workspace_premium_rounded,
+                                  color: selectedMode.value == "Premium" ? Colors.amber.shade800 : Colors.grey,
+                                  size: 22,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Premium Kundli',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: selectedMode.value == "Premium" ? Colors.amber.shade900 : Colors.black,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Advanced & Vastu',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: selectedMode.value == "Premium" ? Colors.amber.shade900.withOpacity(0.8) : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          boxShadow: CustomShadows.cardShadow,
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.workspace_premium_rounded,
-                              color: selectedMode.value == "Premium" ? Colors.amber.shade800 : Colors.grey,
-                              size: 22,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Premium Kundli',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: selectedMode.value == "Premium" ? Colors.amber.shade900 : Colors.black,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Advanced & Vastu',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: selectedMode.value == "Premium" ? Colors.amber.shade900.withOpacity(0.8) : Colors.grey,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
-                    ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
                 ],
-              )),
-              const SizedBox(height: 16),
+              ) : const SizedBox.shrink()),
               
               // Name Field
-              const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+              Text('full_name'.tr, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
                 child: TextFormField(
                   controller: nameController,
                   style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     isDense: true,
-                    hintText: 'e.g. Arjun Kumar',
-                    hintStyle: TextStyle(fontSize: 12, color: AppColors.textLight),
+                    hintText: 'enter_name'.tr,
+                    hintStyle: const TextStyle(fontSize: 12, color: AppColors.textLight),
                   ),
                   validator: (v) => v!.isEmpty ? 'Required' : null,
                 ),
@@ -289,7 +368,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Date of Birth', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+                        Text('birth_date'.tr, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
                         const SizedBox(height: 6),
                         Container(
                           decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
@@ -335,7 +414,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Time of Birth', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+                        Text('birth_time'.tr, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
                         const SizedBox(height: 6),
                         Container(
                           decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
@@ -379,7 +458,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
               const SizedBox(height: 16),
 
               // Gender Field
-              const Text('Gender', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+              Text('gender'.tr, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
@@ -406,21 +485,69 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
               const SizedBox(height: 16),
               
               // Birth Place
-              const Text('Birth Place', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
+              Text('birth_place'.tr, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
-                child: TextFormField(
-                  controller: placeController,
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    isDense: true,
-                    hintText: 'e.g. New Delhi',
-                    hintStyle: TextStyle(fontSize: 12, color: AppColors.textLight),
-                    suffixIcon: Icon(Icons.location_on_rounded, color: Colors.grey, size: 18),
-                  ),
-                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                child: Autocomplete<String>(
+                  optionsBuilder: (TextEditingValue textEditingValue) async {
+                    if (textEditingValue.text == '') {
+                      return const Iterable<String>.empty();
+                    }
+                    return await _getPlaces(textEditingValue.text);
+                  },
+                  onSelected: (String selection) {
+                    placeController.text = selection;
+                  },
+                  fieldViewBuilder: (context, fieldController, focusNode, onEditingComplete) {
+                    _autoCompleteFieldController = fieldController;
+                    if (fieldController.text != placeController.text) {
+                      fieldController.text = placeController.text;
+                    }
+                    fieldController.addListener(() {
+                      placeController.text = fieldController.text;
+                    });
+                    return TextFormField(
+                      controller: fieldController,
+                      focusNode: focusNode,
+                      onEditingComplete: onEditingComplete,
+                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        isDense: true,
+                        hintText: 'enter_birth_place'.tr,
+                        hintStyle: const TextStyle(fontSize: 12, color: AppColors.textLight),
+                        suffixIcon: const Icon(Icons.location_on_rounded, color: Colors.grey, size: 18),
+                      ),
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4.0,
+                        borderRadius: BorderRadius.circular(8),
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width - 32,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(0),
+                            shrinkWrap: true,
+                            itemCount: options.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final String option = options.elementAt(index);
+                              return ListTile(
+                                title: Text(option, style: const TextStyle(fontSize: 13)),
+                                onTap: () {
+                                  onSelected(option);
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               
@@ -446,7 +573,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Text('Death Details', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  Text('death_details'.tr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                                   Checkbox(
                                     value: includeDeathDetails.value,
                                     activeColor: AppColors.primary,
@@ -460,7 +587,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Text('Signature', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  Text('signature'.tr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                                   Checkbox(
                                     value: includeSignature.value,
                                     activeColor: AppColors.primary,
@@ -628,35 +755,6 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                         ),
                       ),
                       ],
-                      const SizedBox(height: 20),
-                      const Divider(),
-                      const SizedBox(height: 16),
-
-                      // Passcode
-                      const Text('Owner Passcode', style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black, fontSize: 13)),
-                      const SizedBox(height: 6),
-                      Container(
-                        decoration: BoxDecoration(boxShadow: CustomShadows.cardShadow, borderRadius: BorderRadius.circular(8)),
-                        child: TextFormField(
-                          controller: passcodeController,
-                          obscureText: true,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
-                          decoration: const InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            isDense: true,
-                            hintText: 'Enter owner passcode',
-                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textLight),
-                            prefixIcon: Icon(Icons.lock_outline_rounded, color: Colors.amber, size: 18),
-                          ),
-                          validator: (v) {
-                            if (selectedMode.value == "Premium" && (v == null || v.isEmpty)) {
-                              return 'Required';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
                     ],
                   );
                 } else {
@@ -674,23 +772,6 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                             Get.snackbar(
                               'Missing Signature',
                               'Please upload a signature image for the Premium Kundli.',
-                              backgroundColor: Colors.red.shade800,
-                              colorText: Colors.white,
-                              snackPosition: SnackPosition.BOTTOM,
-                              margin: const EdgeInsets.all(16),
-                            );
-                            return;
-                          }
-
-                          final code = passcodeController.text.trim();
-                          final prefs = await SharedPreferences.getInstance();
-                          final loggedPhone = prefs.getString('logged_phone') ?? authController.phoneNumber.value;
-                          final expectedPasscode = loggedPhone.isNotEmpty ? loggedPhone : "8171614403";
-
-                          if (code != expectedPasscode) {
-                            Get.snackbar(
-                              'Passcode Error',
-                              'Incorrect Owner Passcode. Please enter your registered login phone number.',
                               backgroundColor: Colors.red.shade800,
                               colorText: Colors.white,
                               snackPosition: SnackPosition.BOTTOM,
@@ -769,7 +850,7 @@ class _BirthFormScreenState extends State<BirthFormScreen> {
                     },
                     child: const Text('Generate Kundli'),
                   )),
-              const SizedBox(height: 80),
+              const SizedBox(height: 24),
             ],
           ),
         ),

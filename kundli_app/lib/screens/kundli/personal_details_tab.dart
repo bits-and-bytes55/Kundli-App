@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
 
 class PersonalDetailsTab extends StatelessWidget {
@@ -11,9 +12,9 @@ class PersonalDetailsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (personalDetails.isEmpty) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColors.scaffoldBg,
-        body: Center(child: Text('Loading details...', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
+        body: Center(child: Text('loading_details'.tr, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
       );
     }
 
@@ -23,39 +24,39 @@ class PersonalDetailsTab extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         children: [
           // Section 1: Birth Info
-          _buildHeader('Birth Details', Icons.cake_rounded),
+          _buildHeader('birth_details'.tr, Icons.cake_rounded),
           _tableCard([
-            _row('Name', name.isNotEmpty ? name : 'User'),
-            _row('Gender', personalDetails['sex'] ?? 'Male'),
-            _row('Date of Birth', personalDetails['dob'] ?? '-'),
-            _row('Time of Birth', personalDetails['tob'] ?? '-'),
-            _row('Day of Birth', personalDetails['day'] ?? '-'),
-            _row('Ishtkaal', personalDetails['ishtkaal'] ?? '-'),
+            _row('name'.tr, name.isNotEmpty ? name : 'User'),
+            _row('gender'.tr, personalDetails['sex'] ?? 'male'.tr),
+            _row('date_of_birth'.tr, personalDetails['dob'] ?? '-'),
+            _row('time_of_birth'.tr, personalDetails['tob'] ?? '-'),
+            _row('day_of_birth'.tr, personalDetails['day'] ?? '-'),
+            _row('ishtkaal'.tr, personalDetails['ishtkaal'] ?? '-'),
           ]),
 
           const SizedBox(height: 16),
 
           // Section 2: Birth Place Info
-          _buildHeader('Place & Time Coordinates', Icons.location_on_rounded),
+          _buildHeader('place_time_coordinates'.tr, Icons.location_on_rounded),
           _tableCard([
-            _row('Place of Birth', personalDetails['place'] ?? '-'),
-            _row('Latitude', personalDetails['latitude'] ?? '-'),
-            _row('Longitude', personalDetails['longitude'] ?? '-'),
-            _row('Time Zone', personalDetails['timezone'] != null ? 'GMT +${personalDetails['timezone']}' : '-'),
-            _row('Local Time Corr.', personalDetails['local_time_corr'] ?? '00.00.00'),
-            _row('War Time Corr.', personalDetails['war_time_corr'] ?? '00.00.00'),
-            _row('LMT at Birth', personalDetails['lmt'] ?? '-'),
-            _row('GMT at Birth', personalDetails['gmt'] ?? '-'),
+            _row('place_of_birth'.tr, personalDetails['place'] ?? '-'),
+            _row('latitude'.tr, personalDetails['latitude'] ?? '-'),
+            _row('longitude'.tr, personalDetails['longitude'] ?? '-'),
+            _row('time_zone'.tr, personalDetails['timezone'] != null ? 'GMT +${personalDetails['timezone']}' : '-'),
+            _row('local_time_corr'.tr, personalDetails['local_time_corr'] ?? '00.00.00'),
+            _row('war_time_corr'.tr, personalDetails['war_time_corr'] ?? '00.00.00'),
+            _row('lmt_at_birth'.tr, personalDetails['lmt'] ?? '-'),
+            _row('gmt_at_birth'.tr, personalDetails['gmt'] ?? '-'),
           ]),
 
           const SizedBox(height: 16),
 
           // Section 3: Astrological Birth Panchang
-          _buildHeader('Panchang at Birth', Icons.brightness_high_rounded),
+          _buildHeader('panchang_at_birth'.tr, Icons.brightness_high_rounded),
           _tableCard([
-            _row('Tithi', personalDetails['tithi'] ?? '-'),
-            _row('Paksha', personalDetails['paksha'] ?? '-'),
-            _row('Hindu Weekday', personalDetails['hindu_weekday'] ?? '-'),
+            _row('tithi'.tr, personalDetails['tithi'] ?? '-'),
+            _row('paksha'.tr, personalDetails['paksha'] ?? '-'),
+            _row('hindu_weekday'.tr, personalDetails['hindu_weekday'] ?? '-'),
           ]),
 
           const SizedBox(height: 20),

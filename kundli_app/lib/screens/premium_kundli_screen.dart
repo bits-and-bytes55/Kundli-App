@@ -1,7 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math' as math;
+import 'package:http/http.dart' as http;
+import 'package:geocoding/geocoding.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+
 import '../controllers/kundli_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/namakshar_mapping.dart';
@@ -14,6 +26,7 @@ import 'kundli/planet_signification_tab.dart';
 import 'kundli/house_significators_tab.dart';
 import 'kundli/kp_tab.dart';
 import 'kundli/direction_match_screen.dart';
+import 'kundli/planet_hits_tab.dart';
 import 'kundli/ashtakvarga_tab.dart';
 import 'kundli/shad_bala_tab.dart';
 import 'kundli/gochar_tab.dart';
@@ -38,7 +51,8 @@ import 'dart:io';
 class PremiumKundliScreen extends StatefulWidget {
   final int initialTabIdx;
   final File? signatureImage;
-  const PremiumKundliScreen({super.key, this.initialTabIdx = 0, this.signatureImage});
+  final Map<String, String>? savedDirectionParams;
+  const PremiumKundliScreen({super.key, this.initialTabIdx = 0, this.signatureImage, this.savedDirectionParams});
 
   @override
   State<PremiumKundliScreen> createState() => _PremiumKundliScreenState();
@@ -49,35 +63,43 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _showLottie = true;
   
+  Map<String, dynamic>? _homeDirectionData;
+  
   final TextEditingController _signatureNameController = TextEditingController();
+  final TextEditingController _signatureTotalController = TextEditingController();
+  final TextEditingController _signaturePredictionController = TextEditingController();
   String _savedSignatureName = '';
+  String _savedSignatureTotal = '';
+  String _savedSignaturePrediction = '';
+  final ScreenshotController _screenshotController = ScreenshotController();
 
-  final List<Tab> _tabs = const [
-    Tab(text: 'Premium'),
-    Tab(text: 'Basic'),
-    Tab(text: '12 Rashi'),
-    Tab(text: 'Direction Prediction'),
-    Tab(text: 'Graha Sthiti'),
-    Tab(text: 'Planets'),
-    Tab(text: 'Planets-Sub'),
-    Tab(text: 'Cusps'),
-    Tab(text: 'Planet Sig.'),
-    Tab(text: 'House Sig.'),
-    Tab(text: 'KP System'),
-    Tab(text: 'Ashtakvarga'),
-    Tab(text: 'Shad Bala'),
-    Tab(text: 'Gochar'),
-    Tab(text: 'Dasha'),
-    Tab(text: 'Varshphal'),
-    Tab(text: 'Avakahada'),
-    Tab(text: 'Chalit Table'),
-    Tab(text: 'Prasthara'),
-    Tab(text: 'Friendship'),
-    Tab(text: 'Yogas'),
-    Tab(text: 'Shodashvarga'),
-    Tab(text: 'Lal Kitab'),
-    Tab(text: 'Predictions'),
-    Tab(text: 'Reports'),
+  final List<Tab> _tabs = [
+    Tab(text: 'premium'.tr),
+    Tab(text: 'basic'.tr),
+    Tab(text: '12_rashi'.tr),
+    Tab(text: 'direction_prediction'.tr),
+    Tab(text: Get.locale?.languageCode == 'hi' ? 'ग्रह हिट' : 'Planet Hit'),
+    Tab(text: 'graha_sthiti'.tr),
+    Tab(text: 'planets'.tr),
+    Tab(text: 'planets_sub'.tr),
+    Tab(text: 'cusps'.tr),
+    Tab(text: 'planet_sig'.tr),
+    Tab(text: 'house_sig'.tr),
+    Tab(text: 'kp_system'.tr),
+    Tab(text: 'ashtakvarga'.tr),
+    Tab(text: 'shad_bala'.tr),
+    Tab(text: 'gochar'.tr),
+    Tab(text: 'dasha'.tr),
+    Tab(text: 'varshphal'.tr),
+    Tab(text: 'avakahada'.tr),
+    Tab(text: 'chalit_table'.tr),
+    Tab(text: 'prasthara'.tr),
+    Tab(text: 'friendship'.tr),
+    Tab(text: 'yogas'.tr),
+    Tab(text: 'shodashvarga'.tr),
+    Tab(text: 'lal_kitab'.tr),
+    Tab(text: 'predictions'.tr),
+    Tab(text: 'reports'.tr),
   ];
 
   // 12 directions data mapping
@@ -207,7 +229,133 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
   void dispose() {
     _tabController.dispose();
     _signatureNameController.dispose();
+    _signatureTotalController.dispose();
+    _signaturePredictionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _shareAsPdf() async {
+    final pdf = pw.Document();
+    final image = await _screenshotController.capture();
+    if (image != null) {
+      pdf.addPage(pw.Page(build: (pw.Context context) {
+        return pw.Center(child: pw.Image(pw.MemoryImage(image)));
+      }));
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/kundli.pdf');
+      await file.writeAsBytes(await pdf.save());
+      await Share.shareXFiles([XFile(file.path)], text: 'Kundli Report');
+    }
+  }
+
+  Widget _buildExaltedDebilitatedNote(Map<String, dynamic> planets) {
+    List<String> uchchPlanets = [];
+    List<String> neechPlanets = [];
+
+    final rules = {
+      'Sun': {'uchch': 1, 'neech': 7, 'hindi': 'सूर्य'},
+      'Moon': {'uchch': 2, 'neech': 8, 'hindi': 'चन्द्र'},
+      'Mars': {'uchch': 10, 'neech': 4, 'hindi': 'मंगल'},
+      'Mercury': {'uchch': 6, 'neech': 12, 'hindi': 'बुध'},
+      'Jupiter': {'uchch': 4, 'neech': 10, 'hindi': 'गुरु'},
+      'Venus': {'uchch': 12, 'neech': 6, 'hindi': 'शुक्र'},
+      'Saturn': {'uchch': 7, 'neech': 1, 'hindi': 'शनि'},
+      'Rahu': {'uchch': 2, 'neech': 8, 'hindi': 'राहु'},
+      'Ketu': {'uchch': 8, 'neech': 2, 'hindi': 'केतु'},
+    };
+
+    planets.forEach((key, data) {
+      if (rules.containsKey(key)) {
+        int rashiNum = data['rashi_num'] ?? 1;
+        if (rashiNum == rules[key]!['uchch']) {
+          uchchPlanets.add(rules[key]!['hindi'] as String);
+        } else if (rashiNum == rules[key]!['neech']) {
+          neechPlanets.add(rules[key]!['hindi'] as String);
+        }
+      }
+    });
+
+    if (uchchPlanets.isEmpty && neechPlanets.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.shade400, width: 1.5),
+        boxShadow: CustomShadows.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.stars_rounded, color: Colors.amber, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'ग्रहों की स्थिति (उच्च / नीच)',
+                style: TextStyle(
+                  color: Colors.amber.shade900,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+          if (uchchPlanets.isNotEmpty)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.arrow_upward_rounded, color: Colors.green.shade700, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 13, color: Colors.black87),
+                      children: [
+                        const TextSpan(text: 'आपकी कुण्डली में ', style: TextStyle(fontWeight: FontWeight.w600)),
+                        TextSpan(
+                          text: uchchPlanets.join(', '),
+                          style: TextStyle(fontWeight: FontWeight.w900, color: Colors.green.shade800),
+                        ),
+                        const TextSpan(text: ' ग्रह उच्च (Exalted) राशि में स्थित हैं, जो अत्यंत शुभ परिणाम देने में सक्षम हैं।'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          if (uchchPlanets.isNotEmpty && neechPlanets.isNotEmpty)
+            const SizedBox(height: 12),
+          if (neechPlanets.isNotEmpty)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.arrow_downward_rounded, color: Colors.red.shade700, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 13, color: Colors.black87),
+                      children: [
+                        const TextSpan(text: 'आपकी कुण्डली में ', style: TextStyle(fontWeight: FontWeight.w600)),
+                        TextSpan(
+                          text: neechPlanets.join(', '),
+                          style: TextStyle(fontWeight: FontWeight.w900, color: Colors.red.shade800),
+                        ),
+                        const TextSpan(text: ' ग्रह नीच (Debilitated) राशि में स्थित हैं। इसके प्रभाव स्वरूप कुछ चुनौतियाँ आ सकती हैं।'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -290,6 +438,11 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
             ),
             actions: [
               IconButton(
+                icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.amber),
+                onPressed: _shareAsPdf,
+                tooltip: 'Download PDF',
+              ),
+              IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
                 onPressed: () => Get.back(),
               )
@@ -307,21 +460,132 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
           body: TabBarView(
             controller: _tabController,
             children: [
-              // 0 - Premium Tab (Everything that was previously the body)
-              SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      height: 540,
-                      child: ChartTab(
-                        ascendant: ascendant,
-                        planets: planets,
-                        kpAscendant: kpAscendant,
-                        kpPlanets: kpPlanets,
-                        showDirections: true,
+              // 0 - Premium Tab
+              Screenshot(
+                controller: _screenshotController,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        height: 540,
+                        child: ChartTab(
+                          ascendant: ascendant,
+                          planets: planets,
+                          kpAscendant: kpAscendant,
+                          kpPlanets: kpPlanets,
+                          showDirections: true,
+                          ashtakvarga: ashtakvarga,
+                          targetHouseCrossIdx: _homeDirectionData?['house'],
+                          isTargetDirectionBad: _homeDirectionData != null 
+                            ? (_homeDirectionData!['lagnaCount'] == 8 || _homeDirectionData!['moonCount'] == 8 || _homeDirectionData!['nameCount'] == 8) 
+                            : false,
+                        ),
                       ),
-                    ),
+                      if (_homeDirectionData == null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final result = await showDialog<Map<String, dynamic>>(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (_) => DirectionPredictionDialog(
+                                  birthPlace: personalDetails['place'] ?? data['place'] ?? '',
+                                  lagnaHouse: lagnaIdx + 1,
+                                  moonHouse: planets['Moon']?['rashi_num'] ?? 1,
+                                  nameRashiHouse: naamRashiIdx != -1 ? naamRashiIdx + 1 : 1,
+                                ),
+                              );
+                              if (result != null) {
+                                setState(() {
+                                  _homeDirectionData = result;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.explore_rounded, color: Colors.white),
+                            label: const Text('Know Direction Prediction', style: TextStyle(fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.explore_rounded, color: AppColors.primary),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              'Direction: ${_homeDirectionData!['name']}',
+                                              style: TextStyle(
+                                                fontSize: 16, 
+                                                fontWeight: (_homeDirectionData!['name'].toString().contains('WNW') || _homeDirectionData!['name'].toString().contains('ESE')) ? FontWeight.w900 : FontWeight.bold,
+                                                color: (_homeDirectionData!['name'].toString().contains('WNW') || _homeDirectionData!['name'].toString().contains('ESE')) ? Colors.red : Colors.black87
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, color: Colors.grey),
+                                      onPressed: () => setState(() => _homeDirectionData = null),
+                                      constraints: const BoxConstraints(),
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                _buildResultRow('लग्न (Ascendant)', _homeDirectionData!['lagnaCount']),
+                                _buildResultRow('चंद्र (Moon Sign)', _homeDirectionData!['moonCount']),
+                                _buildResultRow('नाम राशि (${data['name'] ?? ''})', _homeDirectionData!['nameCount']),
+                                if (_homeDirectionData!['name'].toString().contains('WNW') || _homeDirectionData!['name'].toString().contains('ESE')) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade100,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.red.shade300),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade800),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Note: ${_homeDirectionData!['name']} is considered a generally bad direction. It is not good.',
+                                            style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 13),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ]
+                              ],
+                          ),
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
                       child: Column(
@@ -329,7 +593,9 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                         children: [
                           _buildPremiumHeader(data),
                           const SizedBox(height: 12),
-                          _buildMoonHouseSignCard(planets, lagnaIdx),
+                          _buildMoonHouseSignCard(planets, lagnaIdx, planetSignificators),
+                          const SizedBox(height: 12),
+                          _buildExaltedDebilitatedNote(planets),
                           const SizedBox(height: 12),
                           _buildNameHouseSignCard(data['name'] ?? '', lagnaIdx, planets),
                           const SizedBox(height: 12),
@@ -352,6 +618,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                   ],
                 ),
               ),
+              ),
               // 1 - Basic Details
               PersonalDetailsTab(personalDetails: personalDetails, name: data['name'] ?? ''),
               // 2 - 12 Rashi
@@ -370,48 +637,51 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                 planets: planets,
                 kpAscendant: kpAscendant,
                 kpPlanets: kpPlanets,
+                savedParams: widget.savedDirectionParams,
               ),
-              // 3 - Graha Sthiti
+              // 4 - Planet Hit
+              PlanetHitsTab(planets: planets, kpAscendant: kpAscendant),
+              // 5 - Graha Sthiti
               GrahaSthitiTab(planets: planets, ascendant: ascendant),
-              // 4 - Planets
+              // 6 - Planets
               PlanetsTab(planets: planets, ascendant: ascendant),
-              // 5 - Planets-Sub
+              // 7 - Planets-Sub
               PlanetsSubTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
-              // 6 - Cusps
+              // 8 - Cusps
               CuspsTab(kpAscendant: kpAscendant),
-              // 7 - Planet Sig.
+              // 8 - Planet Sig.
               PlanetSignificationTab(planetSignificators: planetSignificators, kpPlanets: kpPlanets),
-              // 8 - House Sig.
+              // 9 - House Sig.
               HouseSignificatorsTab(houseSignificators: houseSignificators, kpPlanets: kpPlanets),
-              // 9 - KP System
+              // 10 - KP System
               KpTab(kpPlanets: kpPlanets, kpAscendant: kpAscendant),
-              // 10 - Ashtakvarga
+              // 11 - Ashtakvarga
               AshtakvargaTab(ashtakvarga: ashtakvarga),
-              // 11 - Shad Bala
+              // 12 - Shad Bala
               ShadBalaTab(shadBala: shadBala),
-              // 12 - Gochar
+              // 13 - Gochar
               GocharTab(birthAscendant: ascendant, birthPlanets: planets),
-              // 13 - Dasha
+              // 14 - Dasha
               DashaTab(dasha: dasha, charDasha: charDasha, yoginiDasha: yoginiDasha, mahadashaPhala: mahadashaPhala),
-              // 14 - Varshphal
+              // 15 - Varshphal
               const VarshphalTab(),
-              // 15 - Avakahada
+              // 16 - Avakahada
               AvakahadaTab(avakahada: avakahada, ascendant: ascendant, ghatak: ghatak, favourable: favourable),
-              // 16 - Chalit Table
+              // 17 - Chalit Table
               ChalitTableTab(chalitTable: chalitTable),
-              // 17 - Prasthara
+              // 18 - Prasthara
               PrastharashtakvargaTab(prastharaAshtakvarga: prastharaAshtakvarga),
-              // 18 - Friendship
+              // 19 - Friendship
               FriendshipTab(friendship: friendship),
-              // 19 - Yogas
+              // 20 - Yogas
               YogaTab(yogas: yogas),
-              // 20 - Shodashvarga
+              // 21 - Shodashvarga
               ShodashvargaTab(shodashvarga: shodashvarga),
-              // 21 - Lal Kitab
+              // 22 - Lal Kitab
               LalKitabTab(lalKitab: lalKitab),
-              // 22 - Predictions
+              // 23 - Predictions
               PredictionsTab(predictions: predictions),
-              // 23 - Reports
+              // 24 - Reports
               ReportsTab(doshas: doshas, numerology: numerology),
             ],
           ),
@@ -444,6 +714,44 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     );
   }
 
+  Widget _buildResultRow(String title, int count) {
+    bool isBad = count == 8;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isBad ? Colors.red.shade50 : Colors.green.shade50,
+        border: Border.all(color: isBad ? Colors.red.shade200 : Colors.green.shade200),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              Icon(
+                isBad ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                color: isBad ? Colors.red : Colors.green,
+                size: 20,
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isBad 
+              ? 'यह दिशा $title से 8वें भाव में आ रही है, इसलिए यह आपके लिए अनुकूल नहीं है।'
+              : 'यह दिशा $title से ${count}वें भाव में है, जो कि अनुकूल है।',
+            style: TextStyle(color: isBad ? Colors.red.shade800 : Colors.green.shade800, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildPremiumHeader(Map<String, dynamic> data) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -511,156 +819,6 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     );
   }
 
-  // Widget _buildDirectionsSection(List<List<String>> planetsInRashis, int lagnaIdx) {
-  //   return Card(
-  //     elevation: 0,
-  //     shape: RoundedRectangleBorder(
-  //       borderRadius: BorderRadius.circular(12),
-  //       side: const BorderSide(color: Color(0xFFFFE0B2), width: 1.2),
-  //     ),
-  //     child: Theme(
-  //       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-  //       child: ExpansionTile(
-  //         initiallyExpanded: true,
-  //         leading: const Icon(Icons.explore_rounded, color: Colors.amber),
-  //         title: const Text(
-  //           '12 Directions & Astro-Vastu Analysis',
-  //           style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.black),
-  //         ),
-  //         children: [
-  //           Padding(
-  //             padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
-  //             child: Column(
-  //               crossAxisAlignment: CrossAxisAlignment.start,
-  //               children: [
-  //                 const Text(
-  //                   'Mapping of 12 Houses to Vastu directions and placement of planets:',
-  //                   style: TextStyle(fontSize: 12, color: Color(0xFF555555), fontWeight: FontWeight.w500),
-  //                 ),
-  //                 const SizedBox(height: 16),
-  //                 ListView.separated(
-  //                   shrinkWrap: true,
-  //                   physics: const NeverScrollableScrollPhysics(),
-  //                   itemCount: 12,
-  //                   separatorBuilder: (context, index) => const Divider(height: 24, color: AppColors.divider),
-  //                   itemBuilder: (context, idx) {
-  //                     final config = _directionConfigs[idx];
-  //                     final planetsInDir = planetsInRashis[idx];
-  //                     final directionColor = config['color'] as Color;
-  //                     final int houseIdx = (idx - lagnaIdx + 12) % 12;
-  //                     final int houseNum = houseIdx + 1;
-  //                     final String houseSuffix = houseNum == 1 ? 'st' : houseNum == 2 ? 'nd' : houseNum == 3 ? 'rd' : 'th';
-
-  //                     return Row(
-  //                       crossAxisAlignment: CrossAxisAlignment.start,
-  //                       children: [
-  //                         Container(
-  //                           padding: const EdgeInsets.all(10),
-  //                           decoration: BoxDecoration(
-  //                             color: directionColor.withOpacity(0.1),
-  //                             shape: BoxShape.circle,
-  //                           ),
-  //                           child: Icon(config['icon'] as IconData, color: directionColor, size: 24),
-  //                         ),
-  //                         const SizedBox(width: 14),
-  //                         Expanded(
-  //                           child: Column(
-  //                             crossAxisAlignment: CrossAxisAlignment.start,
-  //                             children: [
-  //                               Row(
-  //                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //                                 children: [
-  //                                   Expanded(
-  //                                     child: Text(
-  //                                       config['direction'] as String,
-  //                                       style: TextStyle(
-  //                                         fontSize: 15,
-  //                                         fontWeight: FontWeight.w900,
-  //                                         color: directionColor.darken(20),
-  //                                       ),
-  //                                       softWrap: true,
-  //                                     ),
-  //                                   ),
-  //                                   const SizedBox(width: 8),
-  //                                   Container(
-  //                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-  //                                     decoration: BoxDecoration(
-  //                                       color: Colors.amber.shade100,
-  //                                       borderRadius: BorderRadius.circular(12),
-  //                                     ),
-  //                                     child: Text(
-  //                                       '$houseNum$houseSuffix House (${config['rashi']})',
-  //                                       style: TextStyle(
-  //                                         fontSize: 11,
-  //                                         fontWeight: FontWeight.bold,
-  //                                         color: Colors.amber.shade900,
-  //                                       ),
-  //                                     ),
-  //                                   ),
-  //                                 ],
-  //                               ),
-  //                               const SizedBox(height: 6),
-  //                               Text(
-  //                                 'Significance: ${config['significance']}',
-  //                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black87),
-  //                               ),
-  //                               const SizedBox(height: 4),
-  //                               Text(
-  //                                 'Vastu Guideline: ${config['guideline']}',
-  //                                 style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
-  //                               ),
-  //                               const SizedBox(height: 6),
-  //                               Row(
-  //                                 children: [
-  //                                   const Text(
-  //                                     'Planets Present: ',
-  //                                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black),
-  //                                   ),
-  //                                   if (planetsInDir.isEmpty)
-  //                                     const Text(
-  //                                       'None (Clean & Stable Energy)',
-  //                                       style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
-  //                                     )
-  //                                   else
-  //                                     Wrap(
-  //                                       spacing: 6,
-  //                                       children: planetsInDir.map((p) {
-  //                                         return Container(
-  //                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-  //                                           decoration: BoxDecoration(
-  //                                             color: Colors.orange.shade50,
-  //                                             border: Border.all(color: Colors.orange.shade200),
-  //                                             borderRadius: BorderRadius.circular(8),
-  //                                           ),
-  //                                           child: Text(
-  //                                             p,
-  //                                             style: TextStyle(
-  //                                               fontSize: 10,
-  //                                               fontWeight: FontWeight.bold,
-  //                                               color: Colors.orange.shade900,
-  //                                             ),
-  //                                           ),
-  //                                         );
-  //                                       }).toList(),
-  //                                     ),
-  //                                 ],
-  //                               ),
-  //                             ],
-  //                           ),
-  //                         ),
-  //                       ],
-  //                     );
-  //                   },
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-
   Widget _buildSectionCard({
     required String title,
     required IconData icon,
@@ -698,11 +856,9 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     final details = _calculateNaamRashiDetails(name);
     if (details.isEmpty) return const SizedBox();
 
-    // Use Name Rashi's default Nakshatra and Lord
     final nameNakshatra = details['nakshatra'] ?? '';
     final nameNakshatraLord = details['nakshatra_lord'] ?? '';
 
-    // Rashi color mapping
     Color rashiColor;
     final rashiName = details['rashi']?.split(' ').first ?? '';
     switch (rashiName) {
@@ -721,10 +877,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
       default: rashiColor = const Color(0xFFE07B20);
     }
 
-    // Name Rashi house in chart
     final naamRashiIdx = rashiList.indexOf(rashiName);
-
-    // --- New Computations ---
     final nameRashiHouseNum = naamRashiIdx != -1 ? ((naamRashiIdx - lagnaIdx + 12) % 12 + 1) : 0;
     
     int moonHouseFromName = 0;
@@ -878,7 +1031,6 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Section Header
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 8, top: 12),
           child: Row(
@@ -899,19 +1051,14 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
             ],
           ),
         ),
-
-
-        // Simple List without Card background
         Column(
           children: [
             _buildSimpleRow('Active Name Analyzed', nameDisplay, valueColor: const Color(0xFFE07B20)),
-            
-            // New Fields
             _buildSimpleRow('लग्न से नाम किस भाव में है', '${nameRashiHouseNum > 0 ? nameRashiHouseNum : "-"}वाँ भाव'),
-            _buildSimpleRow('चंद्र से नाम किस भाव में है', '${moonHouseFromName > 0 ? moonHouseFromName : "-"}वाँ भाव'),
-            _buildSimpleRow('नाम राशि से Signified Houses', rashiStr),
-            _buildSimpleRow('नाम नक्षत्र से Signified Houses', nakStr),
-            _buildSimpleRow('Total Active Houses', '', customValueWidget: totalActiveWidget, isLast: true),
+            _buildSimpleRow('name_from_moon'.tr, '${moonHouseFromName > 0 ? moonHouseFromName : "-"}वाँ भाव'),
+            _buildSimpleRow('name_rashi_signified'.tr, rashiStr),
+            _buildSimpleRow('name_nak_signified'.tr, nakStr),
+            _buildSimpleRow('total_active_houses'.tr, '', customValueWidget: totalActiveWidget, isLast: true),
           ],
         ),
         const SizedBox(height: 12),
@@ -1041,7 +1188,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     'Mesh': [
       {'name': 'अश्विनी', 'letters': 'चू, चे, चो, ला', 'lord': 'केतु'},
       {'name': 'भरणी', 'letters': 'ली, लू, ले, लो', 'lord': 'शुक्र'},
-      {'name': 'कृत्तिका 1 चरण', 'letters': 'अ, [आ]', 'lord': 'सूर्य'},
+      {'name': 'कृत्तिका 1 चरण', 'letters': 'अ, [आ, अं]', 'lord': 'सूर्य'},
     ],
     'Vrishabh': [
       {'name': 'कृत्तिका 3 चरण', 'letters': 'ई, उ, ए, [ऊ, ऐ]', 'lord': 'सूर्य'},
@@ -1050,7 +1197,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     ],
     'Mithun': [
       {'name': 'मृगशिरा 2 चरण', 'letters': 'का, की', 'lord': 'मंगल'},
-      {'name': 'आर्द्रा', 'letters': 'कू, घ, ङ, छ', 'lord': 'राहु'},
+      {'name': 'आर्द्रा', 'letters': 'कू, घ, ङ, छ, [क्ष]', 'lord': 'राहु'},
       {'name': 'पुनर्वसु 3 चरण', 'letters': 'के, को, हा', 'lord': 'गुरु'},
     ],
     'Kark': [
@@ -1069,28 +1216,28 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
       {'name': 'चित्रा 2 चरण', 'letters': 'पे, पो', 'lord': 'मंगल'},
     ],
     'Tula': [
-      {'name': 'चित्रा 2 चरण', 'letters': 'रा, री', 'lord': 'मंगल'},
-      {'name': 'स्वाती', 'letters': 'रू, रे, रो, ता', 'lord': 'राहु'},
-      {'name': 'विशाखा 3 चरण', 'letters': 'ती, तू, ते', 'lord': 'गुरु'},
+      {'name': 'चित्रा 2 चरण', 'letters': 'रा, री, [ऋ]', 'lord': 'मंगल'},
+      {'name': 'स्वाती', 'letters': 'रू, रे, रो, ता, [त्र, त्रा]', 'lord': 'राहु'},
+      {'name': 'विशाखा 3 चरण', 'letters': 'ती, तू, ते, [त्रि, त्री, त्रे]', 'lord': 'गुरु'},
     ],
     'Vrischik': [
-      {'name': 'विशाखा 1 चरण', 'letters': 'तो', 'lord': 'गुरु'},
+      {'name': 'विशाखा 1 चरण', 'letters': 'तो, [त्रो]', 'lord': 'गुरु'},
       {'name': 'अनुराधा', 'letters': 'ना, नी, नू, ने', 'lord': 'शनि'},
       {'name': 'ज्येष्ठा', 'letters': 'नो, या, यी, यू', 'lord': 'बुध'},
     ],
     'Dhanu': [
-      {'name': 'मूल', 'letters': 'ये, यो, bh, bh', 'lord': 'केतु'},
+      {'name': 'मूल', 'letters': 'ये, यो, भा, भी', 'lord': 'केतु'},
       {'name': 'पूर्वाषाढ़ा', 'letters': 'भू, धा, फा, ढा, [धी, धू, फ़ा]', 'lord': 'शुक्र'},
       {'name': 'उत्तराषाढ़ा 1 चरण', 'letters': 'भे', 'lord': 'सूर्य'},
     ],
     'Makar': [
       {'name': 'उत्तराषाढ़ा 3 चरण', 'letters': 'भो, जा, जी', 'lord': 'सूर्य'},
       {'name': 'श्रवण', 'letters': 'खी, खू, खे, खो', 'lord': 'चंद्र'},
-      {'name': 'धनिष्ठा 2 चरण', 'letters': 'गा, गी', 'lord': 'मंगल'},
+      {'name': 'धनिष्ठा 2 चरण', 'letters': 'गा, गी, [ज्ञ, ज्ञा, ज्ञी]', 'lord': 'मंगल'},
     ],
     'Kumbh': [
       {'name': 'धनिष्ठा 2 चरण', 'letters': 'गू, गे', 'lord': 'मंगल'},
-      {'name': 'शतभिषा', 'letters': 'गो, सा, सी, सू, [शा, शी, शू, श]', 'lord': 'राहु'},
+      {'name': 'शतभिषा', 'letters': 'गो, सा, सी, सू, [शा, शी, शू, श, श्र, श्रा, श्री, श्रि, श्रे, श्रु, श्रो]', 'lord': 'राहु'},
       {'name': 'पूर्वाभाद्रपद 3 चरण', 'letters': 'से, सो, दा', 'lord': 'गुरु'},
     ],
     'Meen': [
@@ -1165,13 +1312,14 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     );
   }
 
-  Widget _buildMoonHouseSignCard(Map<String, dynamic> planets, int lagnaIdx) {
+  Widget _buildMoonHouseSignCard(Map<String, dynamic> planets, int lagnaIdx, [Map<String, dynamic>? planetSignificators]) {
     final chandra = planets['Moon'] as Map<String, dynamic>?;
     if (chandra == null) return const SizedBox();
 
     final moonRashi = chandra['rashi'] as String? ?? 'Mesh';
     final moonRashiHindi = rashiHindi[moonRashi] ?? moonRashi;
     final moonRashiLordHindi = rashiLordsHindi[moonRashi] ?? '';
+    final rashiLordEng = _getRashiLordEng(moonRashi);
     final moonNakshatra = chandra['nakshatra'] as String? ?? '';
     final moonPada = chandra['pada'] as int? ?? 1;
 
@@ -1189,17 +1337,69 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
     }
 
     final Color orange = AppColors.primary;
+    
+    int moonHouse = chandra['house'] as int? ?? 1;
+    
+    Set<int> rashiSignified = {};
+    if (rashiLordEng.isNotEmpty) {
+      var sigData = planetSignificators?[rashiLordEng] ?? planetSignificators?[rashiLordEng.toLowerCase()];
+      if (sigData is Map && sigData.containsKey('planet_houses')) {
+         List<dynamic> sigs = sigData['planet_houses'];
+         rashiSignified.addAll(sigs.map((e) => int.parse(e.toString())));
+      } else {
+        final ownership = {
+          'Sun': [4], 'Moon': [3], 'Mars': [0, 7], 'Mercury': [2, 5],
+          'Jupiter': [8, 11], 'Venus': [1, 6], 'Saturn': [9, 10]
+        };
+        for (int rIdx in (ownership[rashiLordEng] ?? [])) {
+          rashiSignified.add(((rIdx - lagnaIdx + 12) % 12) + 1);
+        }
+        if (planets[rashiLordEng] != null && planets[rashiLordEng]['house'] != null) {
+          rashiSignified.add(planets[rashiLordEng]['house'] as int);
+        }
+      }
+    }
+    
+    String rashiStr = "-";
+    if (rashiSignified.isNotEmpty) {
+      var l = rashiSignified.toList()..sort();
+      rashiStr = l.join(', ');
+    }
 
-    return Container(
+    Widget _colorRow(String label, String value, Color color) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: TextStyle(color: color.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    Widget card = Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          colors: [Colors.white, const Color(0xFFFFF8F0)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: orange.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: Colors.orange.shade400, width: 2.0),
         boxShadow: [
           BoxShadow(
-            color: orange.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: Colors.orange.withOpacity(0.2),
+            blurRadius: 12,
+            spreadRadius: 2,
+            offset: const Offset(0, 6),
           )
         ],
       ),
@@ -1207,39 +1407,60 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [orange.withOpacity(0.85), const Color(0xFFFFB0C0)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
+                colors: [const Color(0xFFFF8C00), const Color(0xFFFF3D00)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'चंद्र (Moon)',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                Row(
+                  children: [
+                    const Icon(Icons.nights_stay_rounded, color: Colors.white, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'moon_title'.tr,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5),
+                    ),
+                  ],
                 ),
-                Text(
-                  'घर ${chandra['house'] ?? '-'}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.5)),
+                  ),
+                  child: Text(
+                    '${'house'.tr} ${chandra['house'] ?? '-'}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14),
+                  ),
                 ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: Column(
               children: [
-                _detRow('राशि', '$moonRashiHindi ($moonRashiLordHindi)'),
-                _detRow('नक्षत्र', '$moonNakshatra पद $moonPada'),
-                _detRow('नक्षत्र स्वामी', chandra['nakshatra_lord'] ?? '-'),
-                _detRow('नामाक्षर', moonFirstLetter),
-                _detRow('अंश', _formatDegree(chandra['degree'])),
-                _detRow('गति (Speed)', '${(chandra['speed'] as num? ?? 0).toStringAsFixed(4)}°/day'),
+                _colorRow('rashi'.tr, '$moonRashiHindi ($moonRashiLordHindi)', Colors.blue.shade700),
+                _colorRow('nakshatra'.tr, '$moonNakshatra पद $moonPada', Colors.purple.shade700),
+                _colorRow('nakshatra_lord'.tr, chandra['nakshatra_lord'] ?? '-', Colors.teal.shade700),
+                _colorRow('namakshar'.tr, moonFirstLetter, Colors.red.shade700),
+                _colorRow('degree'.tr, _formatDegree(chandra['degree']), Colors.orange.shade800),
+                _colorRow('speed'.tr, '${(chandra['speed'] as num? ?? 0).toStringAsFixed(4)}°/day', Colors.indigo.shade600),
               ],
             ),
           ),
@@ -1254,7 +1475,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$moonRashiHindi राशि के सभी नक्षत्र और नामाक्षर:',
+                  '$moonRashiHindi ${'rashi_all_nakshatras_namakshar'.tr}',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
                 ),
                 const SizedBox(height: 10),
@@ -1262,43 +1483,140 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                   final idx = entry.key;
                   final item = entry.value;
                   final isCurrent = idx == activeNakIdx;
+                  
+                  String nLord = item['lord']!;
+                  String nLordEng = _getNakshatraLordEng(nLord);
+                  
+                  Set<int> nakSignified = {};
+                  if (nLordEng.isNotEmpty) {
+                    var sigData = planetSignificators?[nLordEng] ?? planetSignificators?[nLordEng.toLowerCase()];
+                    if (sigData is Map && sigData.containsKey('planet_houses')) {
+                      List<dynamic> sigs = sigData['planet_houses'];
+                      nakSignified.addAll(sigs.map((e) => int.parse(e.toString())));
+                    } else {
+                      final ownership = {
+                        'Sun': [4], 'Moon': [3], 'Mars': [0, 7], 'Mercury': [2, 5],
+                        'Jupiter': [8, 11], 'Venus': [1, 6], 'Saturn': [9, 10]
+                      };
+                      for (int rIdx in (ownership[nLordEng] ?? [])) {
+                        nakSignified.add(((rIdx - lagnaIdx + 12) % 12) + 1);
+                      }
+                      if (planets[nLordEng] != null && planets[nLordEng]['house'] != null) {
+                        nakSignified.add(planets[nLordEng]['house'] as int);
+                      }
+                    }
+                  }
+                  
+                  String nakStr = "-";
+                  if (nakSignified.isNotEmpty) {
+                    var l = nakSignified.toList()..sort();
+                    nakStr = l.join(', ');
+                  }
+                  
+                  Map<int, int> houseFreq = {};
+                  houseFreq[moonHouse] = (houseFreq[moonHouse] ?? 0) + 1;
+                  houseFreq[1] = (houseFreq[1] ?? 0) + 1;
+                  for (int h in rashiSignified) houseFreq[h] = (houseFreq[h] ?? 0) + 1;
+                  for (int h in nakSignified) houseFreq[h] = (houseFreq[h] ?? 0) + 1;
+                  
+                  List<int> sortedActive = houseFreq.keys.toList()..sort();
+                  List<TextSpan> spans = [];
+                  if (sortedActive.isEmpty) {
+                    spans.add(const TextSpan(text: '-'));
+                  } else {
+                    for (int i = 0; i < sortedActive.length; i++) {
+                      int h = sortedActive[i];
+                      int count = houseFreq[h] ?? 1;
+                      Color textColor = (h == 8 || h == 12) ? Colors.red.shade700 : Colors.green.shade800;
+                      spans.add(TextSpan(
+                        text: '$h',
+                        style: TextStyle(
+                          fontWeight: count > 1 ? FontWeight.w900 : FontWeight.w600,
+                          fontSize: count > 1 ? 15 : 13,
+                          color: textColor,
+                        ),
+                      ));
+                      if (i < sortedActive.length - 1) {
+                        spans.add(TextSpan(
+                          text: ', ', 
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey.shade600)
+                        ));
+                      }
+                    }
+                    bool has8 = sortedActive.contains(8);
+                    spans.add(TextSpan(
+                      text: has8 ? ' ❌' : ' ✔️', 
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: has8 ? Colors.red.shade700 : Colors.green.shade700)
+                    ));
+                  }
+                  
+                  Widget totalActiveWidget = RichText(
+                    textAlign: TextAlign.right,
+                    text: TextSpan(children: spans),
+                  );
 
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isCurrent ? orange.withOpacity(0.08) : Colors.white,
-                      borderRadius: BorderRadius.circular(8),
+                      color: isCurrent ? const Color(0xFFFFF0E0) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isCurrent ? orange : Colors.grey.shade200,
-                        width: isCurrent ? 1.5 : 1,
+                        color: isCurrent ? Colors.orange.shade500 : Colors.grey.shade200,
+                        width: isCurrent ? 2.0 : 1.0,
                       ),
+                      boxShadow: isCurrent ? [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        )
+                      ] : [],
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Icon(
-                          isCurrent ? Icons.stars_rounded : Icons.radio_button_off_rounded,
-                          color: isCurrent ? orange : Colors.grey,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${item['name']} (${item['letters']}) — ${item['lord']}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                              color: isCurrent ? orange : Colors.black87,
+                        Row(
+                          children: [
+                            Icon(
+                              isCurrent ? Icons.stars_rounded : Icons.radio_button_off_rounded,
+                              color: isCurrent ? Colors.orange.shade700 : Colors.grey,
+                              size: 18,
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${item['name']} (${item['letters']}) — ${item['lord']}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isCurrent ? FontWeight.w900 : FontWeight.normal,
+                                  color: isCurrent ? Colors.orange.shade900 : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            if (isCurrent)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'active'.tr,
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade900),
+                                ),
+                              ),
+                          ],
                         ),
-                        if (isCurrent)
-                          Text(
-                            'सक्रिय',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: orange),
-                          ),
-                      ],
-                    ),
+                        if (isCurrent) ...[
+                          const SizedBox(height: 12),
+                          _buildSimpleRow('moon_from_lagna'.tr, '${moonHouse > 0 ? moonHouse : "-"}${'th_house'.tr}'),
+                          _buildSimpleRow('moon_from_moon'.tr, '1${'th_house'.tr}'),
+                          _buildSimpleRow('moon_rashi_signified'.tr, rashiStr),
+                          _buildSimpleRow('moon_nak_signified'.tr, nakStr),
+                          _buildSimpleRow('total_active_houses'.tr, '', customValueWidget: totalActiveWidget, isLast: true),
+                        ]
+                      ]
+                    )
                   );
                 }),
               ],
@@ -1307,6 +1625,8 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
         ],
       ),
     );
+    
+    return card;
   }
 
   Widget _buildNameHouseSignCard(String name, int lagnaIdx, [Map<String, dynamic>? planets]) {
@@ -1435,7 +1755,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$nameRashiHindi राशि के सभी नक्षत्र और नामाक्षर:',
+                  '$nameRashiHindi ${'rashi_all_nakshatras_namakshar'.tr}',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
                 ),
                 const SizedBox(height: 10),
@@ -1475,7 +1795,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                         ),
                         if (isCurrent)
                           Text(
-                            'सक्रिय',
+                            'active'.tr,
                             style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: orange),
                           ),
                       ],
@@ -1567,57 +1887,74 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
               child: Image.file(widget.signatureImage!, height: 100, fit: BoxFit.contain),
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _signatureNameController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter Signature Name',
-                    hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: AppColors.primary),
-                    ),
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
-                  if (_signatureNameController.text.trim().isNotEmpty) {
-                    setState(() {
-                      _savedSignatureName = _signatureNameController.text.trim();
-                    });
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  elevation: 0,
-                ),
-                child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
-            ],
+          const SizedBox(height: 16),
+          TextField(
+            controller: _signatureNameController,
+            decoration: InputDecoration(
+              labelText: 'Signature Name',
+              hintText: 'Enter name in signature',
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           ),
           const SizedBox(height: 12),
-          _buildSimpleRow('Signature Name', currentSignatureName),
-          _buildSimpleRow('Signature Total', '$total = $singleDigit', valueColor: Colors.green.shade800),
-          const SizedBox(height: 8),
-          const Text(
-            'A signature vibrating to this number aligns with its corresponding planetary energy.',
-            style: TextStyle(fontSize: 11, color: Color(0xFF666666)),
+          TextField(
+            controller: _signatureTotalController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Total Letters',
+              hintText: 'Enter total number of letters',
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _signaturePredictionController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: 'Signature Prediction',
+              hintText: 'Enter detailed signature prediction...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _savedSignatureName = _signatureNameController.text.trim();
+                _savedSignatureTotal = _signatureTotalController.text.trim();
+                _savedSignaturePrediction = _signaturePredictionController.text.trim();
+              });
+              Get.snackbar('Saved', 'Signature analysis saved successfully', backgroundColor: Colors.green.shade100, snackPosition: SnackPosition.BOTTOM);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Save Signature Prediction', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+          if (_savedSignatureName.isNotEmpty || _savedSignatureTotal.isNotEmpty || _savedSignaturePrediction.isNotEmpty) ...[
+            const Divider(height: 32),
+            if (_savedSignatureName.isNotEmpty) _buildSimpleRow('Signature Name', _savedSignatureName),
+            if (_savedSignatureName.isNotEmpty) _buildSimpleRow('Chaldean Total', '$total = $singleDigit', valueColor: Colors.green.shade800),
+            if (_savedSignatureTotal.isNotEmpty) _buildSimpleRow('Total Letters', _savedSignatureTotal),
+            if (_savedSignaturePrediction.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text('Prediction:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.all(12),
+                width: double.infinity,
+                decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.amber.shade200)),
+                child: Text(_savedSignaturePrediction, style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.5)),
+              ),
+            ]
+          ],
         ],
       ),
     );
@@ -1714,7 +2051,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$rashiHindiName राशि के सभी नक्षत्र और नामाक्षर:',
+                  '$rashiHindiName ${'rashi_all_nakshatras_namakshar'.tr}',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
                 ),
                 const SizedBox(height: 10),
@@ -1754,7 +2091,7 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                         ),
                         if (isCurrent)
                           Text(
-                            'सक्रिय',
+                            'active'.tr,
                             style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: orange),
                           ),
                       ],
@@ -1911,20 +2248,23 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '${item['name']} (${item['lord']})',
+                          '${item['name']} (${item['letters']}) — ${item['lord']}',
                           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: isCurrent ? orange.darken() : Colors.black87),
                         ),
                       ),
                       if (isCurrent)
                         Text(
-                          'सक्रिय',
+                          'active'.tr,
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: orange),
                         ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _buildSimpleRow('Signified Houses', nakStr),
-                  _buildSimpleRow('Total Active Houses', '', customValueWidget: totalActiveWidget, isLast: true),
+                  _buildSimpleRow('name_from_lagna'.tr, '${houseNum > 0 ? houseNum : "-"}वाँ भाव'),
+                  _buildSimpleRow('name_from_moon'.tr, '${moonHouseFromName > 0 ? moonHouseFromName : "-"}वाँ भाव'),
+                  _buildSimpleRow('name_rashi_signified'.tr, rashiStr),
+                  _buildSimpleRow('name_nak_signified'.tr, nakStr),
+                  _buildSimpleRow('total_active_houses'.tr, '', customValueWidget: totalActiveWidget, isLast: true),
                 ],
               ),
             );
@@ -1969,6 +2309,259 @@ class _PremiumKundliScreenState extends State<PremiumKundliScreen> with SingleTi
       case 'केतु': case 'Ketu': return 'Ketu';
       default: return '';
     }
+  }
+}
+
+class DirectionPredictionDialog extends StatefulWidget {
+  final String birthPlace;
+  final int lagnaHouse, moonHouse, nameRashiHouse;
+  const DirectionPredictionDialog({super.key, required this.birthPlace, required this.lagnaHouse, required this.moonHouse, required this.nameRashiHouse});
+  @override
+  State<DirectionPredictionDialog> createState() => _DirectionPredictionDialogState();
+}
+
+class _DirectionPredictionDialogState extends State<DirectionPredictionDialog> {
+  final TextEditingController _birthPlaceController = TextEditingController();
+  final TextEditingController _currentPlaceController1 = TextEditingController();
+  final TextEditingController _residencePlaceController = TextEditingController();
+  final TextEditingController _currentPlaceController2 = TextEditingController();
+  
+  bool _isLoading = false;
+  int _activeTab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _birthPlaceController.text = widget.birthPlace;
+    _loadSavedData();
+  }
+
+  Future<void> _loadSavedData() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _currentPlaceController1.text = prefs.getString('dp_current_place_1') ?? '';
+        _residencePlaceController.text = prefs.getString('dp_residence_place') ?? '';
+        _currentPlaceController2.text = prefs.getString('dp_current_place_2') ?? '';
+        String savedBirth = prefs.getString('dp_birth_place') ?? '';
+        if (savedBirth.isNotEmpty) {
+          _birthPlaceController.text = savedBirth;
+        }
+      });
+    }
+  }
+
+  Future<Iterable<String>> _getPlaces(String query) async {
+    if (query.isEmpty || query.length < 2) return const [];
+    final encodedQuery = Uri.encodeComponent(query);
+    final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=5&addressdetails=1');
+    try {
+      final response = await http.get(url, headers: {'User-Agent': 'kundli_app_suggestion'});
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((p) => p['display_name'] as String).toList();
+      }
+    } catch (e) {
+      print('Error fetching places: $e');
+    }
+    return const [];
+  }
+
+  Widget _buildPlaceAutocomplete(TextEditingController controller, String label, String hint) {
+    return Autocomplete<String>(
+      optionsBuilder: (TextEditingValue textEditingValue) async {
+        if (textEditingValue.text == '') return const Iterable<String>.empty();
+        return await _getPlaces(textEditingValue.text);
+      },
+      onSelected: (String selection) { controller.text = selection; },
+      fieldViewBuilder: (context, fieldController, focusNode, onEditingComplete) {
+        if (fieldController.text != controller.text) fieldController.text = controller.text;
+        fieldController.addListener(() { controller.text = fieldController.text; });
+        return TextField(
+          controller: fieldController, focusNode: focusNode, onEditingComplete: onEditingComplete,
+          decoration: InputDecoration(labelText: label, hintText: hint, isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4.0, borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width - 96,
+              child: ListView.builder(
+                padding: EdgeInsets.zero, shrinkWrap: true, itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final String option = options.elementAt(index);
+                  return ListTile(title: Text(option, style: const TextStyle(fontSize: 13)), onTap: () => onSelected(option));
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  double _calculateBearing(double lat1, double lon1, double lat2, double lon2) {
+    double rLat1 = lat1 * math.pi / 180.0;
+    double rLat2 = lat2 * math.pi / 180.0;
+    double dLon = (lon2 - lon1) * math.pi / 180.0;
+    double y = math.sin(dLon) * math.cos(rLat2);
+    double x = math.cos(rLat1) * math.sin(rLat2) - math.sin(rLat1) * math.cos(rLat2) * math.cos(dLon);
+    double brng = math.atan2(y, x);
+    return (brng * 180.0 / math.pi + 360.0) % 360.0;
+  }
+
+  Map<String, dynamic> _mapBearingToHouseData(double angle) {
+    int zone = ((angle + 11.25) / 22.5).floor() % 16;
+    String dirName = ''; int dirHouse = 1;
+    switch (zone) {
+      case 0: dirName = 'North (N)'; dirHouse = 6; break;
+      case 1: dirName = 'North-North-East (NNE)'; dirHouse = 4; break;
+      case 2: dirName = 'North-East (NE)'; dirHouse = 9; break;
+      case 3: dirName = 'East-North-East (ENE)'; dirHouse = 5; break;
+      case 4: dirName = 'East (E)'; dirHouse = 1; break;
+      case 5: dirName = 'East-South-East (ESE)'; dirHouse = 12; break;
+      case 6: dirName = 'South-East (SE)'; dirHouse = 12; break;
+      case 7: dirName = 'South-South-East (SSE)'; dirHouse = 10; break;
+      case 8: dirName = 'South (S)'; dirHouse = 10; break;
+      case 9: dirName = 'South-South-West (SSW)'; dirHouse = 8; break;
+      case 10: dirName = 'South-West (SW)'; dirHouse = 8; break;
+      case 11: dirName = 'West-South-West (WSW)'; dirHouse = 7; break;
+      case 12: dirName = 'West (W)'; dirHouse = 11; break;
+      case 13: dirName = 'West-North-West (WNW)'; dirHouse = 2; break;
+      case 14: dirName = 'North-West (NW)'; dirHouse = 2; break;
+      case 15: dirName = 'North-North-West (NNW)'; dirHouse = 3; break;
+    }
+    int lagnaCount = ((dirHouse - widget.lagnaHouse + 12) % 12) + 1;
+    int moonCount = ((dirHouse - widget.moonHouse + 12) % 12) + 1;
+    int nameCount = ((dirHouse - widget.nameRashiHouse + 12) % 12) + 1;
+    return { 'name': dirName, 'house': dirHouse, 'lagnaCount': lagnaCount, 'moonCount': moonCount, 'nameCount': nameCount };
+  }
+
+  Future<void> _submit() async {
+    final current1 = _currentPlaceController1.text.trim();
+    final residence = _residencePlaceController.text.trim();
+    final current2 = _currentPlaceController2.text.trim();
+    final birth = _birthPlaceController.text.trim();
+
+    if ((birth.isEmpty || current1.isEmpty) && (residence.isEmpty || current2.isEmpty)) {
+      Get.snackbar('Error', 'Please fill at least one form completely', backgroundColor: Colors.red.shade100);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      String src = '';
+      String tgt = '';
+      
+      // Prioritize Form 1 if filled, otherwise Form 2
+      if (birth.isNotEmpty && current1.isNotEmpty) {
+        src = birth;
+        tgt = current1;
+      } else {
+        src = residence;
+        tgt = current2;
+      }
+
+      List<Location> srcLocs = await locationFromAddress(src);
+      List<Location> tgtLocs = await locationFromAddress(tgt);
+
+      if (srcLocs.isEmpty || tgtLocs.isEmpty) throw Exception("Location not found");
+
+      double bearing = _calculateBearing(srcLocs.first.latitude, srcLocs.first.longitude, tgtLocs.first.latitude, tgtLocs.first.longitude);
+      final data = _mapBearingToHouseData(bearing);
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('dp_current_place_1', current1);
+      await prefs.setString('dp_residence_place', residence);
+      await prefs.setString('dp_current_place_2', current2);
+      await prefs.setString('dp_birth_place', birth);
+
+      if (mounted) Navigator.pop(context, data);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      Get.snackbar('Error', e.toString(), backgroundColor: Colors.red.shade100);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.all(16),
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Direction Prediction', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Form 1
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.orange.shade200, width: 1.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Form 1: From Birth Place', style: TextStyle(color: Color(0xFFE65100), fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 12),
+                      _buildPlaceAutocomplete(_birthPlaceController, 'Birth Place', 'Enter birth city'),
+                      const SizedBox(height: 12),
+                      _buildPlaceAutocomplete(_currentPlaceController1, 'Current Place', 'Enter current city'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Form 2
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.orange.shade200, width: 1.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Form 2: From Residence', style: TextStyle(color: Color(0xFFE65100), fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 12),
+                      _buildPlaceAutocomplete(_residencePlaceController, 'Residence Location', 'Enter residence city'),
+                      const SizedBox(height: 12),
+                      _buildPlaceAutocomplete(_currentPlaceController2, 'Current Place', 'Enter current city'),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _submit,
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE65100), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  child: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Check Direction Match', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

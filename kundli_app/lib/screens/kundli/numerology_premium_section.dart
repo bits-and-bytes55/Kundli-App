@@ -157,6 +157,7 @@ class NumerologyPremiumSection extends StatelessWidget {
     // Death Numerology
     int? deathMulank;
     int? deathBhagyank;
+    int? deathKuaNumber;
     int? dDay, dMonth, dYear;
 
     if (deathData != null && deathData!['date'] != null && deathData!['date'].toString().isNotEmpty) {
@@ -183,6 +184,24 @@ class NumerologyPremiumSection extends StatelessWidget {
         final dDigits = '$dDay$dMonth$dYear'.split('').map(int.parse);
         final dSum = dDigits.reduce((a, b) => a + b);
         deathBhagyank = _reduceToSingleDigit(dSum);
+
+        // Death Kua Number
+        final int dYearSum = dYear.toString().split('').map(int.parse).reduce((a, b) => a + b);
+        final int dYearRoot = _reduceToSingleDigit(dYearSum);
+        int dResult;
+        if (gender == 'male') {
+          dResult = 11 - dYearRoot;
+        } else {
+          dResult = 4 + dYearRoot;
+        }
+        deathKuaNumber = _reduceToSingleDigit(dResult);
+        if (deathKuaNumber == 5) {
+          if (gender == 'male') {
+            deathKuaNumber = 2;
+          } else {
+            deathKuaNumber = 8;
+          }
+        }
       }
     }
 
@@ -212,7 +231,7 @@ class NumerologyPremiumSection extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(child: _buildCoreNumberBox('Death Bhagyank', deathBhagyank.toString(), Colors.grey.shade800)),
               const SizedBox(width: 12),
-              Expanded(child: const SizedBox()), // Empty slot for alignment
+              Expanded(child: _buildCoreNumberBox('Death Kulank', deathKuaNumber.toString(), Colors.deepPurple.shade800)),
             ],
           ),
         ],
@@ -248,7 +267,7 @@ class NumerologyPremiumSection extends StatelessWidget {
                   children: [
                     const Text('Death Grid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
                     const SizedBox(height: 8),
-                    _buildLoShuGrid(dDay, dMonth, dYear, deathMulank, deathBhagyank, 0),
+                    _buildLoShuGrid(dDay, dMonth, dYear, deathMulank, deathBhagyank, deathKuaNumber ?? 0),
                   ],
                 ),
               ),
